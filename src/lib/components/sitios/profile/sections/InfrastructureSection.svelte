@@ -2,9 +2,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioProfile } from '$lib/types';
-	import { cn } from '$lib/utils';
 	import {
-		AlertTriangle,
 		Building2,
 		Car,
 		Check,
@@ -151,26 +149,30 @@
 		{
 			icon: Car,
 			label: 'Paved',
-			description: 'Paved road access',
-			enabled: sitio.mainAccess.pavedRoad
+			description: 'Standard road access',
+			enabled: sitio.mainAccess.pavedRoad,
+			title: 'Access to the sitio is primarily via paved roads'
 		},
 		{
 			icon: Milestone,
 			label: 'Unpaved',
 			description: 'Dirt/Rough roads',
-			enabled: sitio.mainAccess.unpavedRoad
+			enabled: sitio.mainAccess.unpavedRoad,
+			title: 'Access to the sitio is via unpaved or dirt roads'
 		},
 		{
 			icon: Footprints,
 			label: 'Footpath',
 			description: 'Walking trails only',
-			enabled: sitio.mainAccess.footpath
+			enabled: sitio.mainAccess.footpath,
+			title: 'Access is limited to footpaths or trails'
 		},
 		{
 			icon: Ship,
 			label: 'Boat',
 			description: 'Waterway access',
-			enabled: sitio.mainAccess.boat
+			enabled: sitio.mainAccess.boat,
+			title: 'Access is primarily via water transportation'
 		}
 	]);
 
@@ -258,22 +260,22 @@
 					<div class="flex flex-col gap-4">
 						<div title="Percentage of households with access to electricity">
 							<div class="flex justify-between">
-								<span class="text-sm font-medium text-slate-700 dark:text-slate-300">
-									Household Electricity Access
+								<span class="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+									Electricity Access
 								</span>
 								<span class="text-sm font-bold text-slate-900 dark:text-white">
 									{electricityPercent}%
 								</span>
 							</div>
-							<p class="mb-2 text-xs text-muted-foreground">
-								{sitio.householdsWithElectricity} of {sitio.totalHouseholds} households
-							</p>
 							<div class="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-700">
 								<div
 									class="h-2.5 rounded-full bg-yellow-400 transition-all duration-500"
 									style="width: {electricityPercent}%"
 								></div>
 							</div>
+							<p class="mt-2 text-xs text-muted-foreground">
+								{sitio.householdsWithElectricity} of {sitio.totalHouseholds} households
+							</p>
 							<div
 								class="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50"
 							>
@@ -323,12 +325,9 @@
 									style="width: {toiletPercent}%"
 								></div>
 							</div>
-							{#if toiletPercent < 100}
-								<p class="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-									<AlertTriangle class="size-3 text-amber-500" />
-									<span>{100 - toiletPercent}% rely on communal or open pit facilities</span>
-								</p>
-							{/if}
+							<p class="mt-2 text-xs text-muted-foreground">
+								{sitio.householdsWithToilet} of {sitio.totalHouseholds} households
+							</p>
 						</div>
 
 						<!-- Internet Connectivity -->
@@ -346,13 +345,10 @@
 									class="h-2.5 rounded-full bg-blue-400 transition-all duration-500"
 									style="width: {internetPercent}%"
 								></div>
-							</div>
-							{#if internetPercent < 100}
-								<p class="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-									<AlertTriangle class="size-3 text-amber-500" />
-									<span>{100 - internetPercent}% does not have internet connectivity</span>
+								<p class="mt-2 text-xs text-muted-foreground">
+									{sitio.householdsWithInternet} of {sitio.totalHouseholds} households
 								</p>
-							{/if}
+							</div>
 						</div>
 					</div>
 				</div>
@@ -539,25 +535,37 @@
 			title="Main Access Modes"
 			description="Primary transportation methods"
 			icon={Car}
-			iconBgColor="bg-blue-50 dark:bg-blue-900/20"
+			iconBgColor="bg-blue-50 dark:bg-blue-500/10"
 			iconTextColor="text-blue-600 dark:text-blue-400"
+			headerClass="pb-4"
+			contentPadding="p-3"
 		>
 			{#snippet children()}
-				<div class="grid grid-cols-2 gap-x-2 gap-y-6">
+				<div class="grid grid-cols-2 gap-3">
 					{#each accessModes as mode}
 						{@const Icon = mode.icon}
-						<div class={cn('flex items-start gap-3', mode.enabled || 'opacity-30')}>
-							<Icon
-								class={cn(
-									'mt-0.5 size-5 text-slate-400 dark:text-slate-500',
-									!mode.enabled || 'text-green-400 dark:text-green-500'
-								)}
-							/>
+						<div
+							class="flex items-center gap-2.5 rounded-lg border p-2.5 transition-all {mode.enabled
+								? 'border-blue-100 bg-blue-50/50 dark:border-blue-500/20 dark:bg-blue-500/5'
+								: 'border-slate-100 bg-slate-50/50 opacity-50 dark:border-slate-700 dark:bg-slate-800/30'}"
+							title={mode.title}
+						>
+							<div
+								class="rounded-md p-1.5 {mode.enabled
+									? 'bg-blue-100 dark:bg-blue-500/20'
+									: 'bg-slate-200 dark:bg-slate-700'}"
+							>
+								<Icon
+									class="size-3.5 {mode.enabled
+										? 'text-blue-600 dark:text-blue-400'
+										: 'text-slate-400'}"
+								/>
+							</div>
 							<div class="flex flex-col">
-								<p class="text-sm font-bold text-slate-900 dark:text-white">{mode.label}</p>
-								<p class="text-xs leading-tight text-slate-500 dark:text-slate-400">
+								<span class="text-[13px] font-medium text-foreground">{mode.label}</span>
+								<span class="text-[11px] leading-tight text-muted-foreground">
 									{mode.description}
-								</p>
+								</span>
 							</div>
 						</div>
 					{/each}

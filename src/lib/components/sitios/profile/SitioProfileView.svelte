@@ -41,7 +41,7 @@
 
 	<div class="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
 		<!-- Tabbed Content -->
-		<Tabs.Root value="overview" class="w-full">
+		<Tabs.Root value="overview" class="mt-5 w-full">
 			<div
 				class="sticky top-0 z-20 -mx-4 bg-linear-to-b from-slate-50 via-slate-50 to-transparent px-4 pb-2 dark:from-slate-950 dark:via-slate-950"
 			>
@@ -63,24 +63,24 @@
 				</nav>
 			</div>
 
-			<div class="pt-4">
-				<Tabs.Content value="overview" class="mt-6">
+			<div class="mt-4">
+				<Tabs.Content value="overview" class="">
 					<OverviewSection {sitio} />
 				</Tabs.Content>
 
-				<Tabs.Content value="demographics" class="mt-6">
+				<Tabs.Content value="demographics" class="">
 					<DemographicsSection {sitio} />
 				</Tabs.Content>
 
-				<Tabs.Content value="infrastructure" class="mt-6">
+				<Tabs.Content value="infrastructure" class="">
 					<InfrastructureSection {sitio} />
 				</Tabs.Content>
 
-				<Tabs.Content value="economy" class="mt-6">
+				<Tabs.Content value="economy" class="">
 					<EconomySection {sitio} />
 				</Tabs.Content>
 
-				<Tabs.Content value="assessment" class="mt-6">
+				<Tabs.Content value="assessment" class="">
 					<AssessmentSection {sitio} />
 				</Tabs.Content>
 			</div>
