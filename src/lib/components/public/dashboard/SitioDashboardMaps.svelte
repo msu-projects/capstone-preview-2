@@ -5,7 +5,7 @@
 	import {
 		aggregateCoordinates,
 		aggregateRecommendations,
-		getLatestYearData,
+		getDataForYearOrLatest,
 		type CoordinatesAggregation,
 		type RecommendationsAggregation
 	} from '$lib/utils/sitio-chart-aggregation';
@@ -19,15 +19,17 @@
 
 	let { sitios, selectedYear, onSitioClick }: Props = $props();
 
-	// Aggregated data
-	const coordinates = $derived<CoordinatesAggregation>(aggregateCoordinates(sitios));
-	const recommendations = $derived<RecommendationsAggregation>(aggregateRecommendations(sitios));
+	// Aggregated data (using selected year)
+	const coordinates = $derived<CoordinatesAggregation>(aggregateCoordinates(sitios, selectedYear));
+	const recommendations = $derived<RecommendationsAggregation>(
+		aggregateRecommendations(sitios, selectedYear)
+	);
 
 	// Prepare markers with classifications
 	const markers = $derived(
 		sitios
 			.map((sitio) => {
-				const profile = getLatestYearData(sitio);
+				const profile = getDataForYearOrLatest(sitio, selectedYear);
 				if (!profile || !profile.latitude || !profile.longitude) return null;
 
 				return {

@@ -30,6 +30,20 @@ export function getDataForYear(sitioRecord: SitioRecord, year: number): SitioPro
 	return sitioRecord.yearlyData[year.toString()] || null;
 }
 
+/**
+ * Get data for a specific year or latest year if no year is specified
+ * This is the recommended function to use in aggregation functions
+ */
+export function getDataForYearOrLatest(
+	sitioRecord: SitioRecord,
+	year?: number
+): SitioProfile | null {
+	if (year !== undefined) {
+		return getDataForYear(sitioRecord, year);
+	}
+	return getLatestYearData(sitioRecord);
+}
+
 // ==========================================
 // YEAR-OVER-YEAR COMPARISON TYPES & FUNCTIONS
 // ==========================================
@@ -371,7 +385,10 @@ export interface DemographicsAggregation {
 	conflictCount: number;
 }
 
-export function aggregateDemographics(sitios: SitioRecord[]): DemographicsAggregation {
+export function aggregateDemographics(
+	sitios: SitioRecord[],
+	year?: number
+): DemographicsAggregation {
 	let totalPopulation = 0;
 	let totalMale = 0;
 	let totalFemale = 0;
@@ -394,7 +411,7 @@ export function aggregateDemographics(sitios: SitioRecord[]): DemographicsAggreg
 	let conflictCount = 0;
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		totalPopulation += profile.totalPopulation || 0;
@@ -427,7 +444,7 @@ export function aggregateDemographics(sitios: SitioRecord[]): DemographicsAggreg
 
 	// Estimate age groups
 	const children = sitios.reduce((sum, s) => {
-		const p = getLatestYearData(s);
+		const p = getDataForYearOrLatest(s, year);
 		return sum + (p?.schoolAgeChildren || 0);
 	}, 0);
 	const workingAge = totalLaborWorkforce;
@@ -497,7 +514,7 @@ export interface UtilitiesAggregation {
 	internetPercent: number;
 }
 
-export function aggregateUtilities(sitios: SitioRecord[]): UtilitiesAggregation {
+export function aggregateUtilities(sitios: SitioRecord[], year?: number): UtilitiesAggregation {
 	let totalHouseholds = 0;
 	let householdsWithElectricity = 0;
 	let householdsWithToilet = 0;
@@ -515,7 +532,7 @@ export function aggregateUtilities(sitios: SitioRecord[]): UtilitiesAggregation 
 	let signalNone = 0;
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		totalHouseholds += profile.totalHouseholds || 0;
@@ -611,7 +628,7 @@ function createEmptyFacilityCount(): FacilityConditionCount {
 	};
 }
 
-export function aggregateFacilities(sitios: SitioRecord[]): FacilitiesAggregation {
+export function aggregateFacilities(sitios: SitioRecord[], year?: number): FacilitiesAggregation {
 	const facilities: FacilitiesAggregation = {
 		healthCenter: createEmptyFacilityCount(),
 		pharmacy: createEmptyFacilityCount(),
@@ -626,7 +643,7 @@ export function aggregateFacilities(sitios: SitioRecord[]): FacilitiesAggregatio
 	const distanceCounts: { [key: string]: { total: number; count: number } } = {};
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		// Process each facility type
@@ -698,7 +715,7 @@ export interface LivelihoodAggregation {
 	vulnerableCount: number; // 400-600 PHP/day
 }
 
-export function aggregateLivelihood(sitios: SitioRecord[]): LivelihoodAggregation {
+export function aggregateLivelihood(sitios: SitioRecord[], year?: number): LivelihoodAggregation {
 	let totalFarmers = 0;
 	let totalFarmArea = 0;
 	let totalFarmerOrgs = 0;
@@ -719,7 +736,7 @@ export function aggregateLivelihood(sitios: SitioRecord[]): LivelihoodAggregatio
 	const livestockCounts = new Map<string, number>();
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		// Agriculture
@@ -810,7 +827,10 @@ export interface InfrastructureAggregation {
 	studentsPerRoomNoClassroom: number;
 }
 
-export function aggregateInfrastructure(sitios: SitioRecord[]): InfrastructureAggregation {
+export function aggregateInfrastructure(
+	sitios: SitioRecord[],
+	year?: number
+): InfrastructureAggregation {
 	const result: InfrastructureAggregation = {
 		roadAsphalt: { exists: 0, avgCondition: 0, totalLength: 0 },
 		roadConcrete: { exists: 0, avgCondition: 0, totalLength: 0 },
@@ -843,7 +863,7 @@ export function aggregateInfrastructure(sitios: SitioRecord[]): InfrastructureAg
 	};
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		// Infrastructure - Roads
@@ -985,7 +1005,7 @@ function getPriorityRating(
 	return priorities.find((p) => p.name === name)?.rating ?? 0;
 }
 
-export function aggregatePriorities(sitios: SitioRecord[]): PrioritiesAggregation {
+export function aggregatePriorities(sitios: SitioRecord[], year?: number): PrioritiesAggregation {
 	const result: PrioritiesAggregation = {
 		waterSystem: { totalScore: 0, urgentCount: 0 },
 		communityCR: { totalScore: 0, urgentCount: 0 },
@@ -998,7 +1018,7 @@ export function aggregatePriorities(sitios: SitioRecord[]): PrioritiesAggregatio
 	};
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		const p = profile.priorities;
@@ -1059,7 +1079,7 @@ export interface SafetyAggregation {
 	foodCriticalShortage: number;
 }
 
-export function aggregateSafety(sitios: SitioRecord[]): SafetyAggregation {
+export function aggregateSafety(sitios: SitioRecord[], year?: number): SafetyAggregation {
 	const result: SafetyAggregation = {
 		floodFrequencyCounts: new Map(),
 		landslideFrequencyCounts: new Map(),
@@ -1072,7 +1092,7 @@ export function aggregateSafety(sitios: SitioRecord[]): SafetyAggregation {
 	};
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		// Hazards
@@ -1137,12 +1157,12 @@ export interface GeographicAggregation {
 	municipalities: MunicipalityData[];
 }
 
-export function aggregateGeographic(sitios: SitioRecord[]): GeographicAggregation {
+export function aggregateGeographic(sitios: SitioRecord[], year?: number): GeographicAggregation {
 	const municipalityMap = new Map<string, MunicipalityData>();
 	const barangaySet = new Set<string>();
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		const municipality = profile.municipality;
@@ -1185,11 +1205,15 @@ export interface BarangayData {
 	households: number;
 }
 
-export function aggregateBarangays(sitios: SitioRecord[], municipality?: string): BarangayData[] {
+export function aggregateBarangays(
+	sitios: SitioRecord[],
+	municipality?: string,
+	year?: number
+): BarangayData[] {
 	const barangayMap = new Map<string, BarangayData>();
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		// Filter by municipality if specified
@@ -1227,14 +1251,14 @@ export interface AccessModesAggregation {
 	boat: number;
 }
 
-export function aggregateAccessModes(sitios: SitioRecord[]): AccessModesAggregation {
+export function aggregateAccessModes(sitios: SitioRecord[], year?: number): AccessModesAggregation {
 	let pavedRoad = 0;
 	let unpavedRoad = 0;
 	let footpath = 0;
 	let boat = 0;
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		if (profile.mainAccess.pavedRoad) pavedRoad++;
@@ -1304,7 +1328,7 @@ export interface CoordinatesAggregation {
 	};
 }
 
-export function aggregateCoordinates(sitios: SitioRecord[]): CoordinatesAggregation {
+export function aggregateCoordinates(sitios: SitioRecord[], year?: number): CoordinatesAggregation {
 	const coordinates: SitioCoordinate[] = [];
 	let minLat = Infinity;
 	let maxLat = -Infinity;
@@ -1315,7 +1339,7 @@ export function aggregateCoordinates(sitios: SitioRecord[]): CoordinatesAggregat
 	let validCount = 0;
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		const lat = profile.latitude;
@@ -1370,14 +1394,17 @@ export interface RecommendationsAggregation {
 	sitiosWithMostRecommendations: Array<{ sitioName: string; count: number }>;
 }
 
-export function aggregateRecommendations(sitios: SitioRecord[]): RecommendationsAggregation {
+export function aggregateRecommendations(
+	sitios: SitioRecord[],
+	year?: number
+): RecommendationsAggregation {
 	let totalRecommendations = 0;
 
 	const recommendationsByPPA = new Map<string, number>();
 	const sitioRecommendationCounts: Array<{ sitioName: string; count: number }> = [];
 
 	for (const sitio of sitios) {
-		const profile = getLatestYearData(sitio);
+		const profile = getDataForYearOrLatest(sitio, year);
 		if (!profile) continue;
 
 		// Aggregate recommendations

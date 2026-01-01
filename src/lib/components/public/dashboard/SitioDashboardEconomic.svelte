@@ -53,8 +53,8 @@
 	// Year-over-year comparison data
 	const yearComparison = $derived<YearComparison>(getYearComparison(sitios, currentYear));
 
-	// Aggregated livelihood data
-	const livelihood = $derived<LivelihoodAggregation>(aggregateLivelihood(sitios));
+	// Aggregated livelihood data (using selected year)
+	const livelihood = $derived<LivelihoodAggregation>(aggregateLivelihood(sitios, currentYear));
 
 	// Time series data for income trend
 	const incomeTrendData = $derived(prepareTimeSeriesData(sitios, ['averageDailyIncome']));

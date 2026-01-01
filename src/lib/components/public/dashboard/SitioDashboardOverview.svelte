@@ -50,10 +50,12 @@
 	// Year-over-year comparison data
 	const yearComparison = $derived<YearComparison>(getYearComparison(sitios, currentYear));
 
-	// Aggregated data
-	const demographics = $derived<DemographicsAggregation>(aggregateDemographics(sitios));
-	const utilities = $derived<UtilitiesAggregation>(aggregateUtilities(sitios));
-	const geographic = $derived<GeographicAggregation>(aggregateGeographic(sitios));
+	// Aggregated data (using selected year)
+	const demographics = $derived<DemographicsAggregation>(
+		aggregateDemographics(sitios, currentYear)
+	);
+	const utilities = $derived<UtilitiesAggregation>(aggregateUtilities(sitios, currentYear));
+	const geographic = $derived<GeographicAggregation>(aggregateGeographic(sitios, currentYear));
 
 	// Time series data for population trend chart
 	const populationTrendData = $derived(

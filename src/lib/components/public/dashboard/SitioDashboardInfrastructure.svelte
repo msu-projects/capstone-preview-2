@@ -58,11 +58,13 @@
 		prepareTimeSeriesData(sitios, ['electricityPercent', 'toiletPercent', 'internetPercent'])
 	);
 
-	// Aggregated data
-	const infrastructure = $derived<InfrastructureAggregation>(aggregateInfrastructure(sitios));
-	const facilities = $derived<FacilitiesAggregation>(aggregateFacilities(sitios));
-	const utilities = $derived<UtilitiesAggregation>(aggregateUtilities(sitios));
-	const accessModes = $derived<AccessModesAggregation>(aggregateAccessModes(sitios));
+	// Aggregated data (using selected year)
+	const infrastructure = $derived<InfrastructureAggregation>(
+		aggregateInfrastructure(sitios, currentYear)
+	);
+	const facilities = $derived<FacilitiesAggregation>(aggregateFacilities(sitios, currentYear));
+	const utilities = $derived<UtilitiesAggregation>(aggregateUtilities(sitios, currentYear));
+	const accessModes = $derived<AccessModesAggregation>(aggregateAccessModes(sitios, currentYear));
 
 	// Electricity sources data
 	const electricitySources = $derived([
