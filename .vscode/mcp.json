@@ -1,0 +1,38 @@
+{
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "context7-key",
+			"description": "Context7 API Key",
+			"password": true
+		},
+		{
+			"type": "promptString",
+			"id": "github-api",
+			"description": "Github API Key",
+			"password": true
+		}
+	],
+	"servers": {
+		"svelte": {
+			"url": "https://mcp.svelte.dev/mcp"
+		},
+		"context7": {
+			"type": "http",
+			"url": "https://mcp.context7.com/mcp",
+			"headers": {
+				"CONTEXT7_API_KEY": "${input:context7-key}"
+			}
+		},
+		"shadcn-ui": {
+			"command": "npx",
+			"args": [
+				"@jpisnice/shadcn-ui-mcp-server",
+				"--framework",
+				"svelte",
+				"--github-api-key",
+				"${input:github-api}"
+			]
+		}
+	}
+}
