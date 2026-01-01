@@ -1069,17 +1069,8 @@ export function aggregateCoordinates(sitios: SitioRecord[]): CoordinatesAggregat
 // ==========================================
 
 export interface RecommendationsAggregation {
-	/** Average need score across all sitios */
-	averageNeedScore: number;
 	/** Total number of recommendations across all sitios */
 	totalRecommendations: number;
-	/** Count of sitios by need score ranges */
-	needScoreDistribution: {
-		critical: number; // score >= 3.5
-		high: number; // score >= 2.5 && < 3.5
-		medium: number; // score >= 1.5 && < 2.5
-		low: number; // score < 1.5
-	};
 	/** Recommendations grouped by PPA type */
 	recommendationsByPPA: Map<string, number>;
 	/** Sitios with most recommendations */
@@ -1087,16 +1078,7 @@ export interface RecommendationsAggregation {
 }
 
 export function aggregateRecommendations(sitios: SitioRecord[]): RecommendationsAggregation {
-	let totalNeedScore = 0;
-	let sitiosWithScore = 0;
 	let totalRecommendations = 0;
-
-	const needScoreDistribution = {
-		critical: 0,
-		high: 0,
-		medium: 0,
-		low: 0
-	};
 
 	const recommendationsByPPA = new Map<string, number>();
 	const sitioRecommendationCounts: Array<{ sitioName: string; count: number }> = [];
@@ -1104,23 +1086,6 @@ export function aggregateRecommendations(sitios: SitioRecord[]): Recommendations
 	for (const sitio of sitios) {
 		const profile = getLatestYearData(sitio);
 		if (!profile) continue;
-
-		// Aggregate need scores
-		if (profile.averageNeedScore !== undefined && profile.averageNeedScore > 0) {
-			totalNeedScore += profile.averageNeedScore;
-			sitiosWithScore++;
-
-			// Categorize by need score
-			if (profile.averageNeedScore >= 3.5) {
-				needScoreDistribution.critical++;
-			} else if (profile.averageNeedScore >= 2.5) {
-				needScoreDistribution.high++;
-			} else if (profile.averageNeedScore >= 1.5) {
-				needScoreDistribution.medium++;
-			} else {
-				needScoreDistribution.low++;
-			}
-		}
 
 		// Aggregate recommendations
 		const recommendations = profile.recommendations || [];
@@ -1144,9 +1109,7 @@ export function aggregateRecommendations(sitios: SitioRecord[]): Recommendations
 	const topSitios = sitioRecommendationCounts.slice(0, 10);
 
 	return {
-		averageNeedScore: sitiosWithScore > 0 ? totalNeedScore / sitiosWithScore : 0,
 		totalRecommendations,
-		needScoreDistribution,
 		recommendationsByPPA,
 		sitiosWithMostRecommendations: topSitios
 	};

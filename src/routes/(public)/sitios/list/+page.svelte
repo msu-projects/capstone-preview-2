@@ -35,41 +35,6 @@
 	const itemsPerPage = 12;
 
 	/**
-	 * Get the need score badge variant and color based on score
-	 */
-	function getNeedScoreStyle(score: number): {
-		variant: 'default' | 'secondary' | 'destructive' | 'outline';
-		class: string;
-		label: string;
-	} {
-		if (score >= 2.5) {
-			return {
-				variant: 'destructive',
-				class: 'bg-red-500 hover:bg-red-600 text-white',
-				label: 'Critical'
-			};
-		} else if (score >= 2) {
-			return {
-				variant: 'default',
-				class: 'bg-orange-500 hover:bg-orange-600 text-white',
-				label: 'High'
-			};
-		} else if (score >= 1.5) {
-			return {
-				variant: 'default',
-				class: 'bg-yellow-500 hover:bg-yellow-600 text-white',
-				label: 'Medium'
-			};
-		} else {
-			return {
-				variant: 'secondary',
-				class: 'bg-green-500 hover:bg-green-600 text-white',
-				label: 'Low'
-			};
-		}
-	}
-
-	/**
 	 * Calculate percentage safely
 	 */
 	function calcPercent(value: number, total: number): number {
@@ -141,10 +106,6 @@
 					return bLatest.totalHouseholds - aLatest.totalHouseholds;
 				case 'households-low':
 					return aLatest.totalHouseholds - bLatest.totalHouseholds;
-				case 'need-high':
-					return bLatest.averageNeedScore - aLatest.averageNeedScore;
-				case 'need-low':
-					return aLatest.averageNeedScore - bLatest.averageNeedScore;
 				default:
 					return 0;
 			}
@@ -312,8 +273,7 @@
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Item value="name">Name (A-Z)</Select.Item>
-								<Select.Item value="need-high">Need Score (High→Low)</Select.Item>
-								<Select.Item value="need-low">Need Score (Low→High)</Select.Item>
+
 								<Select.Item value="population-high">Population (High→Low)</Select.Item>
 								<Select.Item value="population-low">Population (Low→High)</Select.Item>
 								<Select.Item value="households-high">Households (High→Low)</Select.Item>
@@ -430,7 +390,6 @@
 				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{#each paginatedSitios as sitio (sitio.coding)}
 						{@const latestData = getLatestData(sitio)}
-						{@const needStyle = getNeedScoreStyle(latestData?.averageNeedScore ?? 0)}
 						{@const toiletPercent = calcPercent(
 							latestData?.householdsWithToilet ?? 0,
 							latestData?.totalHouseholds ?? 1
@@ -444,10 +403,8 @@
 							class="group overflow-hidden border-slate-200 py-0 transition-all hover:border-blue-300 hover:shadow-md dark:border-slate-700 dark:hover:border-blue-700"
 						>
 							<Card.Content class="p-0">
-								<!-- Header with name and need score -->
-								<div
-									class="flex items-start justify-between border-b border-slate-100 p-4 dark:border-slate-800"
-								>
+								<!-- Header with name -->
+								<div class="border-b border-slate-100 p-4 dark:border-slate-800">
 									<div class="min-w-0 flex-1">
 										<h3
 											class="truncate font-semibold text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400"
@@ -463,9 +420,6 @@
 											>
 										</p>
 									</div>
-									<Badge class="{needStyle.class} ml-2 shrink-0">
-										{(latestData?.averageNeedScore ?? 0).toFixed(1)}
-									</Badge>
 								</div>
 
 								<!-- Stats Grid -->
@@ -553,7 +507,6 @@
 				<div class="space-y-3">
 					{#each paginatedSitios as sitio (sitio.coding)}
 						{@const latestData = getLatestData(sitio)}
-						{@const needStyle = getNeedScoreStyle(latestData?.averageNeedScore ?? 0)}
 						{@const toiletPercent = calcPercent(
 							latestData?.householdsWithToilet ?? 0,
 							latestData?.totalHouseholds ?? 1
@@ -570,9 +523,6 @@
 								<div class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
 									<!-- Left: Name & Location -->
 									<div class="flex items-center gap-4">
-										<Badge class="{needStyle.class} shrink-0">
-											{(latestData?.averageNeedScore ?? 0).toFixed(1)}
-										</Badge>
 										<div class="min-w-0">
 											<h3
 												class="font-semibold text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400"

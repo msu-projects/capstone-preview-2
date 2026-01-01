@@ -1,15 +1,34 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import {
+		DashboardEmptyState,
+		SitioDashboardDemographics,
+		SitioDashboardEconomic,
+		SitioDashboardInfrastructure,
+		SitioDashboardMaps,
+		SitioDashboardOverview
+	} from '$lib/components/public/dashboard';
 	import { DashboardSkeleton } from '$lib/components/sitios/dashboard';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import type { SitioRecord } from '$lib/types';
 	import toTitleCase from '$lib/utils/common';
+	import { getAllAvailableYears } from '$lib/utils/sitio-chart-aggregation';
 	import { loadSitios } from '$lib/utils/storage';
-	import { FileText, Lightbulb, List, MapPin, X } from '@lucide/svelte';
+	import {
+		Building2,
+		Calendar,
+		FileText,
+		Lightbulb,
+		List,
+		Map,
+		MapPin,
+		TrendingUp,
+		Users,
+		X
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	// Props from +page.ts
@@ -18,6 +37,7 @@
 			municipality: string;
 			barangay: string;
 			tab: string;
+			year: string;
 		};
 	}
 
@@ -26,21 +46,29 @@
 	let sitios = $state<SitioRecord[]>([]);
 	let isLoading = $state(true);
 
-	// Filter state synced with URL
-	let selectedMunicipality = $derived(data.municipality);
-	let selectedBarangay = $derived(data.barangay);
-	let activeTab = $derived(data.tab);
+	// Filter state synced with URL - use local state that gets updated from URL params
+	let selectedMunicipality = $state('all');
+	let selectedBarangay = $state('all');
+	let activeTab = $state('overview');
+	let selectedYear = $state('latest');
 
-	// Sync state when data changes (e.g., browser back/forward)
+	// Initialize and sync state when data changes (e.g., browser back/forward)
 	$effect(() => {
 		selectedMunicipality = data.municipality;
 		selectedBarangay = data.barangay;
 		activeTab = data.tab;
+		selectedYear = data.year;
 	});
 
 	onMount(() => {
 		sitios = loadSitios();
 		isLoading = false;
+	});
+
+	// Get available years from sitios
+	const availableYears = $derived(() => {
+		const years = getAllAvailableYears(sitios);
+		return years.length > 0 ? years : [new Date().getFullYear()];
 	});
 
 	// Derived values for filter options
@@ -85,7 +113,8 @@
 		const params = new URLSearchParams();
 		if (selectedMunicipality !== 'all') params.set('municipality', selectedMunicipality);
 		if (selectedBarangay !== 'all') params.set('barangay', selectedBarangay);
-		if (activeTab !== 'demographic') params.set('tab', activeTab);
+		if (activeTab !== 'overview') params.set('tab', activeTab);
+		if (selectedYear !== 'latest') params.set('year', selectedYear);
 
 		const queryString = params.toString();
 		goto(`/sitios${queryString ? `?${queryString}` : ''}`, { replaceState: true, noScroll: true });
@@ -108,17 +137,37 @@
 		updateUrl();
 	}
 
+	function handleYearChange(value: string | undefined) {
+		selectedYear = value || 'latest';
+		updateUrl();
+	}
+
 	function clearFilters() {
 		selectedMunicipality = 'all';
 		selectedBarangay = 'all';
 		updateUrl();
 	}
 
+	function handleSitioClick(sitioId: number) {
+		goto(`/sitios/${sitioId}`);
+	}
+
 	// Tab configuration
 	const tabs = [
-		{ id: 'overview', label: 'Overview', icon: FileText }
-		// Other tabs
+		{ id: 'overview', label: 'Overview', icon: FileText },
+		{ id: 'demographics', label: 'Demographics', icon: Users },
+		{ id: 'infrastructure', label: 'Infrastructure', icon: Building2 },
+		{ id: 'economic', label: 'Economic', icon: TrendingUp },
+		{ id: 'maps', label: 'Maps', icon: Map }
 	];
+
+	// Selected year as number for components
+	const selectedYearNumber = $derived(() => {
+		if (selectedYear === 'latest') {
+			return availableYears()[0];
+		}
+		return parseInt(selectedYear, 10);
+	});
 </script>
 
 <svelte:head>
@@ -160,7 +209,7 @@
 					explore specific areas.
 				</p>
 
-				<div class="mt-5 flex flex-col items-center justify-center gap-3">
+				<div class="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
 					<Button variant="default" size="default" href="/sitios/list" class="gap-2">
 						<List class="size-4" />
 						View Sitio List
@@ -170,10 +219,10 @@
 						variant="outline"
 						size="default"
 						href="/recommendations"
-						class="hidden gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-800 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+						class="gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-800 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
 					>
 						<Lightbulb class="size-4" />
-						Find Recommended Sitios for Projects
+						Find Recommended Sitios
 					</Button>
 				</div>
 			</div>
@@ -181,7 +230,7 @@
 	</section>
 
 	<!-- Filter Bar & Tabs -->
-	<section class="container mx-auto px-4 py-6">
+	<section class="container mx-auto px-10 py-6">
 		<!-- Filter Bar -->
 		<div class="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 			<div class="flex flex-wrap items-center gap-3">
@@ -215,6 +264,20 @@
 					</Select.Content>
 				</Select.Root>
 
+				<!-- Year Filter -->
+				<Select.Root type="single" value={selectedYear} onValueChange={handleYearChange}>
+					<Select.Trigger class="w-full sm:w-36">
+						<Calendar class="mr-2 size-4" />
+						{selectedYear === 'latest' ? 'Latest Year' : selectedYear}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item value="latest">Latest Year</Select.Item>
+						{#each availableYears() as year}
+							<Select.Item value={year.toString()}>{year}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+
 				<!-- Clear Filters -->
 				{#if hasActiveFilters}
 					<Button variant="ghost" size="sm" onclick={clearFilters} class="gap-1.5">
@@ -232,28 +295,18 @@
 						{filterLabel}
 					</Badge>
 				{/if}
+				<!-- Sitio count -->
+				<Badge variant="outline" class="gap-1.5">
+					{filteredSitios.length} sitios
+				</Badge>
 			</div>
 		</div>
 
-		<!-- Loading State -->
 		{#if isLoading}
 			<DashboardSkeleton />
 		{:else if filteredSitios.length === 0}
 			<!-- Empty State -->
-			<Card.Root class="py-16 text-center">
-				<Card.Content>
-					<div
-						class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800"
-					>
-						<MapPin class="size-8 text-slate-400" />
-					</div>
-					<h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">No Sitios Found</h3>
-					<p class="mt-2 text-slate-500 dark:text-slate-400">
-						No sitios match your current filter criteria. Try adjusting your filters.
-					</p>
-					<Button onclick={clearFilters} class="mt-4">Clear Filters</Button>
-				</Card.Content>
-			</Card.Root>
+			<DashboardEmptyState onClearFilters={clearFilters} />
 		{:else}
 			<!-- Tabs -->
 			<Tabs.Root value={activeTab} onValueChange={handleTabChange}>
@@ -275,14 +328,37 @@
 					</Tabs.List>
 				</div>
 
-				<div class="mt-3">
-					<!-- Tabs Contents -->
+				<div class="mt-6">
+					<!-- Tab Contents -->
 					<Tabs.Content value="overview">
-						<div class="space-y-8">
-							<!-- Overview Section -->
-						</div>
+						<SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber()} />
 					</Tabs.Content>
-					<!-- Other tabs -->
+
+					<Tabs.Content value="demographics">
+						<SitioDashboardDemographics
+							sitios={filteredSitios}
+							selectedYear={selectedYearNumber()}
+						/>
+					</Tabs.Content>
+
+					<Tabs.Content value="infrastructure">
+						<SitioDashboardInfrastructure
+							sitios={filteredSitios}
+							selectedYear={selectedYearNumber()}
+						/>
+					</Tabs.Content>
+
+					<Tabs.Content value="economic">
+						<SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber()} />
+					</Tabs.Content>
+
+					<Tabs.Content value="maps">
+						<SitioDashboardMaps
+							sitios={filteredSitios}
+							selectedYear={selectedYearNumber()}
+							onSitioClick={handleSitioClick}
+						/>
+					</Tabs.Content>
 				</div>
 			</Tabs.Root>
 		{/if}
