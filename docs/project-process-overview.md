@@ -6,19 +6,15 @@
 
 ## Executive Summary
 
-This document provides a comprehensive overview of the South Cotabato Convergence Data Bank system. The system serves two primary purposes:
+This document provides a comprehensive overview of the South Cotabato Convergence Data Bank system.
 
-1. **Sitio Data Management** - A public-facing module that allows citizens to view detailed demographic, social, economic, and infrastructure data about vulnerable communities (Sitios) in South Cotabato Province.
-
-2. **Project Recommendation** - An intelligent recommendation system that analyzes sitio profiles and suggests the most suitable Programs, Projects, and Activities (PPAs) based on community needs, infrastructure gaps, and socioeconomic conditions.
-
-The system enables transparency by providing public access to community profiles while supporting government officials in identifying priority interventions through data-driven recommendations.
+The system serves as a public-facing data bank that allows citizens to view detailed demographic, social, economic, and infrastructure data about vulnerable communities (Sitios) in South Cotabato Province. The system enables transparency by providing public access to community profiles while supporting government officials in data-driven planning decisions.
 
 ---
 
 ## Table of Contents
 
-### Part I: Sitio Data Module
+### Sitio Data Module
 
 1. [Sitio Module Purpose](#1-sitio-module-purpose)
 2. [Sitio Data Entity](#2-sitio-data-entity)
@@ -29,35 +25,14 @@ The system enables transparency by providing public access to community profiles
    - [4.3 Sitio Profile View](#43-sitio-profile-view)
    - [4.4 Data Visualization](#44-data-visualization)
    - [4.5 Sitio Data Management (Admin Only)](#45-sitio-data-management-admin-only)
-   - [4.6 Sitio Need Score](#46-sitio-need-score)
 
-### Part II: Project Recommendation Module
+### System-Wide Features
 
-5. [Recommendation System Purpose](#5-recommendation-system-purpose)
-6. [Available PPAs](#6-available-ppas)
-   - [6.1 Infrastructure Projects](#61-infrastructure-projects)
-   - [6.2 Service Delivery & Social Projects](#62-service-delivery--social-projects)
-7. [Recommendation Engine](#7-recommendation-engine)
-   - [7.1 Scoring Methodology](#71-scoring-methodology)
-   - [7.2 Priority Levels](#72-priority-levels)
-8. [Sitio Profile Data Model](#8-sitio-profile-data-model)
-9. [Recommendation Workflows](#9-recommendation-workflows)
-   - [9.1 View Recommendations for a Sitio](#91-view-recommendations-for-a-sitio)
-   - [9.2 Explore Recommendations Page](#92-explore-recommendations-page)
-
-### Part III: System-Wide
-
-10. [Audit Trail](#10-audit-trail)
-11. [Access Control](#11-access-control)
-12. [Validation Rules & Business Rules](#12-validation-rules--business-rules)
-13. [Glossary](#13-glossary)
-14. [Version History](#14-version-history)
-
----
-
----
-
-# Part I: Sitio Data Module
+5. [Audit Trail](#5-audit-trail)
+6. [Access Control](#6-access-control)
+7. [Validation Rules & Business Rules](#7-validation-rules--business-rules)
+8. [Glossary](#8-glossary)
+9. [Version History](#9-version-history)
 
 ---
 
@@ -67,7 +42,6 @@ The Sitio Data Module serves as a public-facing data bank that provides comprehe
 
 - **Public Transparency** - Citizens can view detailed demographic and socioeconomic data about their communities
 - **Data-Driven Planning** - Government officials can access community profiles to inform development decisions
-- **Project Targeting** - Sitio data helps identify communities that need specific interventions
 
 ---
 
@@ -373,13 +347,6 @@ Common priority intervention names:
 - **2** - Medium priority
 - **3** - Very urgent
 
-### 3.11 Recommendation
-
-| Field            | Type                | Description                 |
-| ---------------- | ------------------- | --------------------------- |
-| averageNeedScore | number              | Average need score (0-10)   |
-| recommendations  | PPARecommendation[] | List of PPA recommendations |
-
 ---
 
 ## 4. Public Portal Features
@@ -405,18 +372,16 @@ The public portal provides an aggregate dashboard as the main entry point for ex
 | Total Sitios         | COUNT of filtered sitios                                  |
 | Total Population     | SUM of totalPopulation                                    |
 | Total Households     | SUM of totalHouseholds                                    |
-| Avg Need Score       | AVG of averageNeedScore across filtered sitios            |
 | Electrification Rate | Percentage: (householdsWithElectricity / totalHouseholds) |
 | Toilet Access Rate   | Percentage: (householdsWithToilet / totalHouseholds)      |
 
 #### Aggregate Charts
 
-| Chart                   | Type           | Description                                              |
-| ----------------------- | -------------- | -------------------------------------------------------- |
-| Need Level Distribution | Donut          | Count of sitios by need level (Critical/High/Medium/Low) |
-| Demographics Overview   | Stacked Bar    | Male/Female breakdown with labor force highlighted       |
-| Utilities Coverage      | Horizontal Bar | Electricity, toilet access, street lights                |
-| Infrastructure Summary  | Bar            | Facility existence rates, road coverage                  |
+| Chart                  | Type           | Description                                        |
+| ---------------------- | -------------- | -------------------------------------------------- |
+| Demographics Overview  | Stacked Bar    | Male/Female breakdown with labor force highlighted |
+| Utilities Coverage     | Horizontal Bar | Electricity, toilet access, street lights          |
+| Infrastructure Summary | Bar            | Facility existence rates, road coverage            |
 
 #### Mini Map Preview
 
@@ -549,19 +514,17 @@ The public can view comprehensive sitio profiles organized into sections:
 
 - Top 3 priority needs (ranked)
 - Catch-up interventions identified
-- Project recommendations based on sitio profile
 
 ### 4.4 Data Visualization
 
 #### Aggregate Dashboard Visualizations
 
-| Visualization           | Type           | Description                                               |
-| ----------------------- | -------------- | --------------------------------------------------------- |
-| Need Level Distribution | Donut Chart    | Count of sitios by need level (Critical/High/Medium/Low)  |
-| Demographics Overview   | Stacked Bar    | Male/Female breakdown with labor force segment            |
-| Utilities Coverage      | Horizontal Bar | Electricity, toilet, street lights across filtered sitios |
-| Infrastructure Summary  | Bar Chart      | Facility existence rates, road coverage aggregates        |
-| Mini Map Preview        | Leaflet Map    | Interactive map showing filtered sitio markers            |
+| Visualization          | Type           | Description                                               |
+| ---------------------- | -------------- | --------------------------------------------------------- |
+| Demographics Overview  | Stacked Bar    | Male/Female breakdown with labor force segment            |
+| Utilities Coverage     | Horizontal Bar | Electricity, toilet, street lights across filtered sitios |
+| Infrastructure Summary | Bar Chart      | Facility existence rates, road coverage aggregates        |
+| Mini Map Preview       | Leaflet Map    | Interactive map showing filtered sitio markers            |
 
 #### Sitio Profile Visualizations
 
@@ -733,396 +696,31 @@ Check for Dependencies
 
 **Note:** A sitio cannot be deleted if it has associated projects. All project associations must be removed first.
 
-### 4.6 Sitio Need Score
-
-The Need Score is a dynamically-calculated metric (0-10) that indicates a sitio's priority for development projects. A higher score indicates a greater need for assistance. The score is automatically computed by the recommendation engine based on the sitio's profile data, infrastructure gaps, socioeconomic conditions, and community needs.
-
-#### 4.6.1 Score Scale
-
-The need score is calculated by analyzing all available project recommendations for a sitio and determining which projects have the highest priority based on the sitio's profile.
-
-| Score   | Description                                      |
-| ------- | ------------------------------------------------ |
-| 0-3.9   | Low need - community is relatively well-served   |
-| 4.0-6.9 | Medium need - some gaps exist but manageable     |
-| 7.0-8.9 | High need - significant gaps requiring attention |
-| 9.0-10  | Critical need - urgent intervention required     |
-
-#### 4.6.2 Need Levels
-
-| Level    | Score Range | Color Badge | Description                          |
-| -------- | ----------- | ----------- | ------------------------------------ |
-| Critical | 8–10        | Red/Rose    | Urgent need, prioritize for projects |
-| High     | 6–7         | Orange      | Significant need                     |
-| Medium   | 4–5         | Yellow      | Moderate need                        |
-| Low      | 1–3         | Green       | Relatively well-served               |
-
-#### 4.6.3 Score Assignment
-
-- **Automatic Calculation**: The score is computed automatically using the `ProjectScoringEngine` from the recommendation system
-- **Real-time Updates**: Scores are recalculated whenever sitio profile data changes
-- **Criteria-Based**: The engine evaluates multiple weighted criteria across all available PPAs
-- **Top Priority Method**: The overall need score is derived from the highest-priority project recommendations
-- **No Manual Override**: Scores cannot be manually edited; they reflect objective data-driven analysis
-
-#### 4.6.4 Calculation Methodology
-
-The need score calculation follows this process:
-
-1. **Profile Analysis**: The `ProjectScoringEngine` evaluates the sitio profile against all available PPAs
-2. **Criteria Scoring**: Each PPA's criteria are evaluated and points are awarded (see Section 7.1)
-3. **Priority Assignment**: Each PPA receives a priority level based on its total score:
-   - **Critical** (9.0-10.0): Urgent intervention needed
-   - **High** (6.0-7.9): Significant need requiring attention
-   - **Moderate** (4.0-5.9): Some gaps exist
-   - **Low** (0-3.9): Relatively well-served
-4. **Overall Score Derivation**: The sitio's overall need score is determined by:
-   - Identifying the highest-priority project recommendations
-   - Weighting scores by project category (Infrastructure vs. Service Delivery)
-   - Computing an aggregate score that reflects the sitio's most critical needs
-5. **Need Level Assignment**: The final score is mapped to a need level (Critical/High/Medium/Low)
-
-This data-driven approach ensures objective, consistent scoring across all sitios based on actual community conditions rather than subjective assessments.
-
-#### 4.6.5 Admin Features
-
-| Feature             | Description                                                               |
-| ------------------- | ------------------------------------------------------------------------- |
-| Need Score Display  | Automatically calculated and displayed (0-10) with visual level indicator |
-| Need Score Badge    | Color-coded badge (Critical/High/Medium/Low) in sitio list                |
-| Filter by Level     | Filter sitio list by need level                                           |
-| Sort by Score       | Sort sitio list by need score (high to low or low to high)                |
-| Dashboard Chart     | Donut chart showing distribution of sitios by need level                  |
-| Average Need Score  | Dashboard metric showing average need score across sitios                 |
-| Score Recalculation | Scores automatically update when sitio profile data is modified           |
-| Recommendation Link | View detailed project recommendations that contributed to the score       |
-
 ---
 
-# Part II: Project Recommendation Module
+## 5. Audit Trail
 
----
-
-## 5. Recommendation System Purpose
-
-The Project Recommendation module provides intelligent, data-driven recommendations for Programs, Projects, and Activities (PPAs) that are most suitable for each sitio based on their unique profile. The recommendation engine analyzes:
-
-- **Infrastructure gaps** - Missing or inadequate facilities and utilities
-- **Socioeconomic conditions** - Poverty levels, unemployment, income distribution
-- **Health and safety needs** - Disease prevalence, risk exposure, sanitation
-- **Community priorities** - Identified needs and proposed interventions
-- **Geographic context** - GIDA classification, indigenous communities, conflict areas
-
-This enables evidence-based planning and prioritization of development interventions.
-
----
-
-## 6. Available PPAs
-
-### 6.1 Infrastructure Projects
-
-| PPA                        | Description                                  |
-| -------------------------- | -------------------------------------------- |
-| Potable Water System       | Installation/rehabilitation of water systems |
-| Community Comfort Room     | Public toilet facility construction          |
-| Solar Street Lights        | Solar lighting installation                  |
-| Road Construction/Opening  | Road development or improvement              |
-| Bridge Construction        | Bridge building or repair                    |
-| School Building/Classroom  | Educational infrastructure                   |
-| Health Center Construction | Medical facility development                 |
-| Market Facility            | Public market construction                   |
-
-### 6.2 Service Delivery & Social Projects
-
-| PPA                      | Description                      |
-| ------------------------ | -------------------------------- |
-| Farm Tools Distribution  | Agricultural equipment provision |
-| Seed Distribution        | Planting materials provision     |
-| Agricultural Training    | Farmer capacity building         |
-| Livelihood Training      | Skills development programs      |
-| Medical Mission          | Health service delivery          |
-| Medicine Distribution    | Pharmaceutical provision         |
-| Madrasah Support         | Islamic education support        |
-| Educational Assistance   | Scholarship or school supplies   |
-| Waste Management Program | Sanitation and waste handling    |
-
----
-
-## 7. Recommendation Engine
-
-### 7.1 Scoring Methodology
-
-The recommendation engine evaluates each PPA against a sitio's profile using a multi-criteria scoring system. Each PPA has a set of weighted criteria that assess the sitio's need for that particular intervention.
-
-#### Scoring Process
-
-1. **Criteria Evaluation** - Each criterion evaluates specific aspects of the sitio profile
-2. **Point Assignment** - Points are awarded based on how well the sitio matches the criterion
-3. **Score Aggregation** - Individual criterion scores are summed to create a total need score (out of 10)
-4. **Priority Classification** - The total score determines the priority level
-5. **Reasoning Generation** - Explanations are generated for why points were awarded
-
-#### Example Criteria (Potable Water System)
-
-| Criterion                     | Max Points | Evaluation Logic                                                  |
-| ----------------------------- | ---------- | ----------------------------------------------------------------- |
-| No Functional Water Source    | 3.0        | Awards full points if no Level 2/3 functional water systems exist |
-| Reliance on Natural Sources   | 2.5        | Awards points if community relies only on natural water sources   |
-| Existing System Needs Repair  | 1.5        | Awards points if water infrastructure needs repair                |
-| Waterborne Disease Prevalence | 1.5        | Awards points if waterborne health issues are reported            |
-| Large Population Impact       | 1.5        | Awards points based on population size (500+, 300+, 150+)         |
-| GIDA Classification           | 1.0        | Awards points if sitio is classified as GIDA                      |
-
-### 7.2 Priority Levels
-
-Each PPA recommendation is assigned a priority level based on the need score:
-
-| Priority     | Score Range | Color Badge | Description                                           |
-| ------------ | ----------- | ----------- | ----------------------------------------------------- |
-| **Critical** | 9.0 - 10.0  | Red/Rose    | Urgent need; should be prioritized immediately        |
-| **High**     | 7.0 - 8.9   | Orange      | Significant need; important for community development |
-| **Moderate** | 4.0 - 6.9   | Yellow      | Moderate need; beneficial but not urgent              |
-| **Low**      | 0.0 - 3.9   | Green       | Low priority; minimal evidence of need                |
-
----
-
-## 8. Sitio Profile Data Model
-
-The recommendation engine evaluates sitio profiles using the comprehensive data structure defined in the SitioProfile interface. All fields are documented in **Section 3: Sitio Data Categories** above.
-
-### 8.1 Data Model Structure
-
-The sitio profile follows this hierarchical organization:
-
-```
-SitioProfile
-├── Section A: Basic Sitio Information
-│   ├── municipality, barangay, sitioName, sitioCode
-│   ├── latitude, longitude
-│   ├── sitioClassification (gida, indigenous, conflict)
-│   └── mainAccess (pavedRoad, unpavedRoad, footpath, boat)
-├── Section B: Population & Demographics
-│   ├── totalPopulation, totalHouseholds, registeredVoters
-│   ├── laborForceCount, schoolAgeChildren
-│   ├── population (totalMale, totalFemale)
-│   ├── vulnerableGroups (muslimCount, ipCount, seniorsCount, etc.)
-│   └── osy (exists, count)
-├── Section C: Basic Utilities & Connectivity
-│   ├── householdsWithToilet, householdsWithElectricity
-│   ├── electricitySources (grid, solar, battery, generator)
-│   ├── mobileSignal, householdsWithInternet
-│   └── sanitationTypes (waterSealed, pitLatrine, communityCR, openDefecation)
-├── Section D: Community Facilities
-│   └── facilities (healthCenter, pharmacy, communityToilet, kindergarten,
-│       elementarySchool, highSchool, madrasah, market)
-├── Section E: Roads & Internal Infrastructure
-│   └── infrastructure (asphalt, concrete, gravel, natural)
-├── Section F: Education Status
-│   └── studentsPerRoom
-├── Section G: Water & Sanitation
-│   ├── waterSources (natural, level1, level2, level3)
-│   └── sanitationTypes
-├── Section H: Livelihood & Agriculture
-│   ├── workerClass (privateHousehold, privateEstablishment, government, selfEmployed, employer, ofw - all number counts)
-│   ├── averageDailyIncome
-│   ├── agriculture (numberOfFarmers, numberOfAssociations, estimatedFarmAreaHectares)
-│   ├── crops (array), livestock (array)
-├── Section I: Safety & Risk Context
-│   ├── hazards (flood, landslide, drought, earthquake)
-│   ├── peaceOrder, foodSecurity
-└── Section J: Sitio Priority Needs
-    ├── priorities (array of {name, rating} objects)
-    └── Section K: Recommendation
-        ├── averageNeedScore
-        └── recommendations (PPARecommendation[])
-```
-
-### 8.2 Key Evaluation Points
-
-The recommendation engine evaluates these critical aspects:
-
-| Aspect               | Data Sources Used                                                        |
-| -------------------- | ------------------------------------------------------------------------ |
-| Infrastructure Gaps  | facilities, waterSources, householdsWithElectricity, infrastructure      |
-| Socioeconomic Status | averageDailyIncome, vulnerableGroups.unemployedCount, laborForceCount    |
-| Health & Safety      | hazards, peaceOrder, foodSecurity, sanitationTypes, householdsWithToilet |
-| Geographic Context   | sitioClassification (gida, indigenous, conflict), mainAccess             |
-| Community Needs      | priorities (array of intervention ratings), averageNeedScore             |
-| Population Impact    | totalPopulation, totalHouseholds                                         |
-| Education Needs      | studentsPerRoom, schoolAgeChildren, vulnerableGroups.outOfSchoolYouth    |
-| Agricultural Context | workerClass, agriculture, crops, livestock                               |
-
----
-
-## 9. Recommendation Workflows
-
-### 9.1 View Recommendations for a Sitio
-
-```
-Start
-  │
-  ▼
-Navigate to Sitio Profile
-  │
-  ▼
-View "Recommendations" Section
-  │
-  ▼
-System Analyzes Sitio Profile
-  │
-  ├──▶ Evaluate infrastructure gaps
-  ├──▶ Assess socioeconomic conditions
-  ├──▶ Check health and safety needs
-  ├──▶ Consider geographic context
-  └──▶ Review community priorities
-  │
-  ▼
-Generate PPA Recommendations
-  │
-  ├──▶ Calculate need scores (0-10)
-  ├──▶ Assign priority levels
-  └──▶ Generate reasoning explanations
-  │
-  ▼
-Display Recommendations List
-  │
-  ├──▶ Sorted by priority (Critical → Low)
-  ├──▶ Show need score badge
-  ├──▶ Display reasoning points
-  └──▶ Show expected beneficiaries
-  │
-  ▼
-User Reviews Recommendations
-  │
-  ├──▶ View detailed reasoning
-  ├──▶ Compare priority levels
-  └──▶ Identify suitable PPAs
-  │
-  ▼
-End
-```
-
-### 9.2 Explore Recommendations Page
-
-The Sitio Recommendations Page is a publicly accessible tool that allows users to discover and analyze recommended sitios for potential projects without creating an actual project.
-
-```
-Start
-  │
-  ▼
-Navigate to Recommendations Page
-  │ (/recommendations for public, /admin/recommendations for admin)
-  │
-  ▼
-Select Project Category
-  │ (Infrastructure, Agriculture, Education, Health, Livelihood, Environment)
-  │
-  ▼
-Select Project Type
-  │ (Cascading based on category)
-  │
-  ▼
-System Calculates PPA Matches
-  │
-  ├──▶ Match project type keywords against sitio priorities
-  ├──▶ Match against catchupIntervention fields
-  └──▶ Tag sitios with matching needs
-  │
-  ▼
-Display Recommendations
-  │
-  ├──▶ Show count of sitios with matching needs
-  ├──▶ Display matched sitios first (sorted by need score)
-  ├──▶ Show non-matched sitios after (sorted by need score)
-  └──▶ Show match indicators and priority badges
-  │
-  ▼
-Apply Filters (Optional)
-  │
-  ├──▶ Search by name/location
-  ├──▶ Filter by municipality
-  ├──▶ Filter by barangay
-  └──▶ Toggle need score sort order
-  │
-  ▼
-Review Sitio Recommendations
-  │
-  ├──▶ View sitio statistics
-  ├──▶ See matched priorities/interventions
-  └──▶ Check need level badges
-  │
-  ▼
-Click Sitio to View Profile
-  │ (Navigate to detailed sitio page)
-  │
-  ▼
-End
-```
-
-#### 9.2.1 Recommendation Display Features
-
-**For Each Sitio Shown:**
-
-| Display Element         | Description                                                |
-| ----------------------- | ---------------------------------------------------------- |
-| Match Badge             | Sparkle icon indicating PPA alignment with community needs |
-| Sitio Name              | Name with municipality and barangay                        |
-| Need Score Badge        | Color-coded badge (Critical/High/Medium/Low)               |
-| Population & Households | Statistics showing community size                          |
-| Matched Priorities      | Shows which priority rankings match the project type       |
-| Matched Interventions   | Shows which catchupIntervention fields align               |
-| Location Details        | Barangay and municipality information                      |
-
-**Matching Logic:**
-
-The system matches project types against:
-
-1. **Priority fields** - priority1, priority2, priority3 text values
-2. **Catch-up interventions** - Boolean flags in catchupIntervention object
-3. **Custom interventions** - catchupIntervention.others string value
-
-#### 9.2.2 Project Type to Intervention Mapping
-
-| Project Type            | Matches Against                                                         |
-| ----------------------- | ----------------------------------------------------------------------- |
-| Potable Water System    | catchupIntervention.waterSystem, priorities mentioning "water"          |
-| Community Comfort Room  | catchupIntervention.communityCR, priorities mentioning "toilet/CR"      |
-| Solar Street Lights     | catchupIntervention.solarLights, priorities mentioning "lights"         |
-| Road Construction       | catchupIntervention.roadOpening, priorities mentioning "road"           |
-| Farm Tools Distribution | catchupIntervention.farmTools, priorities mentioning "farm/agriculture" |
-| Madrasah Support        | catchupIntervention.madrasahSupport, priorities mentioning "madrasah"   |
-| Health Services         | catchupIntervention.healthServices, priorities mentioning "health"      |
-| Custom Project Types    | Matches against priorities and catchupIntervention.others               |
-
----
-
-# Part III: System-Wide
-
----
-
-## 10. Audit Trail
-
-### 10.1 Overview
+### 5.1 Overview
 
 The system maintains a comprehensive audit trail to track all significant actions performed by users. This ensures accountability, supports compliance requirements, and enables investigation of issues.
 
-### 10.2 Audit Log Entry
+### 5.2 Audit Log Entry
 
-| Field         | Description                                                         |
-| ------------- | ------------------------------------------------------------------- |
-| ID            | Unique identifier for the audit entry (string)                      |
-| User ID       | The ID of the user who performed the action                         |
-| User Name     | The name of the user who performed the action                       |
-| Action        | The type of action performed (see 10.3)                             |
-| Resource Type | The type of resource affected: `user`, `sitio`, or `system`         |
-| Resource ID   | The ID of the affected resource (optional)                          |
-| Resource Name | The name of the affected resource for display (optional)            |
-| Details       | Additional context or notes about the action (optional)             |
-| Changes       | Array of field changes with old and new values (optional, see 10.4) |
-| IP Address    | The IP address from which the action was performed (optional)       |
-| Timestamp     | Date and time of the action (ISO 8601 format)                       |
+| Field         | Description                                                        |
+| ------------- | ------------------------------------------------------------------ |
+| ID            | Unique identifier for the audit entry (string)                     |
+| User ID       | The ID of the user who performed the action                        |
+| User Name     | The name of the user who performed the action                      |
+| Action        | The type of action performed (see 5.3)                             |
+| Resource Type | The type of resource affected: `user`, `sitio`, or `system`        |
+| Resource ID   | The ID of the affected resource (optional)                         |
+| Resource Name | The name of the affected resource for display (optional)           |
+| Details       | Additional context or notes about the action (optional)            |
+| Changes       | Array of field changes with old and new values (optional, see 5.4) |
+| IP Address    | The IP address from which the action was performed (optional)      |
+| Timestamp     | Date and time of the action (ISO 8601 format)                      |
 
-### 10.3 Action Types
+### 5.3 Action Types
 
 | Action   | Description                                        |
 | -------- | -------------------------------------------------- |
@@ -1135,7 +733,7 @@ The system maintains a comprehensive audit trail to track all significant action
 | `export` | Data exported (e.g., PDF report generated)         |
 | `import` | Data imported (e.g., CSV sitio import)             |
 
-### 10.4 Change Tracking
+### 5.4 Change Tracking
 
 When a record is updated, the system captures the specific field changes:
 
@@ -1151,13 +749,12 @@ When a record is updated, the system captures the specific field changes:
 {
 	"changes": [
 		{ "field": "totalHouseholds", "oldValue": 120, "newValue": 125 },
-		{ "field": "householdsWithElectricity", "oldValue": 80, "newValue": 90 },
-		{ "field": "needScore", "oldValue": 7, "newValue": 6 }
+		{ "field": "householdsWithElectricity", "oldValue": 80, "newValue": 90 }
 	]
 }
 ```
 
-### 10.5 Resource Types
+### 5.5 Resource Types
 
 | Resource Type | Description                                                |
 | ------------- | ---------------------------------------------------------- |
@@ -1165,7 +762,7 @@ When a record is updated, the system captures the specific field changes:
 | `sitio`       | Sitio data operations                                      |
 | `system`      | System-level operations (authentication, exports, imports) |
 
-### 10.6 Tracked Operations by Resource
+### 5.6 Tracked Operations by Resource
 
 | Resource Type | Actions Tracked                       |
 | ------------- | ------------------------------------- |
@@ -1173,7 +770,7 @@ When a record is updated, the system captures the specific field changes:
 | **Sitio**     | `create`, `update`, `delete`, `view`  |
 | **User**      | `create`, `update`, `delete`          |
 
-### 10.7 Audit Log Retention
+### 5.7 Audit Log Retention
 
 | Rule             | Description                                          |
 | ---------------- | ---------------------------------------------------- |
@@ -1183,7 +780,7 @@ When a record is updated, the system captures the specific field changes:
 
 ---
 
-## 11. Access Control
+## 6. Access Control
 
 | Role           | Permissions            |
 | -------------- | ---------------------- |
@@ -1192,7 +789,7 @@ When a record is updated, the system captures the specific field changes:
 | **Viewer**     | Read-only access       |
 | **Public**     | View via public portal |
 
-### 11.1 Role-Specific Permissions
+### 6.1 Role-Specific Permissions
 
 | Action                  | Superadmin | Admin | Viewer | Public |
 | ----------------------- | ---------- | ----- | ------ | ------ |
@@ -1200,7 +797,6 @@ When a record is updated, the system captures the specific field changes:
 | Edit Sitio              | ✓          | ✓     | ✗      | ✗      |
 | Delete Sitio            | ✓          | ✓     | ✗      | ✗      |
 | View Sitio Profiles     | ✓          | ✓     | ✓      | ✓      |
-| View Recommendations    | ✓          | ✓     | ✓      | ✓      |
 | View Dashboard          | ✓          | ✓     | ✓      | ✓      |
 | Export Reports          | ✓          | ✓     | ✓      | ✗      |
 | Import Sitio Data (CSV) | ✓          | ✓     | ✗      | ✗      |
@@ -1209,9 +805,9 @@ When a record is updated, the system captures the specific field changes:
 
 ---
 
-## 12. Validation Rules & Business Rules
+## 7. Validation Rules & Business Rules
 
-### 12.1 Sitio Data Rules
+### 7.1 Sitio Data Rules
 
 #### Required Fields
 
@@ -1283,14 +879,12 @@ When a record is updated, the system captures the specific field changes:
 
 #### Priorities Validation
 
-| Field                    | Rule                               |
-| ------------------------ | ---------------------------------- |
-| priorities.\*            | Required, must be 0, 1, 2, or 3    |
-| priorities.othersSpecify | Optional, max 200 characters       |
-| averageNeedScore         | Required, number between 0 and 10  |
-| recommendations          | Array of PPARecommendation objects |
+| Field                    | Rule                            |
+| ------------------------ | ------------------------------- |
+| priorities.\*            | Required, must be 0, 1, 2, or 3 |
+| priorities.othersSpecify | Optional, max 200 characters    |
 
-### 12.2 Business Rules
+### 7.2 Business Rules
 
 #### Population Consistency
 
@@ -1330,41 +924,25 @@ When a record is updated, the system captures the specific field changes:
 - If waterSources.natural has high functioning count and higher-level sources have low counts, consider water quality concerns
 - Priority for waterSystem should be high (2-3) if no Level 2/3 water sources exist
 
-### 12.3 Recommendation Engine Rules
-
-| Rule                       | Description                                                          |
-| -------------------------- | -------------------------------------------------------------------- |
-| Minimum Criteria           | Each PPA must have at least one evaluation criterion                 |
-| Score Range                | All PPA scores must be between 0-10                                  |
-| Priority Assignment        | Priority level automatically assigned based on score range           |
-| Criterion Point Allocation | Sum of max points for all criteria should equal 10 for consistency   |
-| Data Completeness          | Missing optional fields default to "no need" for that criterion      |
-| Multiple PPAs              | A sitio can receive recommendations for multiple PPAs simultaneously |
-
 ---
 
-## 13. Glossary
+## 8. Glossary
 
-| Term                      | Definition                                                                                                                                                              |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **4Ps**                   | Pantawid Pamilyang Pilipino Program - a conditional cash transfer program for poor households                                                                           |
-| **Barangay**              | The smallest administrative division in the Philippines, a village or district                                                                                          |
-| **Beneficiaries**         | The target population who would directly benefit from a recommended PPA                                                                                                 |
-| **CATCH-UP**              | A program for identifying vulnerable communities and providing appropriate interventions                                                                                |
-| **Coding**                | Unique identifier or code assigned to a sitio for administrative tracking                                                                                               |
-| **Demographics**          | Statistical data about the population characteristics including age, sex, and distribution                                                                              |
-| **GIDA**                  | Geographically Isolated and Disadvantaged Area - remote communities with limited access to services                                                                     |
-| **IP**                    | Indigenous People/Peoples - members of indigenous cultural communities                                                                                                  |
-| **Labor Workforce**       | Population aged 15-64 years old, representing the working-age demographic                                                                                               |
-| **Level 1/2/3 Water**     | Classification of water infrastructure: Level 1 (point source/pump), Level 2 (communal faucet), Level 3 (house connection)                                              |
-| **Municipality**          | A local government unit in the Philippines, below the province level                                                                                                    |
-| **Need Score**            | A numerical score (0-10) indicating how much a sitio needs a specific PPA, calculated by the recommendation engine                                                      |
-| **OSY**                   | Out of School Youth - school-age individuals not currently enrolled in education                                                                                        |
-| **PhilHealth**            | Philippine Health Insurance Corporation - the national health insurance program                                                                                         |
-| **PhilSys**               | Philippine Identification System - the national ID program                                                                                                              |
-| **PPA**                   | Programs, Projects, and Activities - development interventions recommended for sitios                                                                                   |
-| **Priority Level**        | A classification (Critical/High/Moderate/Low) based on need score, indicating urgency of intervention                                                                   |
-| **Recommendation Engine** | The AI-powered system that analyzes sitio profiles against PPA criteria to generate scored recommendations                                                              |
-| **Sitio**                 | The smallest administrative division in the Philippines, a subdivision of a barangay. In this system, refers to vulnerable communities targeted for development support |
-| **Sitio Profile**         | Comprehensive data about a sitio including demographics, infrastructure, facilities, livelihood, health, and risks                                                      |
-| **Water-Sealed Toilet**   | Sanitary toilet facility with water seal to prevent odor and contamination                                                                                              |
+| Term                    | Definition                                                                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **4Ps**                 | Pantawid Pamilyang Pilipino Program - a conditional cash transfer program for poor households                                                                           |
+| **Barangay**            | The smallest administrative division in the Philippines, a village or district                                                                                          |
+| **CATCH-UP**            | A program for identifying vulnerable communities and providing appropriate interventions                                                                                |
+| **Coding**              | Unique identifier or code assigned to a sitio for administrative tracking                                                                                               |
+| **Demographics**        | Statistical data about the population characteristics including age, sex, and distribution                                                                              |
+| **GIDA**                | Geographically Isolated and Disadvantaged Area - remote communities with limited access to services                                                                     |
+| **IP**                  | Indigenous People/Peoples - members of indigenous cultural communities                                                                                                  |
+| **Labor Workforce**     | Population aged 15-64 years old, representing the working-age demographic                                                                                               |
+| **Level 1/2/3 Water**   | Classification of water infrastructure: Level 1 (point source/pump), Level 2 (communal faucet), Level 3 (house connection)                                              |
+| **Municipality**        | A local government unit in the Philippines, below the province level                                                                                                    |
+| **OSY**                 | Out of School Youth - school-age individuals not currently enrolled in education                                                                                        |
+| **PhilHealth**          | Philippine Health Insurance Corporation - the national health insurance program                                                                                         |
+| **PhilSys**             | Philippine Identification System - the national ID program                                                                                                              |
+| **Sitio**               | The smallest administrative division in the Philippines, a subdivision of a barangay. In this system, refers to vulnerable communities targeted for development support |
+| **Sitio Profile**       | Comprehensive data about a sitio including demographics, infrastructure, facilities, livelihood, health, and risks                                                      |
+| **Water-Sealed Toilet** | Sanitary toilet facility with water seal to prevent odor and contamination                                                                                              |
