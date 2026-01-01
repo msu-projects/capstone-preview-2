@@ -47,16 +47,55 @@ The Sitio Data Module serves as a public-facing data bank that provides comprehe
 
 ## 2. Sitio Data Entity
 
-### 2.1 Core Identification
+### 2.1 Data Structure Overview
+
+The sitio data model is designed to track changes over time by storing yearly snapshots. Each sitio has:
+
+- **Core Identification** - Permanent fields that identify the sitio and remain constant across years
+- **Yearly Snapshot Data** - Demographic, infrastructure, and socioeconomic data collected for specific years
+
+> **Important:** Yearly data is optional. Users may skip entering data for certain years. The system supports viewing historical trends when multiple years of data are available.
+
+### 2.2 Core Identification (Permanent)
+
+These fields are set when a sitio is first created and remain constant:
 
 | Field        | Type   | Description                                                 |
 | ------------ | ------ | ----------------------------------------------------------- |
+| sitioId      | string | Unique system identifier (auto-generated)                   |
 | municipality | string | Name of the municipality                                    |
 | barangay     | string | Name of the barangay                                        |
 | sitioName    | string | Name of the specific Sitio / Purok                          |
 | sitioCode    | string | Purok/Sitio Code (if available)                             |
 | latitude     | number | Geographical latitude in decimal degrees (e.g., 7.12345)    |
 | longitude    | number | Geographical longitude in decimal degrees (e.g., 125.12345) |
+| createdAt    | string | Date when sitio was first added to system (ISO 8601)        |
+| updatedAt    | string | Date of last modification (ISO 8601)                        |
+
+### 2.3 Yearly Snapshot Data
+
+All other sitio data fields (described in Section 3) are stored as yearly snapshots:
+
+| Field      | Type   | Description                                       |
+| ---------- | ------ | ------------------------------------------------- |
+| year       | number | The year this data represents (e.g., 2024, 2025)  |
+| recordedAt | string | Date when this yearly data was entered (ISO 8601) |
+| recordedBy | string | User ID who entered/last modified this data       |
+| data       | object | All sitio categories data (see Section 3)         |
+
+**Data Object Structure:**
+The `data` object contains all fields from Section 3:
+
+- Sitio Classification & Access
+- Demographics & Population
+- Access to Basic Utilities
+- Facilities
+- Road & Internal Infrastructure
+- Education
+- Water & Sanitation
+- Livelihood & Agriculture
+- Safety & Risk Context
+- Sitio Priority Needs
 
 ---
 
@@ -355,11 +394,14 @@ Common priority intervention names:
 
 The public portal provides an aggregate dashboard as the main entry point for exploring sitio data. This dashboard displays summary statistics and visualizations that respond to filter selections.
 
+> **Note:** By default, the dashboard shows the most recent year's data for each sitio. Users can select a specific year to view historical data.
+
 #### Dashboard Components
 
 | Component                | Description                                                    |
 | ------------------------ | -------------------------------------------------------------- |
 | Filter Context Indicator | Badge showing current filter (e.g., "Showing: Koronadal City") |
+| Year Filter              | Dropdown to select which year's data to display                |
 | Municipality Filter      | Dropdown to filter all dashboard data by municipality          |
 | Barangay Filter          | Cascading dropdown for barangay (dependent on municipality)    |
 | View List Button         | Navigate to detailed sitio list with current filters preserved |
@@ -436,7 +478,14 @@ End
 
 ### 4.3 Sitio Profile View
 
-The public can view comprehensive sitio profiles organized into sections:
+The public can view comprehensive sitio profiles organized into sections.
+
+> **Yearly Data Display:**
+>
+> - By default, the most recent year's data is displayed
+> - Users can select different years from a dropdown to view historical data
+> - If no data exists for a selected year, a message indicates "No data available for [year]"
+> - A timeline or year selector shows which years have available data
 
 #### Overview Section
 
@@ -550,18 +599,51 @@ Administrators can create, edit, and delete sitio records through a multi-step f
 > - **Array inputs** - Water sources with add/remove functionality
 > - **Object inputs** - Nested structures like facilities, health concerns
 
-#### 4.5.1 Create Sitio
+> **Yearly Data Management:**
+>
+> - When creating or editing a sitio, users must specify which year the data represents
+> - Users can add multiple yearly snapshots for the same sitio
+> - Each yearly snapshot is stored independently
+> - Historical data remains accessible and cannot be accidentally overwritten
+
+#### 4.5.1 Add Sitio / Add Yearly Data
 
 ```
 Start
   │
   ▼
-Enter Basic Sitio Details
+Check if Sitio Exists
   │
-  ├──▶ Municipality, Barangay, Sitio Name, Coding
-  ├──▶ Coordinates (Latitude, Longitude)
-  ├──▶ Visit Information
-  └──▶ Classification & Access
+  ├── New Sitio ───▶ Enter Core Identification
+  │                   │
+  │                   ├──▶ Municipality, Barangay, Sitio Name
+  │                   ├──▶ Sitio Code (optional)
+  │                   ├──▶ Coordinates (Latitude, Longitude)
+  │                   │
+  │                   ▼
+  │                Select Year for Data Entry
+  │                   │
+  │                   ▼
+  │                Continue to Data Entry ───┐
+  │                                         │
+  └── Existing Sitio ───▶ Display Core Info  │
+                          │                 │
+                          ▼                 │
+                       Select Year          │
+                          │                 │
+                          ├── Year Has Data ───▶ Confirm Overwrite?
+                          │                      │
+                          │                      ├── Yes ───┐
+                          │                      │         │
+                          │                      └── No ────▶ Cancel
+                          │                                  │
+                          └── Year Empty ──────────────────────┤
+                                                             │
+                                                             ▼
+  ┌──────────────────────────────────────────────────────────┘
+  │
+  ▼
+Enter Classification & Access
   │
   ▼
 Enter Demographics Data
@@ -632,13 +714,16 @@ Enter Community Priorities
 Validate Data
   │
   ▼
-Save Sitio
+Save Yearly Snapshot
+  │
+  ├──▶ If new sitio: Save core identification + yearly data
+  └──▶ If existing: Save/update yearly data only
   │
   ▼
 End
 ```
 
-#### 4.5.2 Edit Sitio
+#### 4.5.2 Edit Sitio Data
 
 ```
 Start
@@ -647,25 +732,39 @@ Start
 Select Sitio from List
   │
   ▼
-Open Sitio Details
+View Available Years
   │
-  ▼
-Modify Information
+  ├── Edit Core Information ──▶ Update permanent fields
+  │                              │
+  │                              ├──▶ Municipality, Barangay, Name
+  │                              ├──▶ Coordinates
+  │                              └──▶ Changes tracked for audit
+  │                                   │
+  │                                   ▼
+  │                                 Save Core Info
+  │                                   │
+  │                                   ▼
+  │                                  End
   │
-  ├──▶ Update any section (Basic, Demographics, etc.)
-  └──▶ Changes tracked for audit trail
-  │
-  ▼
-Validate Changes
-  │
-  ▼
-Save Sitio
-  │
-  ▼
-End
+  └── Edit Yearly Data ──▶ Select Year to Edit
+                            │
+                            ▼
+                         Modify Information
+                            │
+                            ├──▶ Update any section (Demographics, etc.)
+                            └──▶ Changes tracked for audit trail
+                            │
+                            ▼
+                         Validate Changes
+                            │
+                            ▼
+                         Save Yearly Data
+                            │
+                            ▼
+                           End
 ```
 
-#### 4.5.3 Delete Sitio
+#### 4.5.3 Delete Sitio Data
 
 ```
 Start
@@ -674,27 +773,49 @@ Start
 Select Sitio from List
   │
   ▼
-Check for Dependencies
+Choose Delete Action
   │
-  ├── Has Projects ──▶ Cannot Delete (show warning)
-  │                      │
-  │                      ▼
-  │                    End
+  ├── Delete Yearly Data ──▶ Select Year to Delete
+  │                           │
+  │                           ▼
+  │                        Confirm Deletion
+  │                           │
+  │                           ├── Yes ──▶ Delete Year Data
+  │                           │              │
+  │                           │              ▼
+  │                           │           End
+  │                           │
+  │                           └── No ───▶ Cancel
+  │                                        │
+  │                                        ▼
+  │                                       End
   │
-  └── No Projects ──▶ Confirm Deletion
-                        │
-                        ├── Yes ──▶ Delete Sitio
-                        │              │
-                        │              ▼
-                        │           End
-                        │
-                        └── No ───▶ Cancel
-                                     │
-                                     ▼
-                                    End
+  └── Delete Entire Sitio ──▶ Check for Dependencies
+                                │
+                                ├── Has Projects ──▶ Cannot Delete (warning)
+                                │                      │
+                                │                      ▼
+                                │                    End
+                                │
+                                └── No Projects ──▶ Confirm Deletion
+                                                     │
+                                                     ├── Yes ──▶ Delete Sitio
+                                                     │           (all years)
+                                                     │              │
+                                                     │              ▼
+                                                     │           End
+                                                     │
+                                                     └── No ───▶ Cancel
+                                                                  │
+                                                                  ▼
+                                                                 End
 ```
 
-**Note:** A sitio cannot be deleted if it has associated projects. All project associations must be removed first.
+**Notes:**
+
+- Individual yearly data can be deleted without removing the entire sitio
+- The entire sitio (core identification + all yearly data) cannot be deleted if it has associated projects
+- Deleting yearly data is tracked in the audit trail
 
 ---
 
@@ -770,6 +891,13 @@ When a record is updated, the system captures the specific field changes:
 | **Sitio**     | `create`, `update`, `delete`, `view`  |
 | **User**      | `create`, `update`, `delete`          |
 
+**Note for Sitio Operations:**
+
+- `create` - Used when creating a new sitio (core identification) or adding first yearly data
+- `update` - Used when editing core identification or updating/adding yearly snapshot data
+- `delete` - Used when deleting yearly data or entire sitio record
+- The audit trail should specify which year's data was affected in the `details` field
+
 ### 5.7 Audit Log Retention
 
 | Rule             | Description                                          |
@@ -809,7 +937,7 @@ When a record is updated, the system captures the specific field changes:
 
 ### 7.1 Sitio Data Rules
 
-#### Required Fields
+#### Core Identification Validation
 
 | Field        | Rule                                                  |
 | ------------ | ----------------------------------------------------- |
@@ -819,6 +947,19 @@ When a record is updated, the system captures the specific field changes:
 | sitioCode    | Optional, max 50 characters                           |
 | latitude     | Required, must be valid decimal degrees (-90 to 90)   |
 | longitude    | Required, must be valid decimal degrees (-180 to 180) |
+
+**Uniqueness Constraint:**
+
+- The combination of (municipality + barangay + sitioName) must be unique across all sitios
+- This prevents duplicate sitio entries
+
+#### Yearly Data Validation
+
+| Field | Rule                                                            |
+| ----- | --------------------------------------------------------------- |
+| year  | Required, must be a valid 4-digit year (e.g., 2024, 2025)       |
+| year  | Cannot be a future year beyond current year                     |
+| year  | Must be unique for each sitio (one snapshot per sitio per year) |
 
 #### Demographics Validation
 
