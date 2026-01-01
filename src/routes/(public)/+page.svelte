@@ -3,7 +3,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import Separator from '$lib/components/ui/separator/separator.svelte';
 	import { stats } from '$lib/mock-data';
-	import { ArrowRight, Database, Lightbulb, MapPin, Search, Target, Users } from '@lucide/svelte';
+	import { ArrowRight, Database, MapPin, Search, Target, Users } from '@lucide/svelte';
 
 	// Format large numbers
 	function formatNumber(num: number): string {
@@ -50,12 +50,13 @@
 			description:
 				'Access detailed demographic, infrastructure, and socioeconomic data about vulnerable communities across South Cotabato.'
 		},
-		{
-			icon: Lightbulb,
-			title: 'Smart Recommendations',
-			description:
-				"Data-driven recommendations for Programs, Projects, and Activities (PPAs) tailored to each community's specific needs."
-		},
+		// FUTURE FEATURE: Uncomment when recommendation system is ready
+		// {
+		// 	icon: Lightbulb,
+		// 	title: 'Smart Recommendations',
+		// 	description:
+		// 		"Data-driven recommendations for Programs, Projects, and Activities (PPAs) tailored to each community's specific needs."
+		// },
 		{
 			icon: Search,
 			title: 'Transparent & Accessible',
@@ -91,8 +92,8 @@
 					<span class="block text-primary">Convergence Data Bank</span>
 				</h1>
 				<p class="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl">
-					Comprehensive profiles of vulnerable communities with data-driven recommendations for
-					development programs, projects, and activities.
+					Comprehensive profiles of vulnerable communities to support data-driven development
+					programs, projects, and activities.
 				</p>
 				<div class="flex flex-col justify-center gap-3 sm:flex-row">
 					<Button href="/sitios" size="lg" class="gap-2">
@@ -100,10 +101,11 @@
 						Explore Sitios
 						<ArrowRight class="size-4" />
 					</Button>
-					<Button href="/recommendations" variant="outline" size="lg" class="gap-2">
+					<!-- FUTURE FEATURE: Uncomment when recommendation system is ready -->
+					<!-- <Button href="/recommendations" variant="outline" size="lg" class="gap-2">
 						<Lightbulb class="size-5" />
 						View Recommendations
-					</Button>
+					</Button> -->
 				</div>
 			</div>
 		</div>
@@ -142,11 +144,11 @@
 				<h2 class="mb-4 text-3xl font-bold">Empowering Communities Through Data</h2>
 				<p class="text-lg text-muted-foreground">
 					The Convergence Data Bank provides comprehensive information about vulnerable communities
-					and intelligent recommendations to guide development initiatives.
+					to guide development initiatives.
 				</p>
 			</div>
 
-			<div class="grid gap-6 md:grid-cols-3">
+			<div class="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
 				{#each features as feature}
 					<Card.Root class="text-center">
 						<Card.Content class="pt-6">
@@ -170,13 +172,13 @@
 			<div class="mx-auto mb-12 max-w-2xl text-center">
 				<h2 class="mb-4 text-3xl font-bold">Explore the System</h2>
 				<p class="text-lg text-muted-foreground">
-					Two powerful modules working together to support community development in South Cotabato.
+					Comprehensive community data to support development initiatives in South Cotabato.
 				</p>
 			</div>
 
-			<div class="grid gap-6 md:grid-cols-2">
+			<div class="mx-auto max-w-3xl">
 				<a href="/sitios" class="group">
-					<Card.Root class="h-full transition-shadow hover:shadow-lg">
+					<Card.Root class="transition-shadow hover:shadow-lg">
 						<Card.Content class="p-8">
 							<div
 								class="mb-6 flex size-16 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20"
@@ -212,7 +214,8 @@
 					</Card.Root>
 				</a>
 
-				<a href="/recommendations" class="group">
+				<!-- FUTURE FEATURE: Uncomment when recommendation system is ready -->
+				<!-- <a href="/recommendations" class="group">
 					<Card.Root class="h-full transition-shadow hover:shadow-lg">
 						<Card.Content class="p-8">
 							<div
@@ -247,7 +250,7 @@
 							</div>
 						</Card.Content>
 					</Card.Root>
-				</a>
+				</a> -->
 			</div>
 		</div>
 	</section>

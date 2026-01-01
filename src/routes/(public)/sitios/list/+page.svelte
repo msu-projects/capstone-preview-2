@@ -9,7 +9,19 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import type { SitioProfile, SitioRecord } from '$lib/types';
 	import { loadSitios } from '$lib/utils/storage';
-	import { ArrowLeft, ArrowRight, Grid3x3, Lightbulb, List, MapPin, Search } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		ArrowRight,
+		Grid3x3,
+		Home,
+		Lightbulb,
+		List,
+		MapPin,
+		Search,
+		Signal,
+		Users,
+		Zap
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	let sitios = $state<SitioRecord[]>([]);
@@ -21,6 +33,49 @@
 	let currentPage = $state(1);
 	let viewMode = $state<'grid' | 'list'>('grid');
 	const itemsPerPage = 12;
+
+	/**
+	 * Get the need score badge variant and color based on score
+	 */
+	function getNeedScoreStyle(score: number): {
+		variant: 'default' | 'secondary' | 'destructive' | 'outline';
+		class: string;
+		label: string;
+	} {
+		if (score >= 2.5) {
+			return {
+				variant: 'destructive',
+				class: 'bg-red-500 hover:bg-red-600 text-white',
+				label: 'Critical'
+			};
+		} else if (score >= 2) {
+			return {
+				variant: 'default',
+				class: 'bg-orange-500 hover:bg-orange-600 text-white',
+				label: 'High'
+			};
+		} else if (score >= 1.5) {
+			return {
+				variant: 'default',
+				class: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+				label: 'Medium'
+			};
+		} else {
+			return {
+				variant: 'secondary',
+				class: 'bg-green-500 hover:bg-green-600 text-white',
+				label: 'Low'
+			};
+		}
+	}
+
+	/**
+	 * Calculate percentage safely
+	 */
+	function calcPercent(value: number, total: number): number {
+		if (total === 0) return 0;
+		return Math.round((value / total) * 100);
+	}
 
 	// Derived values for filter options
 	let uniqueMunicipalities = $derived(
@@ -171,7 +226,7 @@
 						</p>
 					</div>
 				</div>
-				<div class="flex gap-2">
+				<div class="hidden gap-2">
 					<Button href="/recommendations" variant="outline" class="gap-2">
 						<Lightbulb class="size-4" />
 						<span class="hidden sm:inline">Find Recommendations</span>
@@ -185,7 +240,7 @@
 	<section class="container mx-auto px-4 py-6">
 		<!-- Filters -->
 		<Card.Root class="mb-6 shadow-sm">
-			<Card.Content class="pt-6">
+			<Card.Content class="">
 				<div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div class="flex flex-1 flex-wrap gap-3">
 						<!-- Search -->
@@ -312,20 +367,32 @@
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 				{#each Array(8) as _}
 					<Card.Root class="overflow-hidden">
-						<Card.Content class="pt-5">
-							<div class="mb-3 flex items-start justify-between">
-								<div class="space-y-2">
+						<Card.Content class="p-0">
+							<!-- Header skeleton -->
+							<div
+								class="flex items-start justify-between border-b border-slate-100 p-4 dark:border-slate-800"
+							>
+								<div class="flex-1 space-y-2">
 									<Skeleton class="h-5 w-32" />
-									<Skeleton class="h-4 w-24" />
+									<Skeleton class="h-4 w-40" />
 								</div>
-								<Skeleton class="h-5 w-16" />
+								<Skeleton class="h-6 w-10 rounded-full" />
 							</div>
-							<div class="grid grid-cols-3 gap-2">
-								{#each Array(3) as _}
-									<Skeleton class="h-16 w-full rounded-lg" />
-								{/each}
+							<!-- Stats skeleton -->
+							<div class="grid grid-cols-2 gap-3 p-4">
+								<Skeleton class="h-24 w-full rounded-lg" />
+								<Skeleton class="h-24 w-full rounded-lg" />
 							</div>
-							<Skeleton class="mt-4 h-9 w-full" />
+							<!-- Indicators skeleton -->
+							<div class="space-y-2 border-t border-slate-100 px-4 pt-3 pb-2 dark:border-slate-800">
+								<Skeleton class="h-4 w-full" />
+								<Skeleton class="h-4 w-full" />
+								<Skeleton class="h-4 w-full" />
+							</div>
+							<!-- Link skeleton -->
+							<div class="border-t border-slate-100 px-4 py-3 dark:border-slate-800">
+								<Skeleton class="h-5 w-24" />
+							</div>
 						</Card.Content>
 					</Card.Root>
 				{/each}
@@ -335,12 +402,14 @@
 			<Card.Root class="py-12 text-center">
 				<Card.Content>
 					<div
-						class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-slate-100"
+						class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800"
 					>
-						<MapPin class="size-6 text-slate-400" />
+						<MapPin class="size-6 text-slate-400 dark:text-slate-500" />
 					</div>
-					<h3 class="text-lg font-semibold text-slate-900">No Sitios Found</h3>
-					<p class="mt-1 text-slate-500">Try adjusting your search or filter criteria.</p>
+					<h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">No Sitios Found</h3>
+					<p class="mt-1 text-slate-500 dark:text-slate-400">
+						Try adjusting your search or filter criteria.
+					</p>
 					<Button
 						variant="outline"
 						class="mt-4"
@@ -358,9 +427,231 @@
 		{:else}
 			<!-- Sitios Grid View -->
 			{#if viewMode === 'grid'}
-				<!-- Grid View -->
+				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+					{#each paginatedSitios as sitio (sitio.coding)}
+						{@const latestData = getLatestData(sitio)}
+						{@const needStyle = getNeedScoreStyle(latestData?.averageNeedScore ?? 0)}
+						{@const toiletPercent = calcPercent(
+							latestData?.householdsWithToilet ?? 0,
+							latestData?.totalHouseholds ?? 1
+						)}
+						{@const electricityPercent = calcPercent(
+							latestData?.householdsWithElectricity ?? 0,
+							latestData?.totalHouseholds ?? 1
+						)}
+						{@const signalLevel = latestData?.mobileSignal ?? 'none'}
+						<Card.Root
+							class="group overflow-hidden border-slate-200 py-0 transition-all hover:border-blue-300 hover:shadow-md dark:border-slate-700 dark:hover:border-blue-700"
+						>
+							<Card.Content class="p-0">
+								<!-- Header with name and need score -->
+								<div
+									class="flex items-start justify-between border-b border-slate-100 p-4 dark:border-slate-800"
+								>
+									<div class="min-w-0 flex-1">
+										<h3
+											class="truncate font-semibold text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400"
+										>
+											{sitio.sitioName}
+										</h3>
+										<p
+											class="mt-0.5 flex items-center gap-1 truncate text-sm text-slate-500 dark:text-slate-400"
+										>
+											<MapPin class="size-3 shrink-0" />
+											<span class="truncate"
+												>{sitio.barangay}, {sitio.municipality.toUpperCase()}</span
+											>
+										</p>
+									</div>
+									<Badge class="{needStyle.class} ml-2 shrink-0">
+										{(latestData?.averageNeedScore ?? 0).toFixed(1)}
+									</Badge>
+								</div>
+
+								<!-- Stats Grid -->
+								<div class="grid grid-cols-2 gap-3 p-4">
+									<!-- Population -->
+									<div
+										class="flex flex-col items-center rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30"
+									>
+										<div
+											class="mb-1.5 flex size-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50"
+										>
+											<Users class="size-4 text-blue-600 dark:text-blue-400" />
+										</div>
+										<span class="text-lg font-bold text-slate-900 dark:text-slate-100">
+											{(latestData?.totalPopulation ?? 0).toLocaleString()}
+										</span>
+										<span class="text-xs text-slate-500 dark:text-slate-400">Population</span>
+									</div>
+
+									<!-- Households -->
+									<div
+										class="flex flex-col items-center rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30"
+									>
+										<div
+											class="mb-1.5 flex size-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50"
+										>
+											<Home class="size-4 text-emerald-600 dark:text-emerald-400" />
+										</div>
+										<span class="text-lg font-bold text-slate-900 dark:text-slate-100">
+											{(latestData?.totalHouseholds ?? 0).toLocaleString()}
+										</span>
+										<span class="text-xs text-slate-500 dark:text-slate-400">Households</span>
+									</div>
+								</div>
+
+								<!-- Indicators -->
+								<div
+									class="space-y-2 border-t border-slate-100 px-4 pt-3 pb-2 dark:border-slate-800"
+								>
+									<!-- Toilet Access -->
+									<div class="flex items-center justify-between text-sm">
+										<span class="text-slate-500 dark:text-slate-400">🚽 Toilet Access</span>
+										<span class="font-medium text-slate-700 dark:text-slate-300"
+											>{toiletPercent}%</span
+										>
+									</div>
+
+									<!-- Electricity -->
+									<div class="flex items-center justify-between text-sm">
+										<span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+											<Zap class="size-3.5 text-yellow-500" />
+											Electricity
+										</span>
+										<span class="font-medium text-slate-700 dark:text-slate-300"
+											>{electricityPercent}%</span
+										>
+									</div>
+
+									<!-- Mobile Signal -->
+									<div class="flex items-center justify-between text-sm">
+										<span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+											<Signal class="size-3.5 text-blue-500" />
+											Signal
+										</span>
+										<span class="font-medium text-slate-700 uppercase dark:text-slate-300"
+											>{signalLevel === 'none' ? 'None' : signalLevel}</span
+										>
+									</div>
+								</div>
+
+								<!-- View Profile Link -->
+								<a
+									href="/sitios/{sitio.id}"
+									class="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-slate-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+								>
+									<span>View Profile</span>
+									<ArrowRight class="size-4" />
+								</a>
+							</Card.Content>
+						</Card.Root>
+					{/each}
+				</div>
 			{:else}
 				<!-- List View -->
+				<div class="space-y-3">
+					{#each paginatedSitios as sitio (sitio.coding)}
+						{@const latestData = getLatestData(sitio)}
+						{@const needStyle = getNeedScoreStyle(latestData?.averageNeedScore ?? 0)}
+						{@const toiletPercent = calcPercent(
+							latestData?.householdsWithToilet ?? 0,
+							latestData?.totalHouseholds ?? 1
+						)}
+						{@const electricityPercent = calcPercent(
+							latestData?.householdsWithElectricity ?? 0,
+							latestData?.totalHouseholds ?? 1
+						)}
+						{@const signalLevel = latestData?.mobileSignal ?? 'none'}
+						<Card.Root
+							class="group overflow-hidden border-slate-200 transition-all hover:border-blue-300 hover:shadow-md dark:border-slate-700 dark:hover:border-blue-700"
+						>
+							<Card.Content class="p-0">
+								<div class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+									<!-- Left: Name & Location -->
+									<div class="flex items-center gap-4">
+										<Badge class="{needStyle.class} shrink-0">
+											{(latestData?.averageNeedScore ?? 0).toFixed(1)}
+										</Badge>
+										<div class="min-w-0">
+											<h3
+												class="font-semibold text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400"
+											>
+												{sitio.sitioName}
+											</h3>
+											<p class="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+												<MapPin class="size-3 shrink-0" />
+												{sitio.barangay}, {sitio.municipality.toUpperCase()}
+											</p>
+										</div>
+									</div>
+
+									<!-- Middle: Stats -->
+									<div class="flex flex-wrap items-center gap-4 sm:gap-6">
+										<div class="flex items-center gap-2">
+											<div
+												class="flex size-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50"
+											>
+												<Users class="size-4 text-blue-600 dark:text-blue-400" />
+											</div>
+											<div class="text-sm">
+												<div class="font-semibold text-slate-900 dark:text-slate-100">
+													{(latestData?.totalPopulation ?? 0).toLocaleString()}
+												</div>
+												<div class="text-xs text-slate-500 dark:text-slate-400">Population</div>
+											</div>
+										</div>
+
+										<div class="flex items-center gap-2">
+											<div
+												class="flex size-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50"
+											>
+												<Home class="size-4 text-emerald-600 dark:text-emerald-400" />
+											</div>
+											<div class="text-sm">
+												<div class="font-semibold text-slate-900 dark:text-slate-100">
+													{(latestData?.totalHouseholds ?? 0).toLocaleString()}
+												</div>
+												<div class="text-xs text-slate-500 dark:text-slate-400">Households</div>
+											</div>
+										</div>
+
+										<div class="hidden items-center gap-4 text-sm lg:flex">
+											<div class="text-center">
+												<div class="font-medium text-slate-700 dark:text-slate-300">
+													{toiletPercent}%
+												</div>
+												<div class="text-xs text-slate-500 dark:text-slate-400">Toilet</div>
+											</div>
+											<div class="text-center">
+												<div class="font-medium text-slate-700 dark:text-slate-300">
+													{electricityPercent}%
+												</div>
+												<div class="text-xs text-slate-500 dark:text-slate-400">Electricity</div>
+											</div>
+											<div class="text-center">
+												<div class="font-medium text-slate-700 uppercase dark:text-slate-300">
+													{signalLevel === 'none' ? '—' : signalLevel}
+												</div>
+												<div class="text-xs text-slate-500 dark:text-slate-400">Signal</div>
+											</div>
+										</div>
+									</div>
+
+									<!-- Right: Action -->
+									<Button
+										href="/sitios/{sitio.coding}"
+										variant="ghost"
+										class="gap-1 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/30"
+									>
+										View Profile
+										<ArrowRight class="size-4" />
+									</Button>
+								</div>
+							</Card.Content>
+						</Card.Root>
+					{/each}
+				</div>
 			{/if}
 
 			<!-- Pagination -->
