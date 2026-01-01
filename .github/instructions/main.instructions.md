@@ -2,7 +2,7 @@
 applyTo: '**'
 ---
 
-- use @lucide/svelte (it is imported like this `import { FileQuestionMark, type Icon as IconType } from '@lucide/svelte';`)
+- always use @lucide/svelte for icons
 - use shadcn-svelte (use shadcn mcp)
 - use svelte-mcp for more context about svelte
 - use context7-mcp for more context about things you dont fully understand
@@ -12,3 +12,6 @@ applyTo: '**'
 - make sure to keep all views light and dark mode friendly, based on the user's system settings.
 - reference the docs/project-process-overview.md for more details about the project
 - reference the .github/frontend-designer-skill.md if you are designing the frontend.
+- note that docs/project-process-overview.md is the single source of truth of the project, the project must always be consistent with what the docs/project-process-overview.md described.
+- the truth heirarchy:
+  docs/project-process-overview.md > types > project files
