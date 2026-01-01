@@ -4,12 +4,10 @@
 	import type { SitioRecord } from '$lib/types';
 	import {
 		aggregateCoordinates,
-		aggregateRecommendations,
 		getDataForYearOrLatest,
-		type CoordinatesAggregation,
-		type RecommendationsAggregation
+		type CoordinatesAggregation
 	} from '$lib/utils/sitio-chart-aggregation';
-	import { Info, MapPin } from '@lucide/svelte';
+	import { Layers, Map, MapPin, MapPinned, Navigation } from '@lucide/svelte';
 
 	interface Props {
 		sitios: SitioRecord[];
@@ -19,11 +17,8 @@
 
 	let { sitios, selectedYear, onSitioClick }: Props = $props();
 
-	// Aggregated data (using selected year)
+	// Aggregated coordinates data
 	const coordinates = $derived<CoordinatesAggregation>(aggregateCoordinates(sitios, selectedYear));
-	const recommendations = $derived<RecommendationsAggregation>(
-		aggregateRecommendations(sitios, selectedYear)
-	);
 
 	// Prepare markers with classifications
 	const markers = $derived(
@@ -45,9 +40,22 @@
 			.filter((m): m is NonNullable<typeof m> => m !== null)
 	);
 
-	// Stats for the legend
-	const markerStats = $derived({
-		total: markers.length
+	// Classification counts
+	const classificationCounts = $derived(() => {
+		const counts = { gida: 0, ip: 0, conflict: 0, none: 0 };
+		markers.forEach((marker) => {
+			if (marker.classification?.gida) counts.gida++;
+			if (marker.classification?.indigenous) counts.ip++;
+			if (marker.classification?.conflict) counts.conflict++;
+			if (
+				!marker.classification?.gida &&
+				!marker.classification?.indigenous &&
+				!marker.classification?.conflict
+			) {
+				counts.none++;
+			}
+		});
+		return counts;
 	});
 
 	function handleMarkerClick(marker: { id: number }) {
@@ -55,93 +63,142 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<!-- Map Info Cards -->
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		<Card.Root class="bg-slate-50 dark:bg-slate-800/50">
-			<Card.Content class="flex items-center gap-3 p-4">
-				<div class="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-					<MapPin class="size-5 text-blue-600 dark:text-blue-400" />
-				</div>
-				<div>
-					<p class="text-2xl font-bold text-slate-900 dark:text-slate-100">{markerStats.total}</p>
-					<p class="text-sm text-slate-500 dark:text-slate-400">Sitios on Map</p>
-				</div>
-			</Card.Content>
-		</Card.Root>
+<div class="space-y-4">
+	<!-- Stats Row -->
+	<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+		<div
+			class="flex items-center gap-3 rounded-xl border border-slate-200 bg-linear-to-br from-blue-50 to-white p-3 shadow-sm dark:border-slate-700 dark:from-blue-950/30 dark:to-slate-900"
+		>
+			<div class="rounded-lg bg-blue-500/10 p-2">
+				<MapPinned class="size-5 text-blue-600 dark:text-blue-400" />
+			</div>
+			<div>
+				<p class="text-xl font-bold text-slate-900 dark:text-slate-100">{markers.length}</p>
+				<p class="text-xs text-slate-500 dark:text-slate-400">Mapped Sitios</p>
+			</div>
+		</div>
+
+		<div
+			class="flex items-center gap-3 rounded-xl border border-slate-200 bg-linear-to-br from-amber-50 to-white p-3 shadow-sm dark:border-slate-700 dark:from-amber-950/30 dark:to-slate-900"
+		>
+			<div class="rounded-lg bg-amber-500/10 p-2">
+				<Navigation class="size-5 text-amber-600 dark:text-amber-400" />
+			</div>
+			<div>
+				<p class="text-xl font-bold text-slate-900 dark:text-slate-100">
+					{classificationCounts().gida}
+				</p>
+				<p class="text-xs text-slate-500 dark:text-slate-400">GIDA Areas</p>
+			</div>
+		</div>
+
+		<div
+			class="flex items-center gap-3 rounded-xl border border-slate-200 bg-linear-to-br from-indigo-50 to-white p-3 shadow-sm dark:border-slate-700 dark:from-indigo-950/30 dark:to-slate-900"
+		>
+			<div class="rounded-lg bg-indigo-500/10 p-2">
+				<Layers class="size-5 text-indigo-600 dark:text-indigo-400" />
+			</div>
+			<div>
+				<p class="text-xl font-bold text-slate-900 dark:text-slate-100">
+					{classificationCounts().ip}
+				</p>
+				<p class="text-xs text-slate-500 dark:text-slate-400">IP Communities</p>
+			</div>
+		</div>
+
+		<div
+			class="flex items-center gap-3 rounded-xl border border-slate-200 bg-linear-to-br from-rose-50 to-white p-3 shadow-sm dark:border-slate-700 dark:from-rose-950/30 dark:to-slate-900"
+		>
+			<div class="rounded-lg bg-rose-500/10 p-2">
+				<MapPin class="size-5 text-rose-600 dark:text-rose-400" />
+			</div>
+			<div>
+				<p class="text-xl font-bold text-slate-900 dark:text-slate-100">
+					{classificationCounts().conflict}
+				</p>
+				<p class="text-xs text-slate-500 dark:text-slate-400">Conflict Areas</p>
+			</div>
+		</div>
 	</div>
 
-	<!-- Main Map -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title class="flex items-center gap-2 text-base">
-				<MapPin class="size-5 text-blue-500" />
-				Sitio Locations Map
-			</Card.Title>
-			<Card.Description>
-				Geographic distribution of sitios. Click on markers for details.
+	<!-- Main Map Card -->
+	<Card.Root class="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+		<Card.Header
+			class="border-b border-slate-100 bg-slate-50/50 pb-3 dark:border-slate-800 dark:bg-slate-800/50"
+		>
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<div class="rounded-lg bg-blue-500/10 p-1.5">
+						<Map class="size-4 text-blue-600 dark:text-blue-400" />
+					</div>
+					<Card.Title class="text-base font-semibold">Geographic Distribution</Card.Title>
+				</div>
+				{#if markers.length > 0}
+					<span
+						class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+					>
+						{markers.length} location{markers.length !== 1 ? 's' : ''}
+					</span>
+				{/if}
+			</div>
+			<Card.Description class="mt-1 text-xs">
+				Interactive map showing sitio locations. Click markers for details.
 			</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="p-0">
 			{#if markers.length > 0}
-				<SitioClusterMap
-					{markers}
-					bounds={coordinates.bounds}
-					center={coordinates.center}
-					height="500px"
-					onMarkerClick={handleMarkerClick}
-				/>
+				<div class="relative">
+					<SitioClusterMap
+						{markers}
+						bounds={coordinates.bounds}
+						center={coordinates.center}
+						height="480px"
+						onMarkerClick={handleMarkerClick}
+					/>
+					<!-- Floating Legend -->
+					<div
+						class="absolute bottom-4 left-4 z-1000 rounded-lg border border-slate-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95"
+					>
+						<p class="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+							Marker Colors
+						</p>
+						<div class="flex flex-col gap-1.5">
+							<div class="flex items-center gap-2">
+								<div class="h-4 w-4 rounded-full bg-red-500"></div>
+								<span class="text-xs text-slate-600 dark:text-slate-300">Conflict Affected</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<div class="h-4 w-4 rounded-full bg-orange-500"></div>
+								<span class="text-xs text-slate-600 dark:text-slate-300"
+									>Geographically Isolated (GIDA)</span
+								>
+							</div>
+							<div class="flex items-center gap-2">
+								<div class="h-4 w-4 rounded-full bg-violet-500"></div>
+								<span class="text-xs text-slate-600 dark:text-slate-300"
+									>Indigenous Peoples (IP)</span
+								>
+							</div>
+							<div class="flex items-center gap-2">
+								<div class="h-4 w-4 rounded-full bg-blue-500"></div>
+								<span class="text-xs text-slate-600 dark:text-slate-300">Standard</span>
+							</div>
+						</div>
+					</div>
+				</div>
 			{:else}
 				<div
-					class="flex h-125 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50"
+					class="flex h-96 flex-col items-center justify-center bg-linear-to-b from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900"
 				>
-					<MapPin class="size-12 text-slate-400 dark:text-slate-500" />
-					<p class="mt-4 text-slate-500 dark:text-slate-400">No sitios with coordinates found</p>
-					<p class="mt-1 text-sm text-slate-400 dark:text-slate-500">
-						Sitios need latitude/longitude data to appear on the map
+					<div class="rounded-full bg-slate-200/80 p-4 dark:bg-slate-700/50">
+						<MapPin class="size-10 text-slate-400 dark:text-slate-500" />
+					</div>
+					<p class="mt-4 font-medium text-slate-600 dark:text-slate-300">No mapped locations</p>
+					<p class="mt-1 max-w-xs text-center text-sm text-slate-400 dark:text-slate-500">
+						Sitios require latitude and longitude coordinates to appear on the map
 					</p>
 				</div>
 			{/if}
-		</Card.Content>
-	</Card.Root>
-
-	<!-- Legend -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title class="flex items-center gap-2 text-base">
-				<Info class="size-5 text-slate-500" />
-				Map Legend
-			</Card.Title>
-		</Card.Header>
-		<Card.Content>
-			<div>
-				<h4 class="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-					Classification Badges
-				</h4>
-				<div class="flex flex-wrap gap-3">
-					<div class="flex items-center gap-2">
-						<span
-							class="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-							>GIDA</span
-						>
-						<span class="text-sm text-slate-500 dark:text-slate-400">Geographically Isolated</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<span
-							class="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-							>IP</span
-						>
-						<span class="text-sm text-slate-500 dark:text-slate-400">Indigenous Peoples</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<span
-							class="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-300"
-							>Conflict</span
-						>
-						<span class="text-sm text-slate-500 dark:text-slate-400">Conflict Affected</span>
-					</div>
-				</div>
-			</div>
 		</Card.Content>
 	</Card.Root>
 </div>

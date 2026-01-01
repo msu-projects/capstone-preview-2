@@ -42,8 +42,22 @@
 	let leafletModule: typeof import('leaflet') | null = null;
 	let markerLayerGroup: import('leaflet').LayerGroup | null = null;
 
-	// Get marker color based on need score
-	function getMarkerColor(needScore?: number): string {
+	// Get marker color based on classification first, then need score
+	function getMarkerColor(
+		classification?: SitioMarker['classification'],
+		needScore?: number
+	): string {
+		// Priority: classification over need score
+		if (classification) {
+			// Multiple classifications: use red for conflict (highest priority)
+			if (classification.conflict) return 'red';
+			// Then GIDA
+			if (classification.gida) return 'orange';
+			// Then indigenous
+			if (classification.indigenous) return 'violet';
+		}
+
+		// Fall back to need score coloring
 		if (!needScore) return 'blue';
 		if (needScore >= 3.5) return 'red';
 		if (needScore >= 2.5) return 'orange';
@@ -75,7 +89,7 @@
 		for (const marker of markers) {
 			if (!marker.latitude || !marker.longitude) continue;
 
-			const color = getMarkerColor(marker.needScore);
+			const color = getMarkerColor(marker.classification, marker.needScore);
 			const customIcon = L.icon({
 				iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
 				shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
