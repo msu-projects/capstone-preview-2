@@ -2,6 +2,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioProfile } from '$lib/types';
+	import { cn } from '$lib/utils';
 	import {
 		AlertTriangle,
 		Building2,
@@ -41,44 +42,40 @@
 			: 0
 	);
 
-	// Calculate electricity source percentages
-	const electricityTotal = $derived(
-		sitio.electricitySources.grid +
-			sitio.electricitySources.solar +
-			sitio.electricitySources.battery +
-			sitio.electricitySources.generator
-	);
-
 	const electricitySources = $derived([
 		{
 			label: 'Grid',
+			count: sitio.electricitySources.grid,
 			value:
-				electricityTotal > 0
-					? Math.round((sitio.electricitySources.grid / electricityTotal) * 100)
+				sitio.totalHouseholds > 0
+					? Math.round((sitio.electricitySources.grid / sitio.totalHouseholds) * 100)
 					: 0,
 			color: 'bg-indigo-500'
 		},
 		{
 			label: 'Solar',
+			count: sitio.electricitySources.solar,
 			value:
-				electricityTotal > 0
-					? Math.round((sitio.electricitySources.solar / electricityTotal) * 100)
+				sitio.totalHouseholds > 0
+					? Math.round((sitio.electricitySources.solar / sitio.totalHouseholds) * 100)
 					: 0,
 			color: 'bg-yellow-500'
 		},
 		{
 			label: 'Battery',
+			count: sitio.electricitySources.battery,
 			value:
-				electricityTotal > 0
-					? Math.round((sitio.electricitySources.battery / electricityTotal) * 100)
+				sitio.totalHouseholds > 0
+					? Math.round((sitio.electricitySources.battery / sitio.totalHouseholds) * 100)
 					: 0,
 			color: 'bg-emerald-500'
 		},
 		{
 			label: 'Generator',
+			count: sitio.electricitySources.generator,
 			value:
-				electricityTotal > 0
-					? Math.round((sitio.electricitySources.generator / electricityTotal) * 100)
+				sitio.totalHouseholds > 0
+					? Math.round((sitio.electricitySources.generator / sitio.totalHouseholds) * 100)
 					: 0,
 			color: 'bg-orange-500'
 		}
@@ -154,7 +151,7 @@
 		{
 			icon: Car,
 			label: 'Paved',
-			description: 'Standard road access',
+			description: 'Paved road access',
 			enabled: sitio.mainAccess.pavedRoad
 		},
 		{
@@ -260,14 +257,17 @@
 					<!-- Electricity Section -->
 					<div class="flex flex-col gap-4">
 						<div title="Percentage of households with access to electricity">
-							<div class="mb-2 flex justify-between">
+							<div class="flex justify-between">
 								<span class="text-sm font-medium text-slate-700 dark:text-slate-300">
-									Electricity Access
+									Household Electricity Access
 								</span>
 								<span class="text-sm font-bold text-slate-900 dark:text-white">
 									{electricityPercent}%
 								</span>
 							</div>
+							<p class="mb-2 text-xs text-muted-foreground">
+								{sitio.householdsWithElectricity} of {sitio.totalHouseholds} households
+							</p>
 							<div class="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-700">
 								<div
 									class="h-2.5 rounded-full bg-yellow-400 transition-all duration-500"
@@ -280,11 +280,11 @@
 								<p
 									class="mb-2 text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
 								>
-									Source Breakdown
+									Source Breakdown (per Household)
 								</p>
 								<div class="space-y-2">
-									{#each electricitySources.filter((s) => s.value > 0) as source}
-										<div class="flex items-center text-xs">
+									{#each electricitySources.filter((v) => v.value > 0) as source}
+										<div class="flex items-center gap-2 text-xs">
 											<span class="w-16 text-slate-500 dark:text-slate-400">{source.label}</span>
 											<div class="mx-2 h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
 												<div
@@ -292,9 +292,12 @@
 													style="width: {source.value}%"
 												></div>
 											</div>
-											<span class="w-8 text-right font-medium text-slate-900 dark:text-white"
-												>{source.value}%</span
-											>
+											<div class="flex min-w-20 items-baseline justify-end gap-1">
+												<span class="text-[10px] text-muted-foreground">({source.count})</span>
+												<span class="font-medium text-slate-900 dark:text-white"
+													>{source.value}%</span
+												>
+											</div>
 										</div>
 									{/each}
 								</div>
@@ -344,31 +347,12 @@
 									style="width: {internetPercent}%"
 								></div>
 							</div>
-							<p class="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-								<Router class="size-3 text-slate-400" />
-								<span>Mobile data is primary source</span>
-							</p>
-						</div>
-
-						<!-- Mobile Signal -->
-						<div title="Best available mobile signal">
-							<div class="mb-2 flex justify-between">
-								<span class="text-sm font-medium text-slate-700 dark:text-slate-300">
-									Mobile Signal
-								</span>
-								<span class="text-sm font-semibold text-slate-900 dark:text-white">
-									{signalInfo().label}
-								</span>
-							</div>
-							<div class="flex items-center gap-1">
-								{#each [1, 2, 3, 4] as bar}
-									<div
-										class="h-4 w-2 rounded-sm transition-colors {bar <= signalInfo().bars
-											? 'bg-primary'
-											: 'bg-slate-200 dark:bg-slate-700'}"
-									></div>
-								{/each}
-							</div>
+							{#if internetPercent < 100}
+								<p class="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+									<AlertTriangle class="size-3 text-amber-500" />
+									<span>{100 - internetPercent}% does not have internet connectivity</span>
+								</p>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -433,7 +417,7 @@
 							<div class="col-span-3 flex flex-col items-end gap-0.5">
 								{#if road.exists === 'yes' && road.condition}
 									{@const conditionInfo = getConditionLabel(road.condition)}
-									<span class="text-[10px] font-bold {conditionInfo.class}">
+									<span class="text-xs font-bold {conditionInfo.class}">
 										{conditionInfo.text}
 									</span>
 								{:else}
@@ -562,8 +546,13 @@
 				<div class="grid grid-cols-2 gap-x-2 gap-y-6">
 					{#each accessModes as mode}
 						{@const Icon = mode.icon}
-						<div class="flex items-start gap-3">
-							<Icon class="mt-0.5 size-5 text-slate-400 dark:text-slate-500" />
+						<div class={cn('flex items-start gap-3', mode.enabled || 'opacity-30')}>
+							<Icon
+								class={cn(
+									'mt-0.5 size-5 text-slate-400 dark:text-slate-500',
+									!mode.enabled || 'text-green-400 dark:text-green-500'
+								)}
+							/>
 							<div class="flex flex-col">
 								<p class="text-sm font-bold text-slate-900 dark:text-white">{mode.label}</p>
 								<p class="text-xs leading-tight text-slate-500 dark:text-slate-400">
@@ -583,28 +572,27 @@
 			icon={Router}
 			iconBgColor="bg-slate-50 dark:bg-slate-900/20"
 			iconTextColor="text-slate-400"
+			contentPadding="px-4 py-2"
 		>
-			{#snippet children()}
-				<div class="mt-4 flex justify-between gap-1.5">
-					{#each ['2G', '3G', '4G', '5G'] as network, index}
-						{@const isActive = index + 1 <= signalInfo().bars}
-						<div class="flex flex-1 flex-col items-center gap-1.5">
-							<div
-								class="h-3 w-full rounded transition-all {isActive
-									? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
-									: 'bg-slate-100 dark:bg-slate-700'}"
-							></div>
-							<span
-								class="text-sm font-bold {isActive
-									? 'text-slate-900 dark:text-white'
-									: 'text-slate-400 dark:text-slate-500'}"
-							>
-								{network}
-							</span>
-						</div>
-					{/each}
-				</div>
-			{/snippet}
+			<div class="mt-4 flex justify-between gap-1.5">
+				{#each ['2G', '3G', '4G', '5G'] as network, index}
+					{@const isActive = index + 1 <= signalInfo().bars}
+					<div class="flex flex-1 flex-col items-center gap-1.5">
+						<div
+							class="h-3 w-full rounded transition-all {isActive
+								? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+								: 'bg-slate-100 dark:bg-slate-700'}"
+						></div>
+						<span
+							class="text-sm font-bold {isActive
+								? 'text-slate-900 dark:text-white'
+								: 'text-slate-400 dark:text-slate-500'}"
+						>
+							{network}
+						</span>
+					</div>
+				{/each}
+			</div>
 		</InfoCard>
 
 		<!-- Community Facilities Card -->
