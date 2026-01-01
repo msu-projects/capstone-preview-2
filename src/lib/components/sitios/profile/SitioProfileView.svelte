@@ -19,12 +19,20 @@
 	const { sitio, isAdminView = false }: Props = $props();
 
 	const tabs = [
-		{ id: 'overview', label: 'Overview', icon: FileText },
-		{ id: 'demographics', label: 'Demographics', icon: Users },
-		{ id: 'infrastructure', label: 'Infrastructure', icon: Home },
-		{ id: 'economy', label: 'Economy', icon: ToolCase },
-		{ id: 'assessment', label: 'Assessment', icon: Shield }
+		{ id: 'overview', label: 'Overview', icon: FileText } as const,
+		{ id: 'demographics', label: 'Demographics', icon: Users } as const,
+		{ id: 'infrastructure', label: 'Infrastructure', icon: Home } as const,
+		{ id: 'economy', label: 'Economy', icon: ToolCase } as const,
+		{ id: 'assessment', label: 'Assessment', icon: Shield } as const
 	];
+
+	type Tabs = (typeof tabs)[0]['id'];
+
+	let currentTab = $state<Tabs>('overview');
+
+	const changeTab = (t: Tabs) => {
+		currentTab = t;
+	};
 
 	const breadcrumbItems = $derived([
 		{ label: 'Home', href: isAdminView ? '/admin' : '/' },
@@ -41,7 +49,7 @@
 
 	<div class="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
 		<!-- Tabbed Content -->
-		<Tabs.Root value="overview" class="mt-5 w-full">
+		<Tabs.Root bind:value={currentTab} class="mt-5 w-full">
 			<div
 				class="sticky top-0 z-20 -mx-4 bg-linear-to-b from-slate-50 via-slate-50 to-transparent px-4 pb-2 dark:from-slate-950 dark:via-slate-950"
 			>
@@ -65,7 +73,7 @@
 
 			<div class="mt-4">
 				<Tabs.Content value="overview" class="">
-					<OverviewSection {sitio} />
+					<OverviewSection {sitio} {changeTab} />
 				</Tabs.Content>
 
 				<Tabs.Content value="demographics" class="">
