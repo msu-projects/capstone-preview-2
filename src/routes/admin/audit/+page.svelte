@@ -305,7 +305,7 @@
 					</div>
 					<div class="flex flex-wrap gap-2">
 						<Select.Root type="single" bind:value={actionFilter}>
-							<Select.Trigger class="w-[130px]">
+							<Select.Trigger class="w-32.5">
 								{actionFilter === 'all'
 									? 'All Actions'
 									: actionFilter.charAt(0).toUpperCase() + actionFilter.slice(1)}
@@ -323,7 +323,7 @@
 							</Select.Content>
 						</Select.Root>
 						<Select.Root type="single" bind:value={resourceFilter}>
-							<Select.Trigger class="w-[130px]">
+							<Select.Trigger class="w-32.5">
 								{resourceFilter === 'all'
 									? 'All Resources'
 									: resourceFilter.charAt(0).toUpperCase() + resourceFilter.slice(1)}
@@ -337,7 +337,7 @@
 							</Select.Content>
 						</Select.Root>
 						<Select.Root type="single" bind:value={userFilter}>
-							<Select.Trigger class="w-[150px]">
+							<Select.Trigger class="w-37.5">
 								{userFilter === 'all' ? 'All Users' : userFilter}
 							</Select.Trigger>
 							<Select.Content>
@@ -364,7 +364,7 @@
 				<Table.Root>
 					<Table.Header>
 						<Table.Row>
-							<Table.Head class="w-[180px]">Timestamp</Table.Head>
+							<Table.Head class="w-45">Timestamp</Table.Head>
 							<Table.Head>User</Table.Head>
 							<Table.Head>Action</Table.Head>
 							<Table.Head>Resource</Table.Head>
@@ -410,7 +410,7 @@
 										{/if}
 									</div>
 								</Table.Cell>
-								<Table.Cell class="max-w-[300px] truncate text-sm text-muted-foreground">
+								<Table.Cell class="max-w-75 truncate text-sm text-muted-foreground">
 									{log.details || '-'}
 								</Table.Cell>
 							</Table.Row>

@@ -313,7 +313,7 @@
 					</div>
 					<div class="flex gap-2">
 						<Select.Root type="single" bind:value={roleFilter}>
-							<Select.Trigger class="w-[140px]">
+							<Select.Trigger class="w-35">
 								{roleFilter === 'all'
 									? 'All Roles'
 									: roleFilter.charAt(0).toUpperCase() + roleFilter.slice(1)}
@@ -326,7 +326,7 @@
 							</Select.Content>
 						</Select.Root>
 						<Select.Root type="single" bind:value={statusFilter}>
-							<Select.Trigger class="w-[140px]">
+							<Select.Trigger class="w-35">
 								{statusFilter === 'all'
 									? 'All Status'
 									: statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
