@@ -123,7 +123,7 @@
 								class="h-9"
 							/>
 						</div>
-						<div class="max-h-[300px] overflow-y-auto">
+						<div class="max-h-75 overflow-y-auto">
 							{#if filteredMunicipalities.length === 0}
 								<div class="px-2 py-6 text-center text-sm text-muted-foreground">
 									No municipalities found
@@ -181,7 +181,7 @@
 								class="h-9"
 							/>
 						</div>
-						<div class="max-h-[300px] overflow-y-auto">
+						<div class="max-h-75 overflow-y-auto">
 							{#if !municipality}
 								<div class="px-2 py-6 text-center text-sm text-muted-foreground">
 									Please select a municipality first

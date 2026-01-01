@@ -35,7 +35,6 @@
 	};
 
 	const breadcrumbItems = $derived([
-		{ label: 'Home', href: isAdminView ? '/admin' : '/' },
 		{ label: 'Sitios', href: isAdminView ? '/admin/sitios' : '/sitios' },
 		{ label: sitio.sitioName }
 	]);
@@ -44,7 +43,7 @@
 <div
 	class="min-h-screen bg-linear-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900"
 >
-	<AppBreadcrumb items={breadcrumbItems} />
+	<AppBreadcrumb items={breadcrumbItems} {isAdminView} />
 	<SitioProfileHeader {sitio} />
 
 	<div class="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">

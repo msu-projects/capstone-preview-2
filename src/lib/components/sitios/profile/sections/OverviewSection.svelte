@@ -206,7 +206,7 @@
 				contentPadding="h-full p-0"
 			>
 				{#snippet children()}
-					{#if sitio.latitude && sitio.longitude}
+					<!-- {#if sitio.latitude && sitio.longitude}
 						<div class="absolute top-6 right-6 z-10">
 							<div
 								class="flex items-center gap-2 rounded-full border bg-white/95 px-3 py-1.5 font-mono text-xs text-slate-600 shadow-md backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-300"
@@ -215,7 +215,7 @@
 								<span>{sitio.latitude.toFixed(4)}° N, {sitio.longitude.toFixed(4)}° E</span>
 							</div>
 						</div>
-					{/if}
+					{/if} -->
 					<div class="relative h-full w-full overflow-hidden">
 						<SitioMap
 							latitude={sitio.latitude}

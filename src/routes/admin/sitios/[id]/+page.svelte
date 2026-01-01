@@ -1,12 +1,19 @@
 <script lang="ts">
-	// import { SitioProfileView } from '$lib/components/sitios/profile';
+	import { SitioProfileView } from '$lib/components/sitios/profile';
 	import { Button } from '$lib/components/ui/button';
 	import { loadSitios } from '$lib/utils/storage';
 	import { ArrowLeft } from '@lucide/svelte';
 
 	const { data } = $props<{ data: { id: string } }>();
 	const sitioId = $derived(parseInt(data?.id || '0'));
-	const sitio = $derived(loadSitios().find((s) => s.id === sitioId));
+	const sitioRecord = $derived(loadSitios().find((s) => s.id === sitioId));
+
+	// Get the latest year's data
+	const sitio = $derived.by(() => {
+		if (!sitioRecord) return null;
+		const latestYear = sitioRecord.availableYears[sitioRecord.availableYears.length - 1];
+		return sitioRecord.yearlyData[latestYear.toString()];
+	});
 </script>
 
 <svelte:head>
@@ -25,5 +32,5 @@
 		</div>
 	</div>
 {:else}
-	<!-- <SitioProfileView {sitio} isAdminView={true} /> -->
+	<SitioProfileView {sitio} isAdminView={true} />
 {/if}
