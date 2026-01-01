@@ -106,6 +106,30 @@ function canPerform(resource: keyof UserPermissions, action: 'read' | 'write' | 
 	return hasPermission(resource, action);
 }
 
+/**
+ * Check if user can edit core identifiers of a sitio
+ * Only superadmin can edit core identifiers (municipality, barangay, sitioName, coding, coordinates, classification)
+ */
+function canEditCoreIdentifiers(): boolean {
+	return isSuperadmin;
+}
+
+/**
+ * Check if user can create a new sitio entry
+ * Only superadmin can create new sitio entries
+ */
+function canCreateSitio(): boolean {
+	return isSuperadmin;
+}
+
+/**
+ * Check if user can delete yearly data for a sitio
+ * Only superadmin can delete yearly data entries
+ */
+function canDeleteYearlyData(): boolean {
+	return isSuperadmin;
+}
+
 // Log action helper (wraps audit utility with current user)
 function logAction(
 	action: AuditAction,
@@ -139,5 +163,8 @@ export const authStore = {
 	logout,
 	hasPermission,
 	canPerform,
+	canEditCoreIdentifiers,
+	canCreateSitio,
+	canDeleteYearlyData,
 	logAction
 };

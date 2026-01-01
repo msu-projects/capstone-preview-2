@@ -17,7 +17,12 @@ export type {
 } from './sitio-profile';
 
 // Sitio Storage & Multi-year Data
-export type { LocalStorageSchema, SitioRecord } from './sitio-storage';
+export type {
+	LocalStorageSchema,
+	SitioCoreIdentifier,
+	SitioEditMode,
+	SitioRecord
+} from './sitio-storage';
 
 // Progress Tracking Types
 export type { InfrastructureProgress, ProgressMetric, ProgressReport } from './progress-tracking';

@@ -1,18 +1,27 @@
 import type { SitioProfile } from './sitio-profile.js';
 
 // ==========================================
-// MULTI-YEAR DATA STRUCTURES
+// EDIT MODE TYPES
 // ==========================================
 
 /**
- * SitioRecord - Wrapper type for multi-year data storage
- * Contains static sitio information and yearly data snapshots
+ * Edit modes for sitio management
+ * - 'full': Edit core identifiers (restricted to superadmin)
+ * - 'normal': Edit yearly data only (standard edit)
  */
-export interface SitioRecord {
+export type SitioEditMode = 'full' | 'normal';
+
+// ==========================================
+// CORE IDENTIFIER TYPE
+// ==========================================
+
+/**
+ * SitioCoreIdentifier - Fields that define a sitio's identity
+ * These are permanent and only editable in full edit mode by superadmin
+ */
+export interface SitioCoreIdentifier {
 	/** Unique identifier */
 	id: number;
-
-	// Static information (doesn't change year to year)
 	/** Name of the municipality */
 	municipality: string;
 	/** Name of the barangay */
@@ -25,7 +34,6 @@ export interface SitioRecord {
 	latitude: number;
 	/** Geographical Longitude */
 	longitude: number;
-
 	/** Classification flags (generally static) */
 	sitioClassification: {
 		/** Geographically Isolated and Disadvantaged Area */
@@ -35,7 +43,17 @@ export interface SitioRecord {
 		/** Currently or recently affected by armed conflict */
 		conflict: boolean;
 	};
+}
 
+// ==========================================
+// MULTI-YEAR DATA STRUCTURES
+// ==========================================
+
+/**
+ * SitioRecord - Wrapper type for multi-year data storage
+ * Contains static sitio information and yearly data snapshots
+ */
+export interface SitioRecord extends SitioCoreIdentifier {
 	/**
 	 * Year-based data storage
 	 * Key: Year as string (e.g., "2021", "2022")

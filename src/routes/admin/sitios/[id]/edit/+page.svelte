@@ -1,17 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
-	import BasicInfoTab from '$lib/components/admin/sitios/BasicInfoTab.svelte';
 	import DemographicsSocialTab from '$lib/components/admin/sitios/DemographicsSocialTab.svelte';
 	import InfrastructureHousingTab from '$lib/components/admin/sitios/InfrastructureHousingTab.svelte';
 	import LivelihoodsEconomyTab from '$lib/components/admin/sitios/LivelihoodsEconomyTab.svelte';
 	import NeedsAssessmentTab from '$lib/components/admin/sitios/NeedsAssessmentTab.svelte';
 	import SitioImagesTab from '$lib/components/admin/sitios/SitioImagesTab.svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { FormStepper, type Step } from '$lib/components/ui/form-stepper';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import type { PriorityItem, SitioRecord } from '$lib/types';
 	import { cn } from '$lib/utils';
 	import { loadSitios, updateSitio } from '$lib/utils/storage';
@@ -22,12 +25,16 @@
 		Building,
 		Calendar,
 		CheckCircle2,
+		Copy,
 		Image,
 		Loader2,
 		MapPin,
+		Pencil,
+		Plus,
 		Save,
 		Sparkles,
 		Sprout,
+		Trash2,
 		Users,
 		X
 	} from '@lucide/svelte';
@@ -76,23 +83,16 @@
 	let selectedYear = $state<string>('');
 	let isLoading = $state(true);
 	let isSaving = $state(false);
-	let activeStep = $state('basic');
+	let activeStep = $state('demographics');
 	let cancelDialogOpen = $state(false);
+	let addYearDialogOpen = $state(false);
+	let deleteYearDialogOpen = $state(false);
 	let hasUnsavedChanges = $state(false);
+	let newYearInput = $state('');
 
-	// ===== Section A: Basic Sitio Information =====
-	let municipality = $state('');
-	let barangay = $state('');
-	let sitioName = $state('');
-	let sitioCode = $state('');
-	let latitude = $state(0);
-	let longitude = $state(0);
-	let sitioClassification = $state({
-		gida: false,
-		indigenous: false,
-		conflict: false
-	});
-	let mainAccess = $state('');
+	// Permission checks
+	const canEditCore = $derived(authStore.canEditCoreIdentifiers());
+	const canDeleteYear = $derived(authStore.canDeleteYearlyData());
 
 	// ===== Section B: Population & Demographics =====
 	let totalPopulation = $state(0);
@@ -242,24 +242,12 @@
 	>([]);
 
 	// Validation
-	const isBasicInfoValid = $derived(
-		municipality.trim() !== '' && barangay.trim() !== '' && sitioName.trim() !== ''
-	);
-
 	const isDemographicsValid = $derived(totalPopulation > 0 || totalHouseholds > 0);
 
-	const canSave = $derived(isBasicInfoValid);
+	const canSave = $derived(isDemographicsValid);
 
-	// Step configuration
+	// Step configuration - NO basic info for normal edit
 	const steps: Step[] = $derived([
-		{
-			id: 'basic',
-			label: 'Basic Information',
-			shortLabel: 'Basic Info',
-			icon: MapPin,
-			isValid: isBasicInfoValid,
-			hasError: !isBasicInfoValid && activeStep !== 'basic'
-		},
 		{
 			id: 'demographics',
 			label: 'Population & Demographics',
@@ -300,15 +288,8 @@
 		}
 	]);
 
-	// Step navigation
-	const stepOrder = [
-		'basic',
-		'demographics',
-		'livelihoods',
-		'infrastructure',
-		'needs-assessment',
-		'images'
-	];
+	// Step navigation - no basic info step
+	const stepOrder = ['demographics', 'livelihoods', 'infrastructure', 'needs-assessment', 'images'];
 	const currentStepIndex = $derived(stepOrder.indexOf(activeStep));
 	const canGoNext = $derived(currentStepIndex < stepOrder.length - 1);
 	const canGoPrevious = $derived(currentStepIndex > 0);
@@ -350,24 +331,7 @@
 		const yearData = sitio.yearlyData[selectedYear];
 		if (!yearData) return;
 
-		// Load static data from sitio record
-		municipality = sitio.municipality;
-		barangay = sitio.barangay;
-		sitioName = sitio.sitioName;
-		sitioCode = sitio.coding;
-		latitude = sitio.latitude;
-		longitude = sitio.longitude;
-		sitioClassification = { ...sitio.sitioClassification };
-
 		// Load year-specific data
-		// Main access - convert object to string for component
-		if (yearData.mainAccess) {
-			if (yearData.mainAccess.pavedRoad) mainAccess = 'paved';
-			else if (yearData.mainAccess.unpavedRoad) mainAccess = 'unpaved';
-			else if (yearData.mainAccess.footpath) mainAccess = 'footpath';
-			else if (yearData.mainAccess.boat) mainAccess = 'boat';
-		}
-
 		totalPopulation = yearData.totalPopulation || 0;
 		totalHouseholds = yearData.totalHouseholds || 0;
 		registeredVoters = yearData.registeredVoters || 0;
@@ -452,13 +416,208 @@
 	}
 
 	function handleYearChange(year: string) {
-		// if (hasUnsavedChanges) {
-		// 	// Could show a confirmation dialog here
-		// 	toast.warning('You have unsaved changes. Please save or discard before switching years.');
-		// 	return;
-		// }
 		selectedYear = year;
 		loadYearData();
+	}
+
+	function handleAddYear() {
+		const currentYear = new Date().getFullYear();
+		newYearInput = (currentYear + 1).toString();
+		addYearDialogOpen = true;
+	}
+
+	function confirmAddYear() {
+		if (!sitio) return;
+
+		const newYear = parseInt(newYearInput);
+
+		// Validation
+		if (isNaN(newYear) || newYear < 2000 || newYear > 2100) {
+			toast.error('Please enter a valid year between 2000 and 2100');
+			return;
+		}
+
+		if (sitio.availableYears.includes(newYear)) {
+			toast.error(`Data for ${newYear} already exists. Please select it from the dropdown.`);
+			return;
+		}
+
+		// Copy latest year's data as baseline
+		const latestYear = Math.max(...sitio.availableYears);
+		const latestData = sitio.yearlyData[latestYear.toString()];
+
+		// Create new year data with copied values
+		const newYearData = latestData
+			? JSON.parse(JSON.stringify(latestData))
+			: {
+					totalPopulation: 0,
+					totalHouseholds: 0,
+					registeredVoters: 0,
+					laborForceCount: 0,
+					schoolAgeChildren: 0,
+					population: { totalMale: 0, totalFemale: 0 },
+					vulnerableGroups: {
+						muslimCount: 0,
+						ipCount: 0,
+						seniorsCount: 0,
+						laborForce60to64Count: 0,
+						unemployedCount: 0,
+						noBirthCertCount: 0,
+						noNationalIDCount: 0,
+						outOfSchoolYouth: 0
+					},
+					householdsWithToilet: 0,
+					householdsWithElectricity: 0,
+					electricitySources: { grid: 0, solar: 0, battery: 0, generator: 0 },
+					mobileSignal: 'none' as const,
+					householdsWithInternet: 0,
+					facilities: {
+						healthCenter: { exists: 'no' as const },
+						pharmacy: { exists: 'no' as const },
+						communityToilet: { exists: 'no' as const },
+						kindergarten: { exists: 'no' as const },
+						elementarySchool: { exists: 'no' as const },
+						highSchool: { exists: 'no' as const },
+						madrasah: { exists: 'no' as const },
+						market: { exists: 'no' as const }
+					},
+					infrastructure: {
+						asphalt: { exists: 'no' as const },
+						concrete: { exists: 'no' as const },
+						gravel: { exists: 'no' as const },
+						natural: { exists: 'no' as const }
+					},
+					studentsPerRoom: 'less_than_46' as const,
+					waterSources: {
+						natural: { exists: 'no' as const },
+						level1: { exists: 'no' as const },
+						level2: { exists: 'no' as const },
+						level3: { exists: 'no' as const }
+					},
+					sanitationTypes: {
+						waterSealed: false,
+						pitLatrine: false,
+						communityCR: false,
+						openDefecation: false
+					},
+					workerClass: {
+						privateHousehold: 0,
+						privateEstablishment: 0,
+						government: 0,
+						selfEmployed: 0,
+						employer: 0,
+						ofw: 0
+					},
+					averageDailyIncome: 0,
+					agriculture: {
+						numberOfFarmers: 0,
+						numberOfAssociations: 0,
+						estimatedFarmAreaHectares: 0
+					},
+					crops: [],
+					livestock: [],
+					hazards: {
+						flood: { frequency: '0' },
+						landslide: { frequency: '0' },
+						drought: { frequency: '0' },
+						earthquake: { frequency: '0' }
+					},
+					foodSecurity: 'secure' as const,
+					priorities: [
+						{ name: 'waterSystem' as const, rating: 0 },
+						{ name: 'communityCR' as const, rating: 0 },
+						{ name: 'solarStreetLights' as const, rating: 0 },
+						{ name: 'roadOpening' as const, rating: 0 },
+						{ name: 'farmTools' as const, rating: 0 },
+						{ name: 'healthServices' as const, rating: 0 },
+						{ name: 'educationSupport' as const, rating: 0 }
+					],
+					averageNeedScore: 0,
+					recommendations: []
+				};
+
+		// Update sitio record
+		const updatedYearlyData = {
+			...sitio.yearlyData,
+			[newYear.toString()]: newYearData
+		};
+
+		const newAvailableYears = [...sitio.availableYears, newYear].sort((a, b) => a - b);
+
+		const success = updateSitio(sitio.id, {
+			yearlyData: updatedYearlyData,
+			availableYears: newAvailableYears,
+			updatedAt: new Date().toISOString()
+		});
+
+		if (success) {
+			// Refresh sitio data
+			const sitios = loadSitios();
+			sitio = sitios.find((s) => s.id === sitioId) || null;
+
+			// Switch to new year
+			selectedYear = newYear.toString();
+			loadYearData();
+
+			toast.success(`Added data entry for ${newYear}`, {
+				description: latestData
+					? `Copied baseline data from ${latestYear}`
+					: 'Created with empty data'
+			});
+		} else {
+			toast.error('Failed to add new year data');
+		}
+
+		addYearDialogOpen = false;
+	}
+
+	function handleDeleteYear() {
+		if (!canDeleteYear) {
+			toast.error('You do not have permission to delete year data');
+			return;
+		}
+		deleteYearDialogOpen = true;
+	}
+
+	function confirmDeleteYear() {
+		if (!sitio || !selectedYear) return;
+
+		// Must keep at least one year
+		if (sitio.availableYears.length <= 1) {
+			toast.error('Cannot delete the last remaining year data');
+			deleteYearDialogOpen = false;
+			return;
+		}
+
+		const yearToDelete = parseInt(selectedYear);
+
+		// Remove the year from yearlyData
+		const { [selectedYear]: _, ...remainingYearlyData } = sitio.yearlyData;
+		const newAvailableYears = sitio.availableYears.filter((y) => y !== yearToDelete);
+
+		const success = updateSitio(sitio.id, {
+			yearlyData: remainingYearlyData,
+			availableYears: newAvailableYears,
+			updatedAt: new Date().toISOString()
+		});
+
+		if (success) {
+			// Refresh sitio data
+			const sitios = loadSitios();
+			sitio = sitios.find((s) => s.id === sitioId) || null;
+
+			// Switch to latest available year
+			if (sitio && sitio.availableYears.length > 0) {
+				selectedYear = Math.max(...sitio.availableYears).toString();
+				loadYearData();
+			}
+
+			toast.success(`Deleted data for ${yearToDelete}`);
+		} else {
+			toast.error('Failed to delete year data');
+		}
+
+		deleteYearDialogOpen = false;
 	}
 
 	$effect(() => {
@@ -481,29 +640,33 @@
 	}
 
 	async function handleSave() {
-		if (!sitio || !selectedYear || !isBasicInfoValid) {
-			toast.error('Please complete required fields in Basic Information');
-			activeStep = 'basic';
+		if (!sitio || !selectedYear) {
+			toast.error('No sitio or year selected');
 			return;
 		}
 
 		isSaving = true;
 
-		// Build the updated year data
+		// Get existing year data to preserve core identifiers
+		const existingYearData = sitio.yearlyData[selectedYear];
+
+		// Build the updated year data - include core identifiers from sitio record for type compatibility
 		const updatedYearData = {
-			municipality,
-			barangay,
-			sitioName,
-			sitioCode,
-			latitude,
-			longitude,
-			sitioClassification: { ...sitioClassification },
-			mainAccess: {
-				pavedRoad: mainAccess === 'paved',
-				unpavedRoad: mainAccess === 'unpaved',
-				footpath: mainAccess === 'footpath',
-				boat: mainAccess === 'boat'
+			// Core identifiers (from sitio record, not editable in normal mode)
+			municipality: sitio.municipality,
+			barangay: sitio.barangay,
+			sitioName: sitio.sitioName,
+			sitioCode: sitio.coding,
+			latitude: sitio.latitude,
+			longitude: sitio.longitude,
+			sitioClassification: { ...sitio.sitioClassification },
+			mainAccess: existingYearData?.mainAccess || {
+				pavedRoad: false,
+				unpavedRoad: false,
+				footpath: false,
+				boat: false
 			},
+			// Yearly data fields
 			totalPopulation,
 			totalHouseholds,
 			registeredVoters,
@@ -533,20 +696,13 @@
 			recommendations: JSON.parse(JSON.stringify(recommendations))
 		};
 
-		// Update the sitio record
+		// Update only the yearly data, not the core identifiers
 		const updatedYearlyData = {
 			...sitio.yearlyData,
 			[selectedYear]: updatedYearData
 		};
 
 		const success = updateSitio(sitio.id, {
-			municipality,
-			barangay,
-			sitioName,
-			coding: sitioCode,
-			latitude,
-			longitude,
-			sitioClassification: { ...sitioClassification },
 			yearlyData: updatedYearlyData,
 			updatedAt: new Date().toISOString()
 		});
@@ -558,7 +714,7 @@
 
 		if (success) {
 			toast.success('Sitio updated successfully!', {
-				description: `${sitioName} (${selectedYear}) has been updated.`
+				description: `${sitio.sitioName} (${selectedYear}) has been updated.`
 			});
 			hasUnsavedChanges = false;
 
@@ -585,9 +741,6 @@
 	// Track changes
 	$effect(() => {
 		// This will trigger on any form field change
-		municipality;
-		barangay;
-		sitioName;
 		totalPopulation;
 		totalHouseholds;
 		if (sitio && selectedYear) {
@@ -597,7 +750,7 @@
 </script>
 
 <svelte:head>
-	<title>Edit {sitioName || 'Sitio'} - Admin</title>
+	<title>Edit {sitio?.sitioName || 'Sitio'} - Admin</title>
 </svelte:head>
 
 {#if isLoading}
@@ -620,26 +773,58 @@
 		<!-- Header -->
 		<AdminHeader
 			sticky
-			title="Edit Sitio"
-			description="Update sitio information for {selectedYear}"
-			breadcrumbs={[{ label: 'Sitios', href: '/admin/sitios' }, { label: sitioName || 'Edit' }]}
+			title="Edit Yearly Data"
+			description="Update {sitio.sitioName} data for {selectedYear}"
+			breadcrumbs={[
+				{ label: 'Sitios', href: '/admin/sitios' },
+				{ label: sitio.sitioName || 'Edit' }
+			]}
 		>
 			{#snippet badges()}
-				<!-- Year Selector -->
-				<Select.Root type="single" value={selectedYear} onValueChange={handleYearChange}>
-					<Select.Trigger class="h-8 w-28 text-xs">
-						<Calendar class="mr-1.5 size-3.5" />
-						{selectedYear}
-					</Select.Trigger>
-					<Select.Content>
-						{#each [...(sitio?.availableYears ?? [])].sort((a, b) => b - a) as year}
-							<Select.Item value={year.toString()}>{year}</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				<!-- Year Selector with Add/Delete options -->
+				<div class="flex items-center gap-2">
+					<Select.Root type="single" value={selectedYear} onValueChange={handleYearChange}>
+						<Select.Trigger class="h-8 w-28 text-xs">
+							<Calendar class="mr-1.5 size-3.5" />
+							{selectedYear}
+						</Select.Trigger>
+						<Select.Content>
+							{#each [...(sitio?.availableYears ?? [])].sort((a, b) => b - a) as year}
+								<Select.Item value={year.toString()}>{year}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+
+					<Button variant="outline" size="sm" class="h-8 gap-1.5" onclick={handleAddYear}>
+						<Plus class="size-3.5" />
+						<span class="hidden sm:inline">Add Year</span>
+					</Button>
+
+					{#if canDeleteYear && (sitio?.availableYears?.length ?? 0) > 1}
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-8 gap-1.5 text-destructive hover:bg-destructive/10"
+							onclick={handleDeleteYear}
+						>
+							<Trash2 class="size-3.5" />
+						</Button>
+					{/if}
+				</div>
 			{/snippet}
 			{#snippet actions()}
 				<div class="flex items-center gap-2">
+					<!-- {#if canEditCore && sitio}
+						<Button
+							variant="outline"
+							size="sm"
+							class="gap-2"
+							href="/admin/sitios/{sitio.id}/edit/full"
+						>
+							<Settings class="size-4" />
+							<span class="hidden sm:inline">Full Edit</span>
+						</Button>
+					{/if} -->
 					<Button
 						variant="ghost"
 						onclick={handleCancel}
@@ -673,6 +858,45 @@
 			{/snippet}
 		</AdminHeader>
 
+		<!-- Sitio Core Info Banner (read-only) -->
+		<div class="border-b bg-muted/30 px-4 py-3 md:px-6">
+			<div class="mx-auto max-w-7xl">
+				<div class="flex flex-wrap items-center gap-3 text-sm">
+					<div class="flex items-center gap-2">
+						<MapPin class="size-4 text-muted-foreground" />
+						<span class="font-medium">{sitio.sitioName}</span>
+						<span class="text-muted-foreground">•</span>
+						<span class="text-muted-foreground">{sitio.barangay}, {sitio.municipality}</span>
+					</div>
+					{#if sitio.coding}
+						<Badge variant="outline" class="gap-1">
+							<span class="text-xs">Code: {sitio.coding}</span>
+						</Badge>
+					{/if}
+					{#if sitio.sitioClassification.gida}
+						<Badge variant="secondary" class="text-xs">GIDA</Badge>
+					{/if}
+					{#if sitio.sitioClassification.indigenous}
+						<Badge variant="secondary" class="text-xs">IP</Badge>
+					{/if}
+					{#if sitio.sitioClassification.conflict}
+						<Badge variant="destructive" class="text-xs">Conflict</Badge>
+					{/if}
+					{#if canEditCore}
+						<Button
+							variant="ghost"
+							size="sm"
+							class="h-6 gap-1 px-2 text-xs"
+							href="/admin/sitios/{sitio.id}/edit/full"
+						>
+							<Pencil class="size-3" />
+							Edit Core Info
+						</Button>
+					{/if}
+				</div>
+			</div>
+		</div>
+
 		<!-- Content -->
 		<div class="flex-1 p-4 md:p-6 lg:p-8">
 			<div class="mx-auto max-w-7xl">
@@ -688,9 +912,7 @@
 								<div
 									class="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20"
 								>
-									{#if activeStep === 'basic'}
-										<MapPin class="size-5" />
-									{:else if activeStep === 'demographics'}
+									{#if activeStep === 'demographics'}
 										<Users class="size-5" />
 									{:else if activeStep === 'livelihoods'}
 										<Sprout class="size-5" />
@@ -705,7 +927,7 @@
 								<div>
 									<h2 class="text-lg font-semibold">{steps[currentStepIndex]?.label}</h2>
 									<p class="text-sm text-muted-foreground">
-										Step {currentStepIndex + 1} of {stepOrder.length}
+										Step {currentStepIndex + 1} of {stepOrder.length} • Year {selectedYear}
 									</p>
 								</div>
 							</div>
@@ -724,18 +946,7 @@
 									class="animate-in duration-300 fade-in-0"
 									in:fly={{ x: transitionDirection === 'forward' ? 20 : -20, duration: 200 }}
 								>
-									{#if activeStep === 'basic'}
-										<BasicInfoTab
-											bind:municipality
-											bind:barangay
-											bind:sitioName
-											bind:sitioCode
-											bind:latitude
-											bind:longitude
-											bind:sitioClassification
-											bind:mainAccess
-										/>
-									{:else if activeStep === 'demographics'}
+									{#if activeStep === 'demographics'}
 										<DemographicsSocialTab
 											bind:totalPopulation
 											bind:totalHouseholds
@@ -885,6 +1096,62 @@
 				<AlertDialog.Cancel>Continue Editing</AlertDialog.Cancel>
 				<AlertDialog.Action onclick={confirmCancel} class="bg-destructive hover:bg-destructive/60">
 					Discard Changes
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>
+
+	<!-- Add Year Dialog -->
+	<AlertDialog.Root bind:open={addYearDialogOpen}>
+		<AlertDialog.Content>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Add Year Data</AlertDialog.Title>
+				<AlertDialog.Description>
+					Enter the year for which you want to add data. The data will be copied from the latest
+					available year as a baseline.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<div class="py-4">
+				<Label for="newYear">Year</Label>
+				<Input
+					id="newYear"
+					type="number"
+					bind:value={newYearInput}
+					min="2000"
+					max="2100"
+					class="mt-2"
+				/>
+				<p class="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+					<Copy class="mt-0.5 size-4 shrink-0" />
+					Data will be copied from {sitio?.availableYears?.length
+						? Math.max(...sitio.availableYears)
+						: 'empty template'} as starting point
+				</p>
+			</div>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+				<AlertDialog.Action onclick={confirmAddYear}>Add Year</AlertDialog.Action>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>
+
+	<!-- Delete Year Confirmation Dialog -->
+	<AlertDialog.Root bind:open={deleteYearDialogOpen}>
+		<AlertDialog.Content>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Delete Year Data</AlertDialog.Title>
+				<AlertDialog.Description>
+					Are you sure you want to delete data for <strong>{selectedYear}</strong>? This action
+					cannot be undone.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+				<AlertDialog.Action
+					onclick={confirmDeleteYear}
+					class="bg-destructive hover:bg-destructive/60"
+				>
+					Delete Year Data
 				</AlertDialog.Action>
 			</AlertDialog.Footer>
 		</AlertDialog.Content>

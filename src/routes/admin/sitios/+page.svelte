@@ -11,6 +11,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
 	import { getBarangaysForMunicipality, getMunicipalities } from '$lib/config/location-data';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import type { SitioProfile, SitioRecord } from '$lib/types';
 	import { deleteSitio, loadSitios, updateSitio } from '$lib/utils/storage';
 	import {
@@ -39,6 +40,9 @@
 	}
 
 	let { data }: Props = $props();
+
+	// Permission check
+	const canCreateSitio = $derived(authStore.canCreateSitio());
 
 	// Initialize with data values
 	const initialMunicipality = $derived(data.municipality || 'all');
@@ -453,10 +457,12 @@
 		breadcrumbs={[{ label: 'Sitios' }]}
 	>
 		{#snippet actions()}
-			<Button href="/admin/sitios/new" size="sm">
-				<Plus class="size-4 sm:mr-2" />
-				<span class="hidden sm:inline">Add Sitio</span>
-			</Button>
+			{#if canCreateSitio}
+				<Button href="/admin/sitios/new" size="sm">
+					<Plus class="size-4 sm:mr-2" />
+					<span class="hidden sm:inline">Add Sitio</span>
+				</Button>
+			{/if}
 		{/snippet}
 	</AdminHeader>
 
