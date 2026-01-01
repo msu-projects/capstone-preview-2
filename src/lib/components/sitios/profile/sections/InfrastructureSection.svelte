@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
+	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioProfile } from '$lib/types';
 	import {
@@ -230,6 +231,42 @@
 		}
 	}
 
+	// Road condition descriptions
+	function getRoadConditionDescription(condition: number | undefined): string {
+		switch (condition) {
+			case 5:
+				return 'Optimal condition; new or like-new surface.';
+			case 4:
+				return 'Smooth ride; sound structure with minimal wear.';
+			case 3:
+				return 'Functional but bumpy; minor cracks and wear.';
+			case 2:
+				return 'Rough ride; significant potholes and cracking.';
+			case 1:
+				return 'Unsafe or impassable; severe damage like deep potholes or collapse.';
+			default:
+				return '';
+		}
+	}
+
+	// Facility condition descriptions
+	function getFacilityConditionDescription(condition: number | undefined): string {
+		switch (condition) {
+			case 5:
+				return 'In optimal condition; newly built, renovated, or exceeds standard requirements.';
+			case 4:
+				return 'Fully functional and well-maintained; requires only routine maintenance.';
+			case 3:
+				return 'Functional with minor defects; needs minor repairs and preventive maintenance.';
+			case 2:
+				return 'Functional but with significant wear; requires major repairs soon to prevent failure.';
+			case 1:
+				return 'Severely damaged, unsafe, or non-functional; requires immediate major intervention.';
+			default:
+				return '';
+		}
+	}
+
 	// Mobile signal info
 	const signalInfo = $derived(() => {
 		const signalMap: Record<string, { label: string; bars: number }> = {
@@ -410,12 +447,14 @@
 									<span class="text-sm text-slate-400">—</span>
 								{/if}
 							</div>
-							<div class="col-span-3 flex flex-col items-end gap-0.5">
+							<div class="col-span-3 flex items-center justify-end gap-1">
 								{#if road.exists === 'yes' && road.condition}
 									{@const conditionInfo = getConditionLabel(road.condition)}
+									{@const description = getRoadConditionDescription(road.condition)}
 									<span class="text-xs font-bold {conditionInfo.class}">
 										{conditionInfo.text}
 									</span>
+									<HelpTooltip content={description} />
 								{:else}
 									<span class="text-sm text-slate-400">—</span>
 								{/if}
@@ -650,20 +689,12 @@
 							</div>
 							{#if facility.exists === 'yes' && facility.condition}
 								{@const conditionInfo = getConditionLabel(facility.condition)}
-								<div class="flex flex-col items-end gap-0.5">
+								{@const description = getFacilityConditionDescription(facility.condition)}
+								<div class="flex items-center gap-1">
 									<span class="text-[10px] font-bold {conditionInfo.class}">
 										{conditionInfo.text}
 									</span>
-									<div class="flex gap-0.5" title="Condition: {conditionInfo.text}">
-										{#each [1, 2, 3, 4, 5] as bar}
-											<div
-												class="h-3 w-1 rounded-full transition-colors {bar <=
-												(facility.condition || 0)
-													? 'bg-green-500'
-													: 'bg-slate-200 dark:bg-slate-700'}"
-											></div>
-										{/each}
-									</div>
+									<HelpTooltip content={description} />
 								</div>
 							{:else if facility.exists === 'no'}
 								<div class="flex flex-col items-end opacity-50">
