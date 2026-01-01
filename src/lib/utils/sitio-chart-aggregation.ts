@@ -672,6 +672,16 @@ export interface PrioritiesAggregation {
 	otherPriorities: Map<string, number>;
 }
 
+/**
+ * Helper function to get priority rating by name
+ */
+function getPriorityRating(
+	priorities: Array<{ name: string; rating: number }>,
+	name: string
+): number {
+	return priorities.find((p) => p.name === name)?.rating ?? 0;
+}
+
 export function aggregatePriorities(sitios: SitioRecord[]): PrioritiesAggregation {
 	const result: PrioritiesAggregation = {
 		waterSystem: { totalScore: 0, urgentCount: 0 },
@@ -690,46 +700,40 @@ export function aggregatePriorities(sitios: SitioRecord[]): PrioritiesAggregatio
 
 		const p = profile.priorities;
 
-		// Water System (index 0)
-		const waterSystem = p[0]?.name ?? 0;
+		// Water System
+		const waterSystem = getPriorityRating(p, 'waterSystem');
 		result.waterSystem.totalScore += waterSystem;
 		if (waterSystem === 3) result.waterSystem.urgentCount++;
 
-		// Community CR (index 1)
-		const communityCR = p[1]?.name ?? 0;
+		// Community CR
+		const communityCR = getPriorityRating(p, 'communityCR');
 		result.communityCR.totalScore += communityCR;
 		if (communityCR === 3) result.communityCR.urgentCount++;
 
-		// Solar Street Lights (index 2)
-		const solarStreetLights = p[2]?.name ?? 0;
+		// Solar Street Lights
+		const solarStreetLights = getPriorityRating(p, 'solarStreetLights');
 		result.solarStreetLights.totalScore += solarStreetLights;
 		if (solarStreetLights === 3) result.solarStreetLights.urgentCount++;
 
-		// Road Opening (index 3)
-		const roadOpening = p[3]?.name ?? 0;
+		// Road Opening
+		const roadOpening = getPriorityRating(p, 'roadOpening');
 		result.roadOpening.totalScore += roadOpening;
 		if (roadOpening === 3) result.roadOpening.urgentCount++;
 
-		// Farm Tools (index 4)
-		const farmTools = p[4]?.name ?? 0;
+		// Farm Tools
+		const farmTools = getPriorityRating(p, 'farmTools');
 		result.farmTools.totalScore += farmTools;
 		if (farmTools === 3) result.farmTools.urgentCount++;
 
-		// Health Services (index 5)
-		const healthServices = p[5]?.name ?? 0;
+		// Health Services
+		const healthServices = getPriorityRating(p, 'healthServices');
 		result.healthServices.totalScore += healthServices;
 		if (healthServices === 3) result.healthServices.urgentCount++;
 
-		// Education Support (index 6)
-		const educationSupport = p[6]?.name ?? 0;
+		// Education Support
+		const educationSupport = getPriorityRating(p, 'educationSupport');
 		result.educationSupport.totalScore += educationSupport;
 		if (educationSupport === 3) result.educationSupport.urgentCount++;
-
-		// Others (index 7 if it exists)
-		if (p.length > 7) {
-			// Note: with the new structure, we don't have othersSpecify anymore
-			// This section can be removed or adapted based on requirements
-		}
 	}
 
 	return result;

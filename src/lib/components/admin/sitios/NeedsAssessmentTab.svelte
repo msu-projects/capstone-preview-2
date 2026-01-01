@@ -1,129 +1,142 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
 	import { FormSection } from '$lib/components/ui/form-section';
 	import { HelpTooltip } from '$lib/components/ui/help-tooltip';
-	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { NumberInput } from '$lib/components/ui/number-input';
 	import * as Select from '$lib/components/ui/select';
+	import type { PriorityItem, PriorityName, PriorityRating } from '$lib/types';
 	import { cn } from '$lib/utils';
 	import {
 		AlertTriangle,
-		ArrowDown,
-		ArrowUp,
 		CloudRain,
+		Droplet,
 		Flame,
+		GraduationCap,
+		Heart,
+		Lightbulb,
 		ListChecks,
 		Mountain,
-		Plus,
+		Route,
 		Shield,
-		Swords,
-		Trash2,
+		Tractor,
 		UtensilsCrossed,
 		Waves
 	} from '@lucide/svelte';
 
-	// Helper type for hazard details
+	// Helper type for hazard details matching the document specification
 	type HazardDetails = {
-		/**
-		 * Number of times this hazard occurred in the past 12 months.
-		 */
-		frequency: number;
+		/** Frequency description (text description like "0", "1", "2-3", etc.) */
+		frequency: string;
 	};
 
-	// Props matching SitioProfile Sections I and J
+	// Props matching SitioProfile Sections I and J per documentation
 	let {
 		// Section I - Safety & Risk Context
 		hazards = $bindable<{
 			flood: HazardDetails;
 			landslide: HazardDetails;
 			drought: HazardDetails;
-			seaLevelRise: HazardDetails;
 			earthquake: HazardDetails;
-			armedConflict: HazardDetails;
 		}>({
-			flood: { frequency: 0 },
-			landslide: { frequency: 0 },
-			drought: { frequency: 0 },
-			seaLevelRise: { frequency: 0 },
-			earthquake: { frequency: 0 },
-			armedConflict: { frequency: 0 }
+			flood: { frequency: '0' },
+			landslide: { frequency: '0' },
+			drought: { frequency: '0' },
+			earthquake: { frequency: '0' }
 		}),
 		/** Current Peace and Order Status */
 		peaceOrder = $bindable<'stable' | 'occasional_tensions' | 'unstable'>('stable'),
 		/** Primary food security concern */
 		foodSecurity = $bindable<'secure' | 'seasonal_scarcity' | 'critical_shortage'>('secure'),
 
-		// Section J - Sitio Priority Needs
-		priorities = $bindable<
-			Array<{
-				rank: number;
-				need: string;
-			}>
-		>([])
+		// Section J - Sitio Priority Needs - using the documented structure
+		priorities = $bindable<PriorityItem[]>([
+			{ name: 'waterSystem', rating: 0 },
+			{ name: 'communityCR', rating: 0 },
+			{ name: 'solarStreetLights', rating: 0 },
+			{ name: 'roadOpening', rating: 0 },
+			{ name: 'farmTools', rating: 0 },
+			{ name: 'healthServices', rating: 0 },
+			{ name: 'educationSupport', rating: 0 }
+		])
 	}: {
 		hazards: {
 			flood: HazardDetails;
 			landslide: HazardDetails;
 			drought: HazardDetails;
-			seaLevelRise: HazardDetails;
 			earthquake: HazardDetails;
-			armedConflict: HazardDetails;
 		};
 		peaceOrder: 'stable' | 'occasional_tensions' | 'unstable';
 		foodSecurity: 'secure' | 'seasonal_scarcity' | 'critical_shortage';
-		priorities: Array<{
-			rank: number;
-			need: string;
-		}>;
+		priorities: PriorityItem[];
 	} = $props();
 
-	// Hazard labels for display
+	// Hazard labels for display (only the 4 documented hazard types)
 	const hazardLabels: Record<keyof typeof hazards, { name: string; icon: typeof CloudRain }> = {
 		flood: { name: 'Flood', icon: CloudRain },
 		landslide: { name: 'Landslide', icon: Mountain },
 		drought: { name: 'Drought', icon: Flame },
-		seaLevelRise: { name: 'Sea Level Rise', icon: Waves },
-		earthquake: { name: 'Earthquake', icon: AlertTriangle },
-		armedConflict: { name: 'Armed Conflict', icon: Swords }
+		earthquake: { name: 'Earthquake', icon: Waves }
+	};
+
+	// Frequency options for hazards
+	const frequencyOptions = ['0', '1', '2-3', '4-5', 'More than 5', 'Seasonal'];
+
+	// Priority labels and icons
+	const priorityLabels: Record<
+		PriorityName,
+		{ name: string; description: string; icon: typeof Droplet }
+	> = {
+		waterSystem: {
+			name: 'Water System',
+			description: 'Potable water supply infrastructure',
+			icon: Droplet
+		},
+		communityCR: {
+			name: 'Community CR',
+			description: 'Community comfort room facilities',
+			icon: Waves
+		},
+		solarStreetLights: {
+			name: 'Solar Street Lights',
+			description: 'Solar-powered street lighting',
+			icon: Lightbulb
+		},
+		roadOpening: {
+			name: 'Road Opening',
+			description: 'Road construction and improvement',
+			icon: Route
+		},
+		farmTools: {
+			name: 'Farm Tools',
+			description: 'Agricultural tools and equipment',
+			icon: Tractor
+		},
+		healthServices: {
+			name: 'Health Services',
+			description: 'Healthcare and medical services',
+			icon: Heart
+		},
+		educationSupport: {
+			name: 'Education Support',
+			description: 'Educational facilities and programs',
+			icon: GraduationCap
+		}
+	};
+
+	// Rating labels
+	const ratingLabels: Record<PriorityRating, { label: string; color: string }> = {
+		0: { label: 'Not needed', color: 'bg-muted text-muted-foreground' },
+		1: { label: 'Low', color: 'bg-blue-500/20 text-blue-600 border-blue-500/30' },
+		2: { label: 'Medium', color: 'bg-amber-500/20 text-amber-600 border-amber-500/30' },
+		3: { label: 'Very urgent', color: 'bg-rose-500/20 text-rose-600 border-rose-500/30' }
 	};
 
 	// Section completion checks
-	const hasHazards = $derived(Object.values(hazards).some((h) => h.frequency > 0));
-	const hasPriorities = $derived(priorities.length > 0);
+	const hasHazards = $derived(Object.values(hazards).some((h) => h.frequency !== '0'));
+	const hasPriorities = $derived(priorities.some((p) => p.rating > 0));
 
-	// Priority management
-	function addPriority() {
-		const nextRank = priorities.length > 0 ? Math.max(...priorities.map((p) => p.rank)) + 1 : 1;
-		priorities = [...priorities, { rank: nextRank, need: '' }];
-	}
-
-	function removePriority(index: number) {
-		priorities = priorities.filter((_, i) => i !== index);
-		// Re-rank remaining priorities
-		priorities = priorities.map((p, i) => ({ ...p, rank: i + 1 }));
-	}
-
-	function movePriorityUp(index: number) {
-		if (index > 0) {
-			const newPriorities = [...priorities];
-			[newPriorities[index - 1], newPriorities[index]] = [
-				newPriorities[index],
-				newPriorities[index - 1]
-			];
-			priorities = newPriorities.map((p, i) => ({ ...p, rank: i + 1 }));
-		}
-	}
-
-	function movePriorityDown(index: number) {
-		if (index < priorities.length - 1) {
-			const newPriorities = [...priorities];
-			[newPriorities[index], newPriorities[index + 1]] = [
-				newPriorities[index + 1],
-				newPriorities[index]
-			];
-			priorities = newPriorities.map((p, i) => ({ ...p, rank: i + 1 }));
-		}
+	// Helper function to update a priority rating
+	function updatePriorityRating(priorityName: PriorityName, rating: PriorityRating) {
+		priorities = priorities.map((p) => (p.name === priorityName ? { ...p, rating } : p));
 	}
 </script>
 
@@ -131,26 +144,26 @@
 	<!-- Hazards Section -->
 	<FormSection
 		title="Hazards & Risks"
-		description="Identify natural and human-made hazards affecting the sitio"
+		description="Identify natural hazards affecting the sitio"
 		icon={AlertTriangle}
 		variant="rose"
 		isComplete={hasHazards}
 	>
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			{#each Object.entries(hazards) as [key, hazard]}
 				{@const k = key as keyof typeof hazards}
 				{@const HazardIcon = hazardLabels[k].icon}
 				<div
 					class={cn(
 						'rounded-xl border-2 p-4 transition-all',
-						hazards[k].frequency > 0 && 'border-rose-500/30 bg-rose-500/5 shadow-sm'
+						hazards[k].frequency !== '0' && 'border-rose-500/30 bg-rose-500/5 shadow-sm'
 					)}
 				>
 					<div class="mb-3 flex items-center gap-2">
 						<div
 							class={cn(
 								'flex size-8 items-center justify-center rounded-lg',
-								hazards[k].frequency > 0
+								hazards[k].frequency !== '0'
 									? 'bg-rose-500/20 text-rose-600'
 									: 'bg-muted text-muted-foreground'
 							)}
@@ -162,17 +175,31 @@
 						</Label>
 					</div>
 					<div class="space-y-1.5">
-						<Label class="text-xs text-muted-foreground">Occurrences in past 12 months</Label>
-						<NumberInput
-							id={`hazard-${k}`}
-							bind:value={hazards[k].frequency}
-							placeholder="0"
-							min={0}
-							class={cn(
-								'h-11 rounded-lg',
-								hazards[k].frequency > 0 && 'border-rose-500/30 bg-rose-500/5'
-							)}
-						/>
+						<Label class="text-xs text-muted-foreground">Frequency in past 12 months</Label>
+						<Select.Root
+							type="single"
+							value={hazards[k].frequency}
+							onValueChange={(v) => {
+								if (v) hazards[k].frequency = v;
+							}}
+						>
+							<Select.Trigger
+								id={`hazard-${k}`}
+								class={cn(
+									'h-11 rounded-lg',
+									hazards[k].frequency !== '0' && 'border-rose-500/30 bg-rose-500/5'
+								)}
+							>
+								{hazards[k].frequency === '0' ? 'None' : hazards[k].frequency}
+							</Select.Trigger>
+							<Select.Content>
+								{#each frequencyOptions as option}
+									<Select.Item value={option}>
+										{option === '0' ? 'None' : option}
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
 					</div>
 				</div>
 			{/each}
@@ -319,117 +346,120 @@
 
 	<!-- Priority Needs Section -->
 	<FormSection
-		title="Priority Needs"
-		description="Ranked list of sitio's most pressing needs"
+		title="Priority Interventions"
+		description="Rate the priority level of each intervention type"
 		icon={ListChecks}
 		variant="success"
 		isComplete={hasPriorities}
 	>
 		<div class="space-y-4">
-			<div class="flex items-center justify-between">
-				<Label class="flex items-center gap-1.5 text-sm font-medium">
-					Sitio Priorities
-					<HelpTooltip content="List the top priority needs of this sitio in order of importance" />
-				</Label>
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onclick={addPriority}
-					class="h-9 gap-2 rounded-lg"
-				>
-					<Plus class="size-4" />
-					Add Priority
-				</Button>
+			<div class="flex items-center gap-1.5">
+				<Label class="text-sm font-medium">Intervention Priority Ratings</Label>
+				<HelpTooltip
+					content="Rate each intervention from 0 (Not needed) to 3 (Very urgent) based on community needs"
+				/>
 			</div>
 
-			{#if priorities.length === 0}
-				<div
-					class="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed py-10 text-center"
-				>
-					<div class="flex size-12 items-center justify-center rounded-full bg-muted">
-						<ListChecks class="size-6 text-muted-foreground" />
-					</div>
-					<div>
-						<p class="font-medium text-muted-foreground">No priorities added yet</p>
-						<p class="mt-1 text-sm text-muted-foreground/75">
-							Add the community's most pressing needs
-						</p>
-					</div>
-					<Button variant="outline" size="sm" onclick={addPriority} class="mt-2 gap-2">
-						<Plus class="size-4" />
-						Add First Priority
-					</Button>
-				</div>
-			{:else}
-				<div class="space-y-3">
-					{#each priorities as priority, i (i)}
-						<div
-							class={cn(
-								'group flex items-center gap-3 rounded-xl border-2 p-3 transition-all',
-								priority.need.trim() !== ''
-									? 'border-emerald-500/30 bg-emerald-500/5 shadow-sm'
-									: 'border-muted'
-							)}
-						>
-							<!-- Rank Badge -->
+			<!-- Rating Legend -->
+			<div class="flex flex-wrap gap-2 text-xs">
+				{#each [0, 1, 2, 3] as rating}
+					{@const r = rating as PriorityRating}
+					<span class={cn('rounded-full border px-2.5 py-1 font-medium', ratingLabels[r].color)}>
+						{r} - {ratingLabels[r].label}
+					</span>
+				{/each}
+			</div>
+
+			<!-- Priority Cards -->
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{#each priorities as priority}
+					{@const label = priorityLabels[priority.name]}
+					{@const PriorityIcon = label.icon}
+					<div
+						class={cn(
+							'rounded-xl border-2 p-4 transition-all',
+							priority.rating > 0 && 'shadow-sm',
+							priority.rating === 3 && 'border-rose-500/30 bg-rose-500/5',
+							priority.rating === 2 && 'border-amber-500/30 bg-amber-500/5',
+							priority.rating === 1 && 'border-blue-500/30 bg-blue-500/5',
+							priority.rating === 0 && 'border-muted'
+						)}
+					>
+						<div class="mb-3 flex items-center gap-2">
 							<div
 								class={cn(
-									'flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold transition-colors',
-									priority.need.trim() !== ''
-										? 'bg-emerald-500/20 text-emerald-600'
-										: 'bg-muted text-muted-foreground'
+									'flex size-8 shrink-0 items-center justify-center rounded-lg',
+									priority.rating === 3 && 'bg-rose-500/20 text-rose-600',
+									priority.rating === 2 && 'bg-amber-500/20 text-amber-600',
+									priority.rating === 1 && 'bg-blue-500/20 text-blue-600',
+									priority.rating === 0 && 'bg-muted text-muted-foreground'
 								)}
 							>
-								#{priority.rank}
+								<PriorityIcon class="size-4" />
 							</div>
-
-							<!-- Input -->
-							<Input
-								bind:value={priority.need}
-								placeholder="Enter priority need (e.g., Clean water access, Health center, Road improvement)"
-								class="h-11 flex-1 rounded-lg"
-							/>
-
-							<!-- Actions -->
-							<div class="flex shrink-0 items-center gap-1">
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									class="size-9 rounded-lg"
-									onclick={() => movePriorityUp(i)}
-									disabled={i === 0}
-								>
-									<ArrowUp class="size-4" />
-									<span class="sr-only">Move up</span>
-								</Button>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									class="size-9 rounded-lg"
-									onclick={() => movePriorityDown(i)}
-									disabled={i === priorities.length - 1}
-								>
-									<ArrowDown class="size-4" />
-									<span class="sr-only">Move down</span>
-								</Button>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									class="size-9 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"
-									onclick={() => removePriority(i)}
-								>
-									<Trash2 class="size-4" />
-									<span class="sr-only">Remove</span>
-								</Button>
+							<div class="min-w-0 flex-1">
+								<Label class="text-sm font-semibold">{label.name}</Label>
+								<p class="truncate text-xs text-muted-foreground">
+									{label.description}
+								</p>
 							</div>
 						</div>
-					{/each}
-				</div>
-			{/if}
+						<Select.Root
+							type="single"
+							value={String(priority.rating)}
+							onValueChange={(v) => {
+								if (v) updatePriorityRating(priority.name, Number(v) as PriorityRating);
+							}}
+						>
+							<Select.Trigger
+								class={cn(
+									'h-10 w-full rounded-lg',
+									priority.rating === 3 && 'border-rose-500/30',
+									priority.rating === 2 && 'border-amber-500/30',
+									priority.rating === 1 && 'border-blue-500/30'
+								)}
+							>
+								<span
+									class={cn(
+										'flex items-center gap-2 text-sm',
+										priority.rating > 0 && 'font-medium'
+									)}
+								>
+									<span
+										class={cn(
+											'size-2 rounded-full',
+											priority.rating === 3 && 'bg-rose-500',
+											priority.rating === 2 && 'bg-amber-500',
+											priority.rating === 1 && 'bg-blue-500',
+											priority.rating === 0 && 'bg-muted-foreground/50'
+										)}
+									></span>
+									{ratingLabels[priority.rating].label}
+								</span>
+							</Select.Trigger>
+							<Select.Content>
+								{#each [0, 1, 2, 3] as rating}
+									{@const r = rating as PriorityRating}
+									<Select.Item value={String(r)}>
+										<span class="flex items-center gap-2">
+											<span
+												class={cn(
+													'size-2 rounded-full',
+													r === 3 && 'bg-rose-500',
+													r === 2 && 'bg-amber-500',
+													r === 1 && 'bg-blue-500',
+													r === 0 && 'bg-muted-foreground/50'
+												)}
+											></span>
+											{ratingLabels[r].label}
+										</span>
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+					</div>
+				{/each}
+			</div>
 		</div>
 	</FormSection>
 </div>

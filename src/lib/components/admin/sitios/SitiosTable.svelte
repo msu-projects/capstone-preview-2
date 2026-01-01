@@ -8,8 +8,8 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as Table from '$lib/components/ui/table';
 	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
-	import type { NeedLevel, Sitio } from '$lib/types';
-	import { getNeedLevelFromScore } from '$lib/types';
+	import type { PriorityLevel, SitioRecord } from '$lib/types';
+	import { getPriorityLevel } from '$lib/types';
 	import { formatNumber } from '$lib/utils/formatters';
 	import {
 		ArrowDownUp,
@@ -32,43 +32,57 @@
 
 	// Need level badge styling
 	const needLevelConfig: Record<
-		NeedLevel,
+		PriorityLevel,
 		{
 			label: string;
 			variant: 'destructive' | 'default' | 'secondary' | 'outline';
 			className: string;
 		}
 	> = {
-		critical: {
+		Critical: {
 			label: 'Critical',
 			variant: 'destructive',
 			className: ''
 		},
-		high: {
+		High: {
 			label: 'High',
 			variant: 'default',
 			className: 'bg-orange-500 hover:bg-orange-600'
 		},
-		medium: {
-			label: 'Medium',
+		Moderate: {
+			label: 'Moderate',
 			variant: 'secondary',
 			className: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
 		},
-		low: {
+		Low: {
 			label: 'Low',
 			variant: 'secondary',
 			className: 'bg-green-500/20 text-green-700 dark:text-green-400'
 		}
 	};
 
-	function getNeedBadgeProps(sitio: Sitio) {
+	// Extended Sitio type for table display (flattened for easier display)
+	interface SitioDisplay extends SitioRecord {
+		/** Display name (mapped from sitioName) */
+		name?: string;
+		/** Total population from latest year data */
+		population?: number;
+		/** Total households from latest year data */
+		households?: number;
+		/** Computed need score */
+		need_score?: number;
+		/** Computed priority level */
+		need_level?: PriorityLevel;
+	}
+
+	function getNeedBadgeProps(sitio: SitioDisplay) {
 		const score = sitio.need_score ?? 5;
-		const level = sitio.need_level ?? getNeedLevelFromScore(score);
+		const level = sitio.need_level ?? getPriorityLevel(score);
 		return { score, level, ...needLevelConfig[level] };
 	}
 
 	interface Props {
-		sitios: Sitio[];
+		sitios: SitioDisplay[];
 		totalSitios: number;
 		currentPage: number;
 		itemsPerPage: number;
@@ -293,7 +307,7 @@
 				<Table.Table>
 					<Table.TableHeader>
 						<Table.TableRow>
-							<Table.TableHead class="w-[250px]">
+							<Table.TableHead class="w-62.5">
 								{#if onToggleSort}
 									<button
 										class="flex items-center gap-1 hover:text-foreground"
@@ -308,7 +322,7 @@
 									Sitio
 								{/if}
 							</Table.TableHead>
-							<Table.TableHead class="w-[200px]">
+							<Table.TableHead class="w-50">
 								{#if onToggleSort}
 									<button
 										class="flex items-center gap-1 hover:text-foreground"
@@ -323,7 +337,7 @@
 									Barangay
 								{/if}
 							</Table.TableHead>
-							<Table.TableHead class="w-[200px]">
+							<Table.TableHead class="w-50">
 								{#if onToggleSort}
 									<button
 										class="flex items-center gap-1 hover:text-foreground"
@@ -338,7 +352,7 @@
 									Municipality
 								{/if}
 							</Table.TableHead>
-							<Table.TableHead class="w-[140px] text-right">
+							<Table.TableHead class="w-35 text-right">
 								{#if onToggleSort}
 									<button
 										class="flex items-center gap-1 hover:text-foreground"
@@ -353,7 +367,7 @@
 									Population
 								{/if}
 							</Table.TableHead>
-							<Table.TableHead class="w-[140px] text-right">
+							<Table.TableHead class="w-35 text-right">
 								{#if onToggleSort}
 									<button
 										class="flex items-center gap-1 hover:text-foreground"
@@ -368,7 +382,7 @@
 									Households
 								{/if}
 							</Table.TableHead>
-							<Table.TableHead class="w-[120px] text-center">
+							<Table.TableHead class="w-30 text-center">
 								{#if onToggleSort}
 									<button
 										class="flex items-center gap-1 hover:text-foreground"
@@ -383,7 +397,7 @@
 									Need Score
 								{/if}
 							</Table.TableHead>
-							<Table.TableHead class="w-[100px] text-right">Actions</Table.TableHead>
+							<Table.TableHead class="w-25 text-right">Actions</Table.TableHead>
 						</Table.TableRow>
 					</Table.TableHeader>
 					<Table.TableBody>

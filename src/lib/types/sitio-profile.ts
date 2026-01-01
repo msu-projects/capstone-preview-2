@@ -253,18 +253,16 @@ export interface SitioProfile {
 	// ==========================================
 
 	/**
-	 * Rate the priority level of the following interventions.
-	 * Rating scale: 0 = Not needed, 3 = Very urgent
+	 * Priority interventions with rating scale 0-3
+	 * Each priority item contains:
+	 * - name: The intervention name (e.g., "waterSystem", "communityCR", etc.)
+	 * - rating: Priority rating (0 = Not needed, 1 = Low, 2 = Medium, 3 = Very urgent)
+	 *
+	 * Common priority intervention names:
+	 * - waterSystem, communityCR, solarStreetLights, roadOpening
+	 * - farmTools, healthServices, educationSupport
 	 */
-	// e.g.
-	// 	waterSystem: 0 | 1 | 2 | 3;
-	// 	communityCR: 0 | 1 | 2 | 3;
-	// 	solarStreetLights: 0 | 1 | 2 | 3;
-	// 	roadOpening: 0 | 1 | 2 | 3;
-	// 	farmTools: 0 | 1 | 2 | 3;
-	// 	healthServices: 0 | 1 | 2 | 3;
-	// 	educationSupport: 0 | 1 | 2 | 3;
-	priorities: { name: 0 | 1 | 2 | 3 }[];
+	priorities: PriorityItem[];
 
 	// ==========================================
 	// SECTION K. RECOMMENDATION
@@ -277,6 +275,34 @@ export interface SitioProfile {
 // ==========================================
 // HELPER INTERFACES
 // ==========================================
+
+/**
+ * Standard priority names used in the system
+ */
+export type PriorityName =
+	| 'waterSystem'
+	| 'communityCR'
+	| 'solarStreetLights'
+	| 'roadOpening'
+	| 'farmTools'
+	| 'healthServices'
+	| 'educationSupport';
+
+/**
+ * Priority rating scale
+ * 0 = Not needed, 1 = Low, 2 = Medium, 3 = Very urgent
+ */
+export type PriorityRating = 0 | 1 | 2 | 3;
+
+/**
+ * Priority intervention item (Section J)
+ */
+export interface PriorityItem {
+	/** The intervention name */
+	name: PriorityName;
+	/** Priority rating (0 = Not needed, 1 = Low, 2 = Medium, 3 = Very urgent) */
+	rating: PriorityRating;
+}
 
 /**
  * Details for Community Facilities (Section D)

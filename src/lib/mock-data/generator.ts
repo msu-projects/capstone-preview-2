@@ -2,6 +2,9 @@ import { MUNICIPALITIES_DATA } from '$lib/config/location-data';
 import type {
 	FacilityDetails,
 	HazardDetails,
+	PriorityItem,
+	PriorityName,
+	PriorityRating,
 	RoadDetails,
 	SitioProfile,
 	SitioRecord,
@@ -447,25 +450,26 @@ function generateYearProfile(
 	const foodSecurity = rng.pick(foodSecurityOptions);
 
 	// ========== J. SITIO PRIORITY NEEDS ==========
-	const priorityLevels: Array<0 | 1 | 2 | 3> = [0, 1, 2, 3];
-	const priorities: SitioProfile['priorities'] = [
-		{ name: rng.pick(priorityLevels) },
-		{ name: rng.pick(priorityLevels) },
-		{ name: rng.pick(priorityLevels) },
-		{ name: rng.pick(priorityLevels) },
-		{ name: rng.pick(priorityLevels) },
-		{ name: rng.pick(priorityLevels) },
-		{ name: rng.pick(priorityLevels) }
+	const priorityNames: PriorityName[] = [
+		'waterSystem',
+		'communityCR',
+		'solarStreetLights',
+		'roadOpening',
+		'farmTools',
+		'healthServices',
+		'educationSupport'
 	];
 
-	// Optionally add "others"
-	if (rng.boolean(0.2)) {
-		priorities.push({ name: rng.pick(priorityLevels) });
-	}
+	const priorityRatings: PriorityRating[] = [0, 1, 2, 3];
+
+	const priorities: PriorityItem[] = priorityNames.map((name) => ({
+		name,
+		rating: rng.pick(priorityRatings)
+	}));
 
 	// ========== K. RECOMMENDATION ==========
 	const averageNeedScore = Number(
-		(priorities.reduce((sum, p) => sum + p.name, 0) / priorities.length).toFixed(2)
+		(priorities.reduce((sum, p) => sum + p.rating, 0) / priorities.length).toFixed(2)
 	);
 
 	// ========== BUILD PROFILE ==========
@@ -545,7 +549,7 @@ function generateYearProfile(
 }
 
 // ===== STORAGE KEYS =====
-export const STORAGE_VERSION = 5; // Increment to clear outdated data (updated priorities to array structure)
+export const STORAGE_VERSION = 6; // Increment to clear outdated data (updated priorities to use {name, rating} structure)
 export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
 export const MOCK_DATA_INITIALIZED_KEY = 'sccdp_mock_data_initialized';
 

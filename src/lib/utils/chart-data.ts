@@ -305,34 +305,41 @@ export function calculateOverallCoverage(sitios: SitioProfile[]) {
 
 /**
  * Get common priorities across sitios
- * Now using numeric priority ratings (0-3 scale) from array structure
+ * Using the {name, rating} priority structure
  */
 export function getCommonPriorities(sitios: SitioProfile[], topN: number = 5) {
-	// Standard priority names in order (matching the array indices)
-	const priorityNames = [
-		'Water System',
-		'Community CR',
-		'Solar Street Lights',
-		'Road Opening',
-		'Farm Tools',
-		'Health Services',
-		'Education Support'
-	];
+	// Map of priority names to display labels
+	const priorityLabels: Record<string, string> = {
+		waterSystem: 'Water System',
+		communityCR: 'Community CR',
+		solarStreetLights: 'Solar Street Lights',
+		roadOpening: 'Road Opening',
+		farmTools: 'Farm Tools',
+		healthServices: 'Health Services',
+		educationSupport: 'Education Support'
+	};
+
+	// Collect priority scores by name
+	const priorityScoreMap = new Map<string, { totalScore: number; count: number }>();
+
+	sitios.forEach((s) => {
+		s.priorities.forEach((p) => {
+			const existing = priorityScoreMap.get(p.name) ?? { totalScore: 0, count: 0 };
+			priorityScoreMap.set(p.name, {
+				totalScore: existing.totalScore + p.rating,
+				count: existing.count + 1
+			});
+		});
+	});
 
 	const priorityScores: Array<{ priority: string; totalScore: number; avgScore: number }> = [];
 
-	priorityNames.forEach((name, index) => {
-		const totalScore = sitios.reduce((sum, s) => {
-			const val = s.priorities[index]?.name ?? 0;
-			return sum + val;
-		}, 0);
-
-		const avgScore = sitios.length > 0 ? totalScore / sitios.length : 0;
-
-		if (totalScore > 0) {
+	priorityScoreMap.forEach((value, name) => {
+		const avgScore = value.count > 0 ? value.totalScore / value.count : 0;
+		if (value.totalScore > 0) {
 			priorityScores.push({
-				priority: name,
-				totalScore,
+				priority: priorityLabels[name] ?? name,
+				totalScore: value.totalScore,
 				avgScore
 			});
 		}

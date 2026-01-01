@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { FormStepper, type Step } from '$lib/components/ui/form-stepper';
+	import type { PriorityItem } from '$lib/types';
 	import { cn } from '$lib/utils';
 	import {
 		AlertTriangle,
@@ -50,10 +51,8 @@
 	};
 
 	type HazardDetails = {
-		/**
-		 * Number of times this hazard occurred in the past 12 months.
-		 */
-		frequency: number;
+		/** Frequency description (text) */
+		frequency: string;
 	};
 
 	let isSaving = $state(false);
@@ -188,16 +187,12 @@
 		flood: HazardDetails;
 		landslide: HazardDetails;
 		drought: HazardDetails;
-		seaLevelRise: HazardDetails;
 		earthquake: HazardDetails;
-		armedConflict: HazardDetails;
 	}>({
-		flood: { frequency: 0 },
-		landslide: { frequency: 0 },
-		drought: { frequency: 0 },
-		seaLevelRise: { frequency: 0 },
-		earthquake: { frequency: 0 },
-		armedConflict: { frequency: 0 }
+		flood: { frequency: '0' },
+		landslide: { frequency: '0' },
+		drought: { frequency: '0' },
+		earthquake: { frequency: '0' }
 	});
 	/** Current Peace and Order Status */
 	let peaceOrder = $state<'stable' | 'occasional_tensions' | 'unstable'>('stable');
@@ -205,7 +200,15 @@
 	let foodSecurity = $state<'secure' | 'seasonal_scarcity' | 'critical_shortage'>('secure');
 
 	// ===== Section J: Sitio Priority Needs =====
-	let priorities = $state<Array<{ rank: number; need: string }>>([]);
+	let priorities = $state<PriorityItem[]>([
+		{ name: 'waterSystem', rating: 0 },
+		{ name: 'communityCR', rating: 0 },
+		{ name: 'solarStreetLights', rating: 0 },
+		{ name: 'roadOpening', rating: 0 },
+		{ name: 'farmTools', rating: 0 },
+		{ name: 'healthServices', rating: 0 },
+		{ name: 'educationSupport', rating: 0 }
+	]);
 
 	// ===== Images =====
 	let images = $state<
@@ -264,7 +267,7 @@
 			label: 'Safety & Priority Needs',
 			shortLabel: 'Safety & Needs',
 			icon: AlertTriangle,
-			isValid: priorities.length > 0
+			isValid: priorities.some((p) => p.rating > 0)
 		},
 		{
 			id: 'images',

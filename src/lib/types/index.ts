@@ -8,6 +8,9 @@
 export type {
 	FacilityDetails,
 	HazardDetails,
+	PriorityItem,
+	PriorityName,
+	PriorityRating,
 	RoadDetails,
 	SitioProfile,
 	WaterSourceStatus

@@ -38,24 +38,28 @@ export function getPriorityLevel(score: number): PriorityLevel {
 }
 
 /**
- * Get a priority value by index from the priorities array
- * The priorities array follows the standard order:
- * [0] waterSystem, [1] communityCR, [2] solarStreetLights,
- * [3] roadOpening, [4] farmTools, [5] healthServices, [6] educationSupport
+ * Get a priority rating by name from the priorities array
+ * @param priorities - The priorities array with {name, rating} structure
+ * @param priorityName - The name of the priority to look up
+ * @returns The rating (0-3) or 0 if not found
  */
-function getPriorityValue(priorities: SitioProfile['priorities'], index: number): 0 | 1 | 2 | 3 {
-	return priorities[index]?.name ?? 0;
+function getPriorityValue(
+	priorities: SitioProfile['priorities'],
+	priorityName: string
+): 0 | 1 | 2 | 3 {
+	const priority = priorities.find((p) => p.name === priorityName);
+	return priority?.rating ?? 0;
 }
 
-// Priority indices for easier access
-const PRIORITY_INDEX = {
-	waterSystem: 0,
-	communityCR: 1,
-	solarStreetLights: 2,
-	roadOpening: 3,
-	farmTools: 4,
-	healthServices: 5,
-	educationSupport: 6
+// Priority names for easier access
+const PRIORITY_NAMES = {
+	waterSystem: 'waterSystem',
+	communityCR: 'communityCR',
+	solarStreetLights: 'solarStreetLights',
+	roadOpening: 'roadOpening',
+	farmTools: 'farmTools',
+	healthServices: 'healthServices',
+	educationSupport: 'educationSupport'
 } as const;
 
 function countFunctionalWaterSources(
@@ -844,7 +848,7 @@ export const SOLAR_STREET_LIGHTS_CONFIG: PPAConfig = {
 			enabled: true,
 			evaluate: (profile) => {
 				// Use priorities array index for solarStreetLights: 0=not needed, 1=low, 2=moderate, 3=very urgent
-				const priority = getPriorityValue(profile.priorities, PRIORITY_INDEX.solarStreetLights);
+				const priority = getPriorityValue(profile.priorities, PRIORITY_NAMES.solarStreetLights);
 				if (priority === 3) {
 					return { points: 4.0, reason: 'Street lights are a very urgent priority' };
 				} else if (priority === 2) {
@@ -1565,7 +1569,7 @@ export const LIVELIHOOD_ASSISTANCE_CONFIG: PPAConfig = {
 			maxPoints: 1.5,
 			enabled: true,
 			evaluate: (profile) => {
-				const priority = getPriorityValue(profile.priorities, PRIORITY_INDEX.farmTools);
+				const priority = getPriorityValue(profile.priorities, PRIORITY_NAMES.farmTools);
 				if (priority >= 2 && profile.agriculture.numberOfFarmers > 0) {
 					return {
 						points: 1.5,
@@ -1632,7 +1636,7 @@ export const AGRICULTURAL_INPUTS_CONFIG: PPAConfig = {
 			maxPoints: 2.5,
 			enabled: true,
 			evaluate: (profile) => {
-				const priority = getPriorityValue(profile.priorities, PRIORITY_INDEX.farmTools);
+				const priority = getPriorityValue(profile.priorities, PRIORITY_NAMES.farmTools);
 				if (priority === 3 && profile.agriculture.numberOfFarmers > 0) {
 					return { points: 2.5, reason: 'Farm tools/inputs are a very urgent priority' };
 				} else if (priority === 2 && profile.agriculture.numberOfFarmers > 0) {
@@ -2082,7 +2086,7 @@ export function addCustomCriterionExample(sitioProfile: SitioProfile) {
 			maxPoints: 2.0,
 			enabled: true,
 			evaluate: (profile) => {
-				const priority = getPriorityValue(profile.priorities, PRIORITY_INDEX.roadOpening);
+				const priority = getPriorityValue(profile.priorities, PRIORITY_NAMES.roadOpening);
 				if (priority === 3) {
 					return {
 						points: 2.0,
