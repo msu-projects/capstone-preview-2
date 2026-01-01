@@ -1,14 +1,20 @@
 <script lang="ts">
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
+	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import TreemapChart from '$lib/components/charts/TreemapChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
+	import * as Card from '$lib/components/ui/card';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import * as Popover from '$lib/components/ui/popover';
 	import type { SitioRecord } from '$lib/types';
 	import {
 		aggregateLivelihood,
-		type LivelihoodAggregation
+		getAllAvailableYears,
+		getYearComparison,
+		prepareTimeSeriesData,
+		type LivelihoodAggregation,
+		type YearComparison
 	} from '$lib/utils/sitio-chart-aggregation';
 	import {
 		AlertTriangle,
@@ -39,8 +45,24 @@
 
 	let { sitios, selectedYear }: Props = $props();
 
+	// Get available years for comparison
+	const availableYears = $derived(getAllAvailableYears(sitios));
+	const currentYear = $derived(selectedYear || availableYears[0] || new Date().getFullYear());
+	const hasMultipleYears = $derived(availableYears.length > 1);
+
+	// Year-over-year comparison data
+	const yearComparison = $derived<YearComparison>(getYearComparison(sitios, currentYear));
+
 	// Aggregated livelihood data
 	const livelihood = $derived<LivelihoodAggregation>(aggregateLivelihood(sitios));
+
+	// Time series data for income trend
+	const incomeTrendData = $derived(prepareTimeSeriesData(sitios, ['averageDailyIncome']));
+
+	// Time series data for poverty trend
+	const povertyTrendData = $derived(
+		prepareTimeSeriesData(sitios, ['povertyCount', 'vulnerableCount'])
+	);
 
 	// Total workers
 	const totalWorkers = $derived(
@@ -478,6 +500,80 @@
 				</div>
 			{/snippet}
 		</InfoCard>
+
+		<!-- Income Trend Chart (only show if multiple years) -->
+		{#if hasMultipleYears && incomeTrendData.categories.length > 1}
+			<Card.Root>
+				<Card.Header class="pb-2">
+					<div class="flex items-center gap-2">
+						<div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-900/20">
+							<TrendingUp class="size-5 text-emerald-600 dark:text-emerald-400" />
+						</div>
+						<div>
+							<Card.Title class="text-base">Average Daily Income Trend</Card.Title>
+							<Card.Description>Year-over-year income changes across all sitios</Card.Description>
+						</div>
+						{#if yearComparison.trends.averageIncome}
+							<Badge
+								variant={yearComparison.trends.averageIncome.isPositive ? 'default' : 'destructive'}
+								class="ml-auto"
+							>
+								{yearComparison.trends.averageIncome.value >= 0 ? '↑' : '↓'}
+								{Math.abs(yearComparison.trends.averageIncome.value)}% vs last year
+							</Badge>
+						{/if}
+					</div>
+				</Card.Header>
+				<Card.Content>
+					<LineChart
+						series={incomeTrendData.series}
+						categories={incomeTrendData.categories}
+						height={260}
+						curve="smooth"
+						showLegend={false}
+						yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
+					/>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+
+		<!-- Poverty Trend Chart (only show if multiple years) -->
+		{#if hasMultipleYears && povertyTrendData.categories.length > 1}
+			<Card.Root>
+				<Card.Header class="pb-2">
+					<div class="flex items-center gap-2">
+						<div class="rounded-lg bg-rose-50 p-2 dark:bg-rose-900/20">
+							<TrendingDown class="size-5 text-rose-600 dark:text-rose-400" />
+						</div>
+						<div>
+							<Card.Title class="text-base">Poverty & Vulnerability Trends</Card.Title>
+							<Card.Description
+								>Sitios below poverty line and in vulnerable income brackets</Card.Description
+							>
+						</div>
+						{#if yearComparison.trends.povertyCount}
+							<Badge
+								variant={yearComparison.trends.povertyCount.isPositive ? 'default' : 'destructive'}
+								class="ml-auto"
+							>
+								{yearComparison.trends.povertyCount.value >= 0 ? '↑' : '↓'}
+								{Math.abs(yearComparison.trends.povertyCount.value)}% poverty
+							</Badge>
+						{/if}
+					</div>
+				</Card.Header>
+				<Card.Content>
+					<LineChart
+						series={povertyTrendData.series}
+						categories={povertyTrendData.categories}
+						height={260}
+						curve="smooth"
+						showLegend={true}
+						yAxisFormatter={(val) => val.toLocaleString()}
+					/>
+				</Card.Content>
+			</Card.Root>
+		{/if}
 
 		<!-- Agriculture Card -->
 		<InfoCard

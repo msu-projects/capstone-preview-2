@@ -24,6 +24,299 @@ export function getLatestYearData(sitioRecord: SitioRecord): SitioProfile | null
 }
 
 /**
+ * Get data for a specific year from a SitioRecord
+ */
+export function getDataForYear(sitioRecord: SitioRecord, year: number): SitioProfile | null {
+	return sitioRecord.yearlyData[year.toString()] || null;
+}
+
+// ==========================================
+// YEAR-OVER-YEAR COMPARISON TYPES & FUNCTIONS
+// ==========================================
+
+/**
+ * Represents a trend/change from one period to another
+ */
+export interface YoYTrend {
+	value: number;
+	label: string;
+	isPositive: boolean;
+}
+
+/**
+ * Calculate year-over-year percentage change
+ */
+export function calculateYoYChange(currentValue: number, previousValue: number): YoYTrend | null {
+	if (previousValue === 0 && currentValue === 0) return null;
+	if (previousValue === 0) {
+		return { value: 100, label: 'vs last year', isPositive: currentValue > 0 };
+	}
+
+	const change = ((currentValue - previousValue) / previousValue) * 100;
+	return {
+		value: Math.round(change * 10) / 10,
+		label: 'vs last year',
+		isPositive: change >= 0
+	};
+}
+
+/**
+ * Data point for time series charts
+ */
+export interface TimeSeriesDataPoint {
+	year: number;
+	value: number;
+}
+
+/**
+ * Multi-series time series for charts with multiple lines
+ */
+export interface MultiSeriesTimeData {
+	name: string;
+	data: number[];
+	color?: string;
+}
+
+/**
+ * Aggregated metrics for a specific year
+ */
+export interface YearlyMetrics {
+	year: number;
+	totalPopulation: number;
+	totalMale: number;
+	totalFemale: number;
+	totalHouseholds: number;
+	totalLaborWorkforce: number;
+	totalUnemployed: number;
+	employmentRate: number;
+	participationRate: number;
+	averageDailyIncome: number;
+	sitiosWithIncome: number;
+	electricityPercent: number;
+	toiletPercent: number;
+	internetPercent: number;
+	totalRoadLength: number;
+	povertyCount: number;
+	vulnerableCount: number;
+	sitioCount: number;
+}
+
+/**
+ * Aggregate metrics for a specific year across all sitios
+ */
+export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): YearlyMetrics {
+	let totalPopulation = 0;
+	let totalMale = 0;
+	let totalFemale = 0;
+	let totalHouseholds = 0;
+	let totalLaborWorkforce = 0;
+	let totalUnemployed = 0;
+	let householdsWithElectricity = 0;
+	let householdsWithToilet = 0;
+	let householdsWithInternet = 0;
+	let totalDailyIncome = 0;
+	let sitiosWithIncome = 0;
+	let totalRoadLength = 0;
+	let povertyCount = 0;
+	let vulnerableCount = 0;
+	let sitioCount = 0;
+
+	for (const sitio of sitios) {
+		const profile = getDataForYear(sitio, year);
+		if (!profile) continue;
+
+		sitioCount++;
+		totalPopulation += profile.totalPopulation || 0;
+		totalMale += profile.population?.totalMale || 0;
+		totalFemale += profile.population?.totalFemale || 0;
+		totalHouseholds += profile.totalHouseholds || 0;
+		totalLaborWorkforce += profile.laborForceCount || 0;
+		totalUnemployed += profile.vulnerableGroups?.unemployedCount || 0;
+		householdsWithElectricity += profile.householdsWithElectricity || 0;
+		householdsWithToilet += profile.householdsWithToilet || 0;
+		householdsWithInternet += profile.householdsWithInternet || 0;
+
+		// Road lengths
+		totalRoadLength +=
+			(profile.infrastructure?.concrete?.length || 0) +
+			(profile.infrastructure?.asphalt?.length || 0) +
+			(profile.infrastructure?.gravel?.length || 0) +
+			(profile.infrastructure?.natural?.length || 0);
+
+		// Income data
+		if (profile.averageDailyIncome && profile.averageDailyIncome > 0) {
+			totalDailyIncome += profile.averageDailyIncome;
+			sitiosWithIncome++;
+
+			// Poverty classification
+			if (profile.averageDailyIncome < 400) povertyCount++;
+			else if (profile.averageDailyIncome <= 600) vulnerableCount++;
+		}
+	}
+
+	const employed = totalLaborWorkforce - totalUnemployed;
+
+	return {
+		year,
+		totalPopulation,
+		totalMale,
+		totalFemale,
+		totalHouseholds,
+		totalLaborWorkforce,
+		totalUnemployed,
+		employmentRate: totalLaborWorkforce > 0 ? (employed / totalLaborWorkforce) * 100 : 0,
+		participationRate: totalPopulation > 0 ? (totalLaborWorkforce / totalPopulation) * 100 : 0,
+		averageDailyIncome: sitiosWithIncome > 0 ? totalDailyIncome / sitiosWithIncome : 0,
+		sitiosWithIncome,
+		electricityPercent:
+			totalHouseholds > 0 ? (householdsWithElectricity / totalHouseholds) * 100 : 0,
+		toiletPercent: totalHouseholds > 0 ? (householdsWithToilet / totalHouseholds) * 100 : 0,
+		internetPercent: totalHouseholds > 0 ? (householdsWithInternet / totalHouseholds) * 100 : 0,
+		totalRoadLength,
+		povertyCount,
+		vulnerableCount,
+		sitioCount
+	};
+}
+
+/**
+ * Get metrics for multiple years for time-series charts
+ */
+export function getMultiYearMetrics(sitios: SitioRecord[]): YearlyMetrics[] {
+	const years = getAllAvailableYears(sitios);
+	return years.map((year) => aggregateMetricsForYear(sitios, year)).reverse(); // oldest first
+}
+
+/**
+ * Get comparison between two years
+ */
+export interface YearComparison {
+	current: YearlyMetrics;
+	previous: YearlyMetrics | null;
+	trends: {
+		population: YoYTrend | null;
+		households: YoYTrend | null;
+		laborWorkforce: YoYTrend | null;
+		employmentRate: YoYTrend | null;
+		averageIncome: YoYTrend | null;
+		electricityAccess: YoYTrend | null;
+		toiletAccess: YoYTrend | null;
+		internetAccess: YoYTrend | null;
+		roadLength: YoYTrend | null;
+		povertyCount: YoYTrend | null;
+	};
+}
+
+/**
+ * Get year-over-year comparison data
+ */
+export function getYearComparison(sitios: SitioRecord[], currentYear: number): YearComparison {
+	const years = getAllAvailableYears(sitios).sort((a, b) => b - a);
+	const currentYearIndex = years.indexOf(currentYear);
+	const previousYear = currentYearIndex < years.length - 1 ? years[currentYearIndex + 1] : null;
+
+	const current = aggregateMetricsForYear(sitios, currentYear);
+	const previous = previousYear ? aggregateMetricsForYear(sitios, previousYear) : null;
+
+	return {
+		current,
+		previous,
+		trends: {
+			population: previous
+				? calculateYoYChange(current.totalPopulation, previous.totalPopulation)
+				: null,
+			households: previous
+				? calculateYoYChange(current.totalHouseholds, previous.totalHouseholds)
+				: null,
+			laborWorkforce: previous
+				? calculateYoYChange(current.totalLaborWorkforce, previous.totalLaborWorkforce)
+				: null,
+			employmentRate: previous
+				? calculateYoYChange(current.employmentRate, previous.employmentRate)
+				: null,
+			averageIncome: previous
+				? calculateYoYChange(current.averageDailyIncome, previous.averageDailyIncome)
+				: null,
+			electricityAccess: previous
+				? calculateYoYChange(current.electricityPercent, previous.electricityPercent)
+				: null,
+			toiletAccess: previous
+				? calculateYoYChange(current.toiletPercent, previous.toiletPercent)
+				: null,
+			internetAccess: previous
+				? calculateYoYChange(current.internetPercent, previous.internetPercent)
+				: null,
+			roadLength: previous
+				? calculateYoYChange(current.totalRoadLength, previous.totalRoadLength)
+				: null,
+			povertyCount: previous
+				? {
+						...calculateYoYChange(current.povertyCount, previous.povertyCount)!,
+						// For poverty, decrease is positive
+						isPositive: current.povertyCount <= previous.povertyCount
+					}
+				: null
+		}
+	};
+}
+
+/**
+ * Prepare time-series data for LineChart component
+ */
+export function prepareTimeSeriesData(
+	sitios: SitioRecord[],
+	metrics: (keyof YearlyMetrics)[]
+): { categories: string[]; series: MultiSeriesTimeData[] } {
+	const yearlyMetrics = getMultiYearMetrics(sitios);
+	const categories = yearlyMetrics.map((m) => m.year.toString());
+
+	const metricLabels: Record<string, string> = {
+		totalPopulation: 'Population',
+		totalMale: 'Male',
+		totalFemale: 'Female',
+		totalHouseholds: 'Households',
+		totalLaborWorkforce: 'Labor Force',
+		employmentRate: 'Employment Rate',
+		participationRate: 'Participation Rate',
+		averageDailyIncome: 'Avg Daily Income',
+		electricityPercent: 'Electricity',
+		toiletPercent: 'Sanitation',
+		internetPercent: 'Internet',
+		totalRoadLength: 'Road Length (km)',
+		povertyCount: 'Below Poverty',
+		vulnerableCount: 'Vulnerable'
+	};
+
+	const metricColors: Record<string, string> = {
+		totalPopulation: 'hsl(217, 91%, 60%)',
+		totalMale: 'hsl(217, 91%, 60%)',
+		totalFemale: 'hsl(330, 81%, 60%)',
+		totalHouseholds: 'hsl(142, 71%, 45%)',
+		totalLaborWorkforce: 'hsl(262, 83%, 58%)',
+		employmentRate: 'hsl(142, 71%, 45%)',
+		participationRate: 'hsl(217, 91%, 60%)',
+		averageDailyIncome: 'hsl(142, 71%, 45%)',
+		electricityPercent: 'hsl(45, 93%, 47%)',
+		toiletPercent: 'hsl(187, 85%, 43%)',
+		internetPercent: 'hsl(217, 91%, 60%)',
+		totalRoadLength: 'hsl(25, 95%, 53%)',
+		povertyCount: 'hsl(0, 84%, 60%)',
+		vulnerableCount: 'hsl(45, 93%, 47%)'
+	};
+
+	const series: MultiSeriesTimeData[] = metrics.map((metric) => ({
+		name: metricLabels[metric] || metric,
+		data: yearlyMetrics.map((m) => {
+			const value = m[metric];
+			return typeof value === 'number' ? Math.round(value * 10) / 10 : 0;
+		}),
+		color: metricColors[metric]
+	}));
+
+	return { categories, series };
+}
+
+/**
  * Safe percentage calculation with divide-by-zero protection
  */
 function safePercentage(numerator: number, denominator: number): number {

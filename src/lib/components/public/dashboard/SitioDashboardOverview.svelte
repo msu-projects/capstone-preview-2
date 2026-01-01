@@ -1,16 +1,22 @@
 <script lang="ts">
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
+	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
+	import * as Card from '$lib/components/ui/card';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioRecord } from '$lib/types';
 	import {
 		aggregateDemographics,
 		aggregateGeographic,
 		aggregateUtilities,
+		getAllAvailableYears,
+		getYearComparison,
+		prepareTimeSeriesData,
 		type DemographicsAggregation,
 		type GeographicAggregation,
-		type UtilitiesAggregation
+		type UtilitiesAggregation,
+		type YearComparison
 	} from '$lib/utils/sitio-chart-aggregation';
 	import {
 		AlertTriangle,
@@ -23,6 +29,7 @@
 		ShieldAlert,
 		Signal,
 		Sparkles,
+		TrendingUp,
 		Users,
 		Wifi,
 		Zap
@@ -35,10 +42,23 @@
 
 	let { sitios, selectedYear }: Props = $props();
 
+	// Get available years for comparison
+	const availableYears = $derived(getAllAvailableYears(sitios));
+	const currentYear = $derived(selectedYear || availableYears[0] || new Date().getFullYear());
+	const hasMultipleYears = $derived(availableYears.length > 1);
+
+	// Year-over-year comparison data
+	const yearComparison = $derived<YearComparison>(getYearComparison(sitios, currentYear));
+
 	// Aggregated data
 	const demographics = $derived<DemographicsAggregation>(aggregateDemographics(sitios));
 	const utilities = $derived<UtilitiesAggregation>(aggregateUtilities(sitios));
 	const geographic = $derived<GeographicAggregation>(aggregateGeographic(sitios));
+
+	// Time series data for population trend chart
+	const populationTrendData = $derived(
+		prepareTimeSeriesData(sitios, ['totalPopulation', 'totalHouseholds'])
+	);
 
 	// Classification distribution for donut chart
 	const classificationData = $derived([
@@ -55,39 +75,43 @@
 		}))
 	);
 
-	// Key stats for quick overview
+	// Key stats for quick overview with YoY trends
 	const keyStats = $derived([
 		{
 			icon: MapPin,
 			label: 'Total Sitios',
 			value: sitios.length.toLocaleString(),
 			subtext: 'recorded communities',
-			color: 'text-blue-500'
+			color: 'text-blue-500',
+			trend: null // Sitio count is cumulative, no YoY comparison
 		},
 		{
 			icon: Users,
 			label: 'Population',
 			value: demographics.totalPopulation.toLocaleString(),
 			subtext: `${demographics.averageHouseholdSize.toFixed(1)} avg/household`,
-			color: 'text-emerald-500'
+			color: 'text-emerald-500',
+			trend: yearComparison.trends.population
 		},
 		{
 			icon: Home,
 			label: 'Households',
 			value: demographics.totalHouseholds.toLocaleString(),
 			subtext: `${sitios.length > 0 ? (demographics.totalHouseholds / sitios.length).toFixed(1) : 0} avg/sitio`,
-			color: 'text-violet-500'
+			color: 'text-violet-500',
+			trend: yearComparison.trends.households
 		},
 		{
 			icon: Building2,
 			label: 'Coverage',
 			value: `${geographic.totalMunicipalities}`,
 			subtext: `municipalities, ${geographic.totalBarangays} barangays`,
-			color: 'text-amber-500'
+			color: 'text-amber-500',
+			trend: null // Administrative coverage doesn't have YoY
 		}
 	]);
 
-	// Utilities overview stats
+	// Utilities overview stats with YoY trends
 	const utilityStats = $derived([
 		{
 			icon: Zap,
@@ -102,7 +126,8 @@
 					? 'good'
 					: utilities.electricityPercent >= 50
 						? 'warning'
-						: 'critical'
+						: 'critical',
+			trend: yearComparison.trends.electricityAccess
 		},
 		{
 			icon: Droplets,
@@ -117,7 +142,8 @@
 					? 'good'
 					: utilities.toiletPercent >= 50
 						? 'warning'
-						: 'critical'
+						: 'critical',
+			trend: yearComparison.trends.toiletAccess
 		},
 		{
 			icon: Wifi,
@@ -132,7 +158,8 @@
 					? 'good'
 					: utilities.internetPercent >= 25
 						? 'warning'
-						: 'critical'
+						: 'critical',
+			trend: yearComparison.trends.internetAccess
 		},
 		{
 			icon: Signal,
@@ -142,7 +169,8 @@
 			color: 'text-indigo-500',
 			bgColor: 'bg-indigo-50 dark:bg-indigo-500/10',
 			borderColor: 'border-indigo-200 dark:border-indigo-500/30',
-			status: utilities.signal4G + utilities.signal5G > sitios.length / 2 ? 'good' : 'warning'
+			status: utilities.signal4G + utilities.signal5G > sitios.length / 2 ? 'good' : 'warning',
+			trend: null
 		}
 	]);
 
@@ -230,7 +258,19 @@
 									<p class="mt-0.5 text-xl leading-none font-bold text-foreground">
 										{stat.value}
 									</p>
-									<p class="mt-1 truncate text-xs text-muted-foreground/70">{stat.subtext}</p>
+									<div class="mt-1 flex items-center gap-2">
+										<p class="truncate text-xs text-muted-foreground/70">{stat.subtext}</p>
+										{#if stat.trend && hasMultipleYears}
+											<span
+												class="inline-flex items-center text-xs font-medium {stat.trend.isPositive
+													? 'text-emerald-600 dark:text-emerald-400'
+													: 'text-rose-600 dark:text-rose-400'}"
+											>
+												{stat.trend.value >= 0 ? '↑' : '↓'}
+												{Math.abs(stat.trend.value)}%
+											</span>
+										{/if}
+									</div>
 								</div>
 							</div>
 						{/each}
@@ -316,13 +356,52 @@
 							<p class="mt-1 text-2xl leading-none font-bold text-foreground">
 								{util.value}
 							</p>
-							<p class="mt-1.5 text-xs text-muted-foreground/70">{util.subtext}</p>
+							<div class="mt-1.5 flex items-center gap-2">
+								<p class="text-xs text-muted-foreground/70">{util.subtext}</p>
+								{#if util.trend && hasMultipleYears}
+									<span
+										class="inline-flex items-center text-xs font-medium {util.trend.isPositive
+											? 'text-emerald-600 dark:text-emerald-400'
+											: 'text-rose-600 dark:text-rose-400'}"
+									>
+										{util.trend.value >= 0 ? '↑' : '↓'}
+										{Math.abs(util.trend.value)}%
+									</span>
+								{/if}
+							</div>
 						</div>
 					</div>
 				{/each}
 			</div>
 		{/snippet}
 	</InfoCard>
+
+	<!-- Population Trend Chart (only show if multiple years) -->
+	{#if hasMultipleYears && populationTrendData.categories.length > 1}
+		<Card.Root>
+			<Card.Header class="pb-2">
+				<div class="flex items-center gap-2">
+					<div class="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/20">
+						<TrendingUp class="size-5 text-blue-600 dark:text-blue-400" />
+					</div>
+					<div>
+						<Card.Title class="text-base">Population & Household Trends</Card.Title>
+						<Card.Description>Year-over-year growth across all sitios</Card.Description>
+					</div>
+				</div>
+			</Card.Header>
+			<Card.Content>
+				<LineChart
+					series={populationTrendData.series}
+					categories={populationTrendData.categories}
+					height={280}
+					curve="smooth"
+					showLegend={true}
+					yAxisFormatter={(val) => val.toLocaleString()}
+				/>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 
 	<!-- Bottom Row: Classification + Charts -->
 	<div class="grid grid-cols-1 gap-5 lg:grid-cols-12">

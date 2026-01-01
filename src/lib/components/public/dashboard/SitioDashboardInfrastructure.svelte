@@ -1,7 +1,9 @@
 <script lang="ts">
 	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
+	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
+	import * as Card from '$lib/components/ui/card';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioRecord } from '$lib/types';
@@ -10,10 +12,14 @@
 		aggregateFacilities,
 		aggregateInfrastructure,
 		aggregateUtilities,
+		getAllAvailableYears,
+		getYearComparison,
+		prepareTimeSeriesData,
 		type AccessModesAggregation,
 		type FacilitiesAggregation,
 		type InfrastructureAggregation,
-		type UtilitiesAggregation
+		type UtilitiesAggregation,
+		type YearComparison
 	} from '$lib/utils/sitio-chart-aggregation';
 	import {
 		Building2,
@@ -25,6 +31,7 @@
 		Milestone,
 		Router,
 		Ship,
+		TrendingUp,
 		Zap
 	} from '@lucide/svelte';
 
@@ -37,6 +44,19 @@
 
 	// Total sitios for percentage calculations
 	const totalSitios = $derived(sitios.length);
+
+	// Get available years for comparison
+	const availableYears = $derived(getAllAvailableYears(sitios));
+	const currentYear = $derived(selectedYear || availableYears[0] || new Date().getFullYear());
+	const hasMultipleYears = $derived(availableYears.length > 1);
+
+	// Year-over-year comparison data
+	const yearComparison = $derived<YearComparison>(getYearComparison(sitios, currentYear));
+
+	// Time series data for utilities trends
+	const utilityTrendData = $derived(
+		prepareTimeSeriesData(sitios, ['electricityPercent', 'toiletPercent', 'internetPercent'])
+	);
 
 	// Aggregated data
 	const infrastructure = $derived<InfrastructureAggregation>(aggregateInfrastructure(sitios));
@@ -417,6 +437,70 @@
 				</div>
 			{/snippet}
 		</InfoCard>
+
+		<!-- Utility Access Trend Chart (only show if multiple years) -->
+		{#if hasMultipleYears && utilityTrendData.categories.length > 1}
+			<Card.Root>
+				<Card.Header class="pb-2">
+					<div class="flex items-center gap-2">
+						<div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
+							<TrendingUp class="size-5 text-indigo-600 dark:text-indigo-400" />
+						</div>
+						<div>
+							<Card.Title class="text-base">Utility Access Trends</Card.Title>
+							<Card.Description>Year-over-year utility coverage improvements (%)</Card.Description>
+						</div>
+					</div>
+					<!-- Trend badges -->
+					<div class="mt-2 flex flex-wrap gap-2">
+						{#if yearComparison.trends.electricityAccess}
+							<Badge
+								variant={yearComparison.trends.electricityAccess.isPositive
+									? 'default'
+									: 'destructive'}
+								class="gap-1"
+							>
+								<Zap class="size-3" />
+								Electricity {yearComparison.trends.electricityAccess.value >= 0 ? '+' : ''}
+								{yearComparison.trends.electricityAccess.value.toFixed(1)}%
+							</Badge>
+						{/if}
+						{#if yearComparison.trends.toiletAccess}
+							<Badge
+								variant={yearComparison.trends.toiletAccess.isPositive ? 'default' : 'destructive'}
+								class="gap-1"
+							>
+								<Droplets class="size-3" />
+								Sanitation {yearComparison.trends.toiletAccess.value >= 0 ? '+' : ''}
+								{yearComparison.trends.toiletAccess.value.toFixed(1)}%
+							</Badge>
+						{/if}
+						{#if yearComparison.trends.internetAccess}
+							<Badge
+								variant={yearComparison.trends.internetAccess.isPositive
+									? 'default'
+									: 'destructive'}
+								class="gap-1"
+							>
+								<Router class="size-3" />
+								Internet {yearComparison.trends.internetAccess.value >= 0 ? '+' : ''}
+								{yearComparison.trends.internetAccess.value.toFixed(1)}%
+							</Badge>
+						{/if}
+					</div>
+				</Card.Header>
+				<Card.Content>
+					<LineChart
+						series={utilityTrendData.series}
+						categories={utilityTrendData.categories}
+						height={280}
+						curve="smooth"
+						showLegend={true}
+						yAxisFormatter={(val) => `${val.toFixed(1)}%`}
+					/>
+				</Card.Content>
+			</Card.Root>
+		{/if}
 
 		<!-- Internal Infrastructure (Roads) Card -->
 		<InfoCard

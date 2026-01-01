@@ -8,7 +8,7 @@
 		value: string | number;
 		subtitle?: string;
 		icon: Component;
-		trend?: { value: number; label: string };
+		trend?: { value: number; label: string; isPositive?: boolean };
 		variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
 		class?: string;
 	}
@@ -52,6 +52,11 @@
 	};
 
 	const styles = $derived(variantStyles[variant]);
+
+	// Determine if trend is positive based on isPositive flag (if provided) or value
+	const trendIsPositive = $derived(
+		trend ? (trend.isPositive !== undefined ? trend.isPositive : trend.value >= 0) : false
+	);
 </script>
 
 <Card.Root class={cn('relative overflow-hidden py-0', className)}>
@@ -68,7 +73,7 @@
 				{/if}
 				{#if trend}
 					<p
-						class="mt-2 text-sm font-medium {trend.value >= 0
+						class="mt-2 text-sm font-medium {trendIsPositive
 							? 'text-emerald-600 dark:text-emerald-400'
 							: 'text-rose-600 dark:text-rose-400'}"
 					>

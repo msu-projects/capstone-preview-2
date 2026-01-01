@@ -1,11 +1,16 @@
 <script lang="ts">
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
+	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import type { SitioRecord } from '$lib/types';
 	import {
 		aggregateDemographics,
-		type DemographicsAggregation
+		getAllAvailableYears,
+		getYearComparison,
+		prepareTimeSeriesData,
+		type DemographicsAggregation,
+		type YearComparison
 	} from '$lib/utils/sitio-chart-aggregation';
 	import {
 		Briefcase,
@@ -33,8 +38,26 @@
 
 	let { sitios, selectedYear }: Props = $props();
 
+	// Get available years for comparison
+	const availableYears = $derived(getAllAvailableYears(sitios));
+	const currentYear = $derived(selectedYear || availableYears[0] || new Date().getFullYear());
+	const hasMultipleYears = $derived(availableYears.length > 1);
+
+	// Year-over-year comparison data
+	const yearComparison = $derived<YearComparison>(getYearComparison(sitios, currentYear));
+
 	// Aggregated demographics data
 	const demographics = $derived<DemographicsAggregation>(aggregateDemographics(sitios));
+
+	// Time series data for population trend chart
+	const populationGenderTrend = $derived(
+		prepareTimeSeriesData(sitios, ['totalMale', 'totalFemale'])
+	);
+
+	// Time series data for labor force trend
+	const laborForceTrend = $derived(
+		prepareTimeSeriesData(sitios, ['totalLaborWorkforce', 'totalUnemployed'])
+	);
 
 	// Gender distribution for donut chart
 	const genderData = $derived([
@@ -109,6 +132,9 @@
 			)}% female"
 			icon={Users}
 			variant="primary"
+			trend={hasMultipleYears && yearComparison.trends.population
+				? yearComparison.trends.population
+				: undefined}
 		/>
 		<DashboardStatCard
 			title="Total Households"
@@ -116,6 +142,9 @@
 			subtitle="Avg {demographics.averageHouseholdSize.toFixed(1)} members/household"
 			icon={Heart}
 			variant="success"
+			trend={hasMultipleYears && yearComparison.trends.households
+				? yearComparison.trends.households
+				: undefined}
 		/>
 		<DashboardStatCard
 			title="Registered Voters"
@@ -134,8 +163,38 @@
 				: demographics.unemploymentRate >= 10
 					? 'warning'
 					: 'success'}
+			trend={hasMultipleYears && yearComparison.trends.laborWorkforce
+				? yearComparison.trends.laborWorkforce
+				: undefined}
 		/>
 	</div>
+
+	<!-- Population Trend Chart (only show if multiple years) -->
+	{#if hasMultipleYears && populationGenderTrend.categories.length > 1}
+		<Card.Root>
+			<Card.Header class="pb-2">
+				<div class="flex items-center gap-2">
+					<div class="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/20">
+						<TrendingUp class="size-5 text-blue-600 dark:text-blue-400" />
+					</div>
+					<div>
+						<Card.Title class="text-base">Population by Gender Over Time</Card.Title>
+						<Card.Description>Year-over-year population trends</Card.Description>
+					</div>
+				</div>
+			</Card.Header>
+			<Card.Content>
+				<LineChart
+					series={populationGenderTrend.series}
+					categories={populationGenderTrend.categories}
+					height={260}
+					curve="smooth"
+					showLegend={true}
+					yAxisFormatter={(val) => val.toLocaleString()}
+				/>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 
 	<!-- Main Content Grid: 2/3 + 1/3 layout on large screens -->
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
