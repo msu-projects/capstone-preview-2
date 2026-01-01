@@ -90,7 +90,7 @@
 		},
 		{
 			label: 'Conflict-Affected',
-			description: 'Conflict-affected area status',
+			description: 'Conflict-affected area',
 			active: !sitio.sitioClassification.conflict,
 			activeIcon: ShieldCheck,
 			inactiveIcon: ShieldAlert,
@@ -389,7 +389,7 @@
 								class="shrink-0"
 							>
 								{#if item.invertedLogic}
-									{isActive ? 'Cleared' : 'Affected'}
+									{isActive ? 'No' : 'Yes'}
 								{:else}
 									{item.active ? 'Yes' : 'No'}
 								{/if}

@@ -699,46 +699,67 @@
 						<UserCheck class="size-5 text-slate-500" />
 						Sitio Classifications
 					</Card.Title>
-					<Card.Description>Sitios by vulnerability classification</Card.Description>
+					<Card.Description>Special area designations and vulnerability status</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<div class="space-y-4">
+					<div class="space-y-3">
 						<div
-							class="flex items-center justify-between rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20"
+							class="rounded-lg border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-900/30 dark:bg-amber-900/20"
 						>
-							<div class="flex items-center gap-2">
-								<span class="size-3 rounded-full bg-amber-500"></span>
-								<span class="text-sm font-medium text-slate-700 dark:text-slate-300">GIDA</span>
+							<div class="flex items-start justify-between gap-3">
+								<div class="flex items-start gap-2.5">
+									<span class="mt-0.5 size-3 shrink-0 rounded-full bg-amber-500"></span>
+									<div class="min-w-0 flex-1">
+										<span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
+											>GIDA Status</span
+										>
+										<p class="mt-0.5 text-xs text-muted-foreground/80">
+											Geographically Isolated and Disadvantaged Area
+										</p>
+									</div>
+								</div>
+								<span class="text-lg font-bold text-slate-900 dark:text-white">
+									{demographics.gidaCount}
+								</span>
 							</div>
-							<span class="text-lg font-bold text-slate-900 dark:text-white">
-								{demographics.gidaCount}
-							</span>
 						</div>
 						<div
-							class="flex items-center justify-between rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20"
+							class="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 dark:border-emerald-900/30 dark:bg-emerald-900/20"
 						>
-							<div class="flex items-center gap-2">
-								<span class="size-3 rounded-full bg-blue-500"></span>
-								<span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-									>Indigenous</span
-								>
+							<div class="flex items-start justify-between gap-3">
+								<div class="flex items-start gap-2.5">
+									<span class="mt-0.5 size-3 shrink-0 rounded-full bg-emerald-500"></span>
+									<div class="min-w-0 flex-1">
+										<span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
+											>Indigenous Community</span
+										>
+										<p class="mt-0.5 text-xs text-muted-foreground/80">
+											Indigenous Peoples (IP) Area
+										</p>
+									</div>
+								</div>
+								<span class="text-lg font-bold text-slate-900 dark:text-white">
+									{demographics.indigenousCount}
+								</span>
 							</div>
-							<span class="text-lg font-bold text-slate-900 dark:text-white">
-								{demographics.indigenousCount}
-							</span>
 						</div>
 						<div
-							class="flex items-center justify-between rounded-lg bg-red-50 p-3 dark:bg-red-900/20"
+							class="rounded-lg border border-red-200 bg-red-50 p-3.5 dark:border-red-900/30 dark:bg-red-900/20"
 						>
-							<div class="flex items-center gap-2">
-								<span class="size-3 rounded-full bg-red-500"></span>
-								<span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-									>Conflict Affected</span
-								>
+							<div class="flex items-start justify-between gap-3">
+								<div class="flex items-start gap-2.5">
+									<span class="mt-0.5 size-3 shrink-0 rounded-full bg-red-500"></span>
+									<div class="min-w-0 flex-1">
+										<span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
+											>Conflict-Affected</span
+										>
+										<p class="mt-0.5 text-xs text-muted-foreground/80">Conflict-affected area</p>
+									</div>
+								</div>
+								<span class="text-lg font-bold text-slate-900 dark:text-white">
+									{demographics.conflictCount}
+								</span>
 							</div>
-							<span class="text-lg font-bold text-slate-900 dark:text-white">
-								{demographics.conflictCount}
-							</span>
 						</div>
 						<p class="text-center text-xs text-muted-foreground">
 							Note: Sitios may have multiple classifications
