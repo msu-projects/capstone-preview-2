@@ -280,16 +280,16 @@ Each water source contains:
 
 ### 3.8 Livelihood & Agriculture
 
-#### Worker Class (workerClass object - boolean flags)
+#### Worker Class (workerClass object - number counts)
 
-| Field                | Description                                      |
-| -------------------- | ------------------------------------------------ |
-| privateHousehold     | e.g., domestic helper                            |
-| privateEstablishment | e.g., company employee                           |
-| government           | e.g., Barangay Tanod, Teacher                    |
-| selfEmployed         | e.g., Sari-sari store                            |
-| employer             | Own family-operated farm/business with employees |
-| unpaidFamilyWorker   | Unpaid family worker                             |
+| Field                | Type   | Description                                      |
+| -------------------- | ------ | ------------------------------------------------ |
+| privateHousehold     | number | e.g., domestic helper                            |
+| privateEstablishment | number | e.g., company employee                           |
+| government           | number | e.g., Barangay Tanod, Teacher                    |
+| selfEmployed         | number | e.g., Sari-sari store                            |
+| employer             | number | Own family-operated farm/business with employees |
+| ofw                  | number | Overseas Filipino Workers                        |
 
 #### Income
 
@@ -345,19 +345,26 @@ Each hazard contains:
 
 ### 3.10 Sitio Priority Needs
 
-**Priority Interventions** (priorities object - rating scale 0-3):
+**Priority Interventions** (priorities array - rating scale 0-3):
 
-| Field             | Type             | Description                              |
-| ----------------- | ---------------- | ---------------------------------------- |
-| waterSystem       | 0 \| 1 \| 2 \| 3 | Water system priority                    |
-| communityCR       | 0 \| 1 \| 2 \| 3 | Community comfort room priority          |
-| solarStreetLights | 0 \| 1 \| 2 \| 3 | Solar street lights priority             |
-| roadOpening       | 0 \| 1 \| 2 \| 3 | Road opening priority                    |
-| farmTools         | 0 \| 1 \| 2 \| 3 | Farm tools priority                      |
-| healthServices    | 0 \| 1 \| 2 \| 3 | Health services priority                 |
-| educationSupport  | 0 \| 1 \| 2 \| 3 | Education support priority               |
-| others            | 0 \| 1 \| 2 \| 3 | Other priorities (optional)              |
-| othersSpecify     | string           | Specification for 'Others' if applicable |
+| Field      | Type                      | Description                                        |
+| ---------- | ------------------------- | -------------------------------------------------- |
+| priorities | Array<{name: 0\|1\|2\|3}> | Array of priority interventions with rating values |
+
+Each priority item in the array contains:
+
+- **name**: The intervention name (e.g., "waterSystem", "communityCR", "solarStreetLights", "roadOpening", "farmTools", "healthServices", "educationSupport")
+- **rating**: Priority rating (0 = Not needed, 1 = Low, 2 = Medium, 3 = Very urgent)
+
+Common priority intervention names:
+
+- waterSystem - Water system priority
+- communityCR - Community comfort room priority
+- solarStreetLights - Solar street lights priority
+- roadOpening - Road opening priority
+- farmTools - Farm tools priority
+- healthServices - Health services priority
+- educationSupport - Education support priority
 
 **Priority Rating Scale:**
 
@@ -916,7 +923,7 @@ SitioProfile
 │   ├── waterSources (natural, level1, level2, level3)
 │   └── sanitationTypes
 ├── Section H: Livelihood & Agriculture
-│   ├── workerClass (privateHousehold, privateEstablishment, government, etc.)
+│   ├── workerClass (privateHousehold, privateEstablishment, government, selfEmployed, employer, ofw - all number counts)
 │   ├── averageDailyIncome
 │   ├── agriculture (numberOfFarmers, numberOfAssociations, estimatedFarmAreaHectares)
 │   ├── crops (array), livestock (array)
@@ -924,8 +931,7 @@ SitioProfile
 │   ├── hazards (flood, landslide, drought, earthquake)
 │   ├── peaceOrder, foodSecurity
 └── Section J: Sitio Priority Needs
-    ├── priorities (waterSystem, communityCR, solarStreetLights, roadOpening,
-    │   farmTools, healthServices, educationSupport, others)
+    ├── priorities (array of {name, rating} objects)
     └── Section K: Recommendation
         ├── averageNeedScore
         └── recommendations (PPARecommendation[])
@@ -941,7 +947,7 @@ The recommendation engine evaluates these critical aspects:
 | Socioeconomic Status | averageDailyIncome, vulnerableGroups.unemployedCount, laborForceCount    |
 | Health & Safety      | hazards, peaceOrder, foodSecurity, sanitationTypes, householdsWithToilet |
 | Geographic Context   | sitioClassification (gida, indigenous, conflict), mainAccess             |
-| Community Needs      | priorities (waterSystem, communityCR, etc.), averageNeedScore            |
+| Community Needs      | priorities (array of intervention ratings), averageNeedScore             |
 | Population Impact    | totalPopulation, totalHouseholds                                         |
 | Education Needs      | studentsPerRoom, schoolAgeChildren, vulnerableGroups.outOfSchoolYouth    |
 | Agricultural Context | workerClass, agriculture, crops, livestock                               |
@@ -1267,7 +1273,7 @@ When a record is updated, the system captures the specific field changes:
 
 | Field                                 | Rule                                               |
 | ------------------------------------- | -------------------------------------------------- |
-| workerClass.\*                        | Boolean flags for different worker classes         |
+| workerClass.\*                        | Non-negative integer counts for worker classes     |
 | averageDailyIncome                    | Required, non-negative number                      |
 | agriculture.numberOfFarmers           | Optional, non-negative integer, ≤ total population |
 | agriculture.numberOfAssociations      | Optional, non-negative integer, ≤ numberOfFarmers  |
@@ -1311,7 +1317,7 @@ When a record is updated, the system captures the specific field changes:
 
 #### Livelihood & Income
 
-- If workerClass.selfEmployed or workerClass.employer is true, expect agriculture.numberOfFarmers > 0 for agricultural communities
+- If workerClass.selfEmployed > 0 or workerClass.employer > 0, expect agriculture.numberOfFarmers > 0 for agricultural communities
 - If agriculture.numberOfFarmers > 0, expect agriculture.estimatedFarmAreaHectares > 0
 - If crops array is not empty, expect agriculture.numberOfFarmers > 0
 - If livestock array is not empty, expect agriculture.numberOfFarmers > 0
