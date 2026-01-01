@@ -23,7 +23,7 @@
 	>
 		<CircleHelp class="size-3.5" />
 	</Tooltip.Trigger>
-	<Tooltip.Content {side} class="max-w-[280px] text-pretty">
+	<Tooltip.Content {side} class="max-w-70 text-pretty">
 		{#if children}
 			{@render children()}
 		{:else}

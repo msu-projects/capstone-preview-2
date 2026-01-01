@@ -242,9 +242,6 @@ export interface SitioProfile {
 		earthquake: HazardDetails;
 	};
 
-	/** Current Peace and Order Status */
-	peaceOrder: 'stable' | 'occasional_tensions' | 'unstable';
-
 	/** Primary food security concern */
 	foodSecurity: 'secure' | 'seasonal_scarcity' | 'critical_shortage';
 

@@ -16,7 +16,6 @@
 		ListChecks,
 		Mountain,
 		Route,
-		Shield,
 		Tractor,
 		UtensilsCrossed,
 		Waves
@@ -42,8 +41,6 @@
 			drought: { frequency: '0' },
 			earthquake: { frequency: '0' }
 		}),
-		/** Current Peace and Order Status */
-		peaceOrder = $bindable<'stable' | 'occasional_tensions' | 'unstable'>('stable'),
 		/** Primary food security concern */
 		foodSecurity = $bindable<'secure' | 'seasonal_scarcity' | 'critical_shortage'>('secure'),
 
@@ -64,7 +61,6 @@
 			drought: HazardDetails;
 			earthquake: HazardDetails;
 		};
-		peaceOrder: 'stable' | 'occasional_tensions' | 'unstable';
 		foodSecurity: 'secure' | 'seasonal_scarcity' | 'critical_shortage';
 		priorities: PriorityItem[];
 	} = $props();
@@ -203,75 +199,6 @@
 					</div>
 				</div>
 			{/each}
-		</div>
-	</FormSection>
-
-	<!-- Peace & Order Section -->
-	<FormSection
-		title="Peace & Order"
-		description="Current peace and order status in the community"
-		icon={Shield}
-		variant="warning"
-		defaultOpen={false}
-	>
-		<div class="space-y-3">
-			<Label for="peaceOrder" class="flex items-center gap-1.5 text-sm font-medium">
-				Current Peace and Order Status
-				<HelpTooltip content="Select the current peace and order situation in the sitio" />
-			</Label>
-			<Select.Root
-				type="single"
-				value={peaceOrder}
-				onValueChange={(v) => {
-					if (v) peaceOrder = v as 'stable' | 'occasional_tensions' | 'unstable';
-				}}
-			>
-				<Select.Trigger
-					id="peaceOrder"
-					class={cn(
-						'h-11 rounded-xl',
-						peaceOrder === 'occasional_tensions' && 'border-amber-500/50 bg-amber-500/5',
-						peaceOrder === 'unstable' && 'border-rose-500/50 bg-rose-500/5'
-					)}
-				>
-					{#if peaceOrder === 'stable'}
-						<span class="flex items-center gap-2">
-							<span class="size-2 rounded-full bg-emerald-500"></span>
-							Stable / Peaceful
-						</span>
-					{:else if peaceOrder === 'occasional_tensions'}
-						<span class="flex items-center gap-2">
-							<span class="size-2 rounded-full bg-amber-500"></span>
-							Occasional tensions (no displacement)
-						</span>
-					{:else}
-						<span class="flex items-center gap-2">
-							<span class="size-2 rounded-full bg-rose-500"></span>
-							Unstable (periodic evacuation/displacement required)
-						</span>
-					{/if}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="stable">
-						<span class="flex items-center gap-2">
-							<span class="size-2 rounded-full bg-emerald-500"></span>
-							Stable / Peaceful
-						</span>
-					</Select.Item>
-					<Select.Item value="occasional_tensions">
-						<span class="flex items-center gap-2">
-							<span class="size-2 rounded-full bg-amber-500"></span>
-							Occasional tensions (no displacement)
-						</span>
-					</Select.Item>
-					<Select.Item value="unstable">
-						<span class="flex items-center gap-2">
-							<span class="size-2 rounded-full bg-rose-500"></span>
-							Unstable (periodic evacuation/displacement required)
-						</span>
-					</Select.Item>
-				</Select.Content>
-			</Select.Root>
 		</div>
 	</FormSection>
 

@@ -399,15 +399,40 @@ function generateYearProfile(
 	};
 
 	// ========== H. LIVELIHOOD & AGRICULTURE ==========
-	const totalWorkers = laborForceCount;
-	const workerClass = {
-		privateHousehold: rng.nextInt(0, Math.floor(totalWorkers * 0.1)),
-		privateEstablishment: rng.nextInt(0, Math.floor(totalWorkers * 0.2)),
-		government: rng.nextInt(0, Math.floor(totalWorkers * 0.15)),
-		selfEmployed: rng.nextInt(Math.floor(totalWorkers * 0.2), Math.floor(totalWorkers * 0.5)),
-		employer: rng.nextInt(0, Math.floor(totalWorkers * 0.1)),
-		ofw: rng.nextInt(0, Math.floor(totalWorkers * 0.15))
+	// Total workers = employed workers only (labor force - unemployed)
+	const totalWorkers = laborForceCount - unemployedCount;
+
+	// Distribute workers across categories using percentages that sum to 1.0
+	const workerDistribution = {
+		privateHousehold: 0.08 + rng.next() * 0.05, // 8-13%
+		privateEstablishment: 0.15 + rng.next() * 0.1, // 15-25%
+		government: 0.1 + rng.next() * 0.08, // 10-18%
+		selfEmployed: 0.35 + rng.next() * 0.2, // 35-55%
+		employer: 0.03 + rng.next() * 0.05, // 3-8%
+		ofw: 0.05 + rng.next() * 0.1 // 5-15%
 	};
+
+	// Normalize distribution to sum to 1.0
+	const distributionSum = Object.values(workerDistribution).reduce((a, b) => a + b, 0);
+	Object.keys(workerDistribution).forEach((key) => {
+		workerDistribution[key as keyof typeof workerDistribution] /= distributionSum;
+	});
+
+	// Calculate actual counts, ensuring they sum to totalWorkers
+	const workerCounts = {
+		privateHousehold: Math.floor(totalWorkers * workerDistribution.privateHousehold),
+		privateEstablishment: Math.floor(totalWorkers * workerDistribution.privateEstablishment),
+		government: Math.floor(totalWorkers * workerDistribution.government),
+		selfEmployed: Math.floor(totalWorkers * workerDistribution.selfEmployed),
+		employer: Math.floor(totalWorkers * workerDistribution.employer),
+		ofw: 0 // Will be calculated last to ensure exact sum
+	};
+
+	// Assign remaining workers to OFW to ensure exact sum
+	const assignedWorkers = Object.values(workerCounts).reduce((a, b) => a + b, 0);
+	workerCounts.ofw = totalWorkers - assignedWorkers;
+
+	const workerClass = workerCounts;
 
 	const averageDailyIncome = rng.nextInt(150, 800); // PHP per day
 
@@ -432,15 +457,6 @@ function generateYearProfile(
 		drought: generateHazardDetails(rng),
 		earthquake: generateHazardDetails(rng)
 	};
-
-	const peaceOrderOptions: Array<'stable' | 'occasional_tensions' | 'unstable'> = [
-		'stable',
-		'occasional_tensions',
-		'unstable'
-	];
-	const peaceOrder = sitioClassification.conflict
-		? rng.pick(['occasional_tensions', 'unstable'] as const)
-		: rng.pick(peaceOrderOptions);
 
 	const foodSecurityOptions: Array<'secure' | 'seasonal_scarcity' | 'critical_shortage'> = [
 		'secure',
@@ -534,7 +550,6 @@ function generateYearProfile(
 
 		// Section I - Safety & Risk Context
 		hazards,
-		peaceOrder,
 		foodSecurity,
 
 		// Section J - Sitio Priority Needs
@@ -549,7 +564,7 @@ function generateYearProfile(
 }
 
 // ===== STORAGE KEYS =====
-export const STORAGE_VERSION = 6; // Increment to clear outdated data (updated priorities to use {name, rating} structure)
+export const STORAGE_VERSION = 7; // Increment to clear outdated data (removed peaceOrder field)
 export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
 export const MOCK_DATA_INITIALIZED_KEY = 'sccdp_mock_data_initialized';
 

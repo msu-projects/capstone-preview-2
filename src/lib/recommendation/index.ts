@@ -530,11 +530,7 @@ export const COMMUNITY_HUB_CONFIG: PPAConfig = {
 			maxPoints: 2.0,
 			enabled: true,
 			evaluate: (profile) => {
-				if (
-					profile.sitioClassification.conflict ||
-					profile.peaceOrder === 'unstable' ||
-					profile.peaceOrder === 'occasional_tensions'
-				) {
+				if (profile.sitioClassification.conflict) {
 					return {
 						points: 2.0,
 						reason: 'Conflict-affected area needs dispute resolution venue'
@@ -905,11 +901,7 @@ export const SOLAR_STREET_LIGHTS_CONFIG: PPAConfig = {
 			maxPoints: 1.0,
 			enabled: true,
 			evaluate: (profile) => {
-				if (
-					profile.sitioClassification.conflict ||
-					profile.peaceOrder === 'unstable' ||
-					profile.peaceOrder === 'occasional_tensions'
-				) {
+				if (profile.sitioClassification.conflict) {
 					return {
 						points: 1.0,
 						reason: 'Conflict area - lighting improves safety'
@@ -1213,8 +1205,7 @@ export const SERVICE_CARAVAN_CONFIG: PPAConfig = {
 					profile.foodSecurity === 'seasonal_scarcity'
 				)
 					concerns++;
-				if (profile.peaceOrder === 'unstable' || profile.peaceOrder === 'occasional_tensions')
-					concerns++;
+				if (profile.sitioClassification.conflict) concerns++;
 
 				if (concerns >= 3) {
 					return {
@@ -1463,7 +1454,7 @@ export const FEEDING_PROGRAM_CONFIG: PPAConfig = {
 			maxPoints: 1.0,
 			enabled: true,
 			evaluate: (profile) => {
-				if (profile.sitioClassification.conflict || profile.peaceOrder === 'unstable') {
+				if (profile.sitioClassification.conflict) {
 					return { points: 1.0, reason: 'Conflict impacts food security' };
 				}
 				return { points: 0, reason: 'No recent conflict' };
@@ -1780,11 +1771,7 @@ export const SOCIAL_PREPARATION_CONFIG: PPAConfig = {
 			maxPoints: 1.5,
 			enabled: true,
 			evaluate: (profile) => {
-				if (
-					profile.sitioClassification.conflict ||
-					profile.peaceOrder === 'unstable' ||
-					profile.peaceOrder === 'occasional_tensions'
-				) {
+				if (profile.sitioClassification.conflict) {
 					return {
 						points: 1.5,
 						reason: 'Conflict context requires careful community engagement'

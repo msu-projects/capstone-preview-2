@@ -344,12 +344,6 @@ Each hazard contains:
 | drought    | Drought events    |
 | earthquake | Earthquake events |
 
-#### Peace and Order Status
-
-| Field      | Type                                            | Description                    |
-| ---------- | ----------------------------------------------- | ------------------------------ |
-| peaceOrder | 'stable' \| 'occasional_tensions' \| 'unstable' | Current peace and order status |
-
 #### Food Security
 
 | Field        | Type                                                   | Description                   |
@@ -1048,7 +1042,6 @@ When a record is updated, the system captures the specific field changes:
 - If sitioClassification.indigenous is true and vulnerableGroups.muslimCount > 0, madrasah facility should be considered
 - If mainAccess has only 'boat' as true, expect limited road infrastructure
 - GIDA classification typically correlates with limited facilities and infrastructure
-- If sitioClassification.conflict is true, expect peaceOrder to be 'unstable' or 'occasional_tensions'
 
 #### Livelihood & Income
 

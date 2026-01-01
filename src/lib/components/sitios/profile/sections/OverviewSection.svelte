@@ -4,7 +4,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioProfile } from '$lib/types';
-	import { formatNumber } from '$lib/utils/formatters';
 	import {
 		AlertTriangle,
 		ArrowRight,
@@ -14,17 +13,14 @@
 		Footprints,
 		Globe,
 		Landmark,
-		Leaf,
 		MapPin,
 		Milestone,
-		Shield,
 		ShieldAlert,
 		ShieldCheck,
 		Ship,
 		Signal,
 		Sparkles,
 		Users,
-		Wheat,
 		Wifi,
 		Zap
 	} from '@lucide/svelte';
@@ -93,7 +89,7 @@
 			activeBorder: 'border-emerald-200 dark:border-emerald-500/30'
 		},
 		{
-			label: 'Peace & Order',
+			label: 'Conflict-Affected',
 			description: 'Conflict-affected area status',
 			active: !sitio.sitioClassification.conflict,
 			activeIcon: ShieldCheck,
@@ -166,35 +162,6 @@
 			color: signalDisplay.color
 		}
 	]);
-
-	// Peace and order status
-	const peaceOrderStatus = $derived(
-		{
-			stable: {
-				label: 'Stable',
-				icon: ShieldCheck,
-				color: 'text-emerald-600 dark:text-emerald-400',
-				bg: 'bg-emerald-50 dark:bg-emerald-500/10'
-			},
-			occasional_tensions: {
-				label: 'Occasional Tensions',
-				icon: Shield,
-				color: 'text-amber-600 dark:text-amber-400',
-				bg: 'bg-amber-50 dark:bg-amber-500/10'
-			},
-			unstable: {
-				label: 'Unstable',
-				icon: ShieldAlert,
-				color: 'text-red-600 dark:text-red-400',
-				bg: 'bg-red-50 dark:bg-red-500/10'
-			}
-		}[sitio.peaceOrder] || {
-			label: 'Unknown',
-			icon: Shield,
-			color: 'text-slate-500',
-			bg: 'bg-slate-50 dark:bg-slate-500/10'
-		}
-	);
 
 	// Food security status
 	const foodSecurityStatus = $derived(
@@ -371,6 +338,7 @@
 			iconTextColor="text-slate-600 dark:text-slate-400"
 			headerClass="pb-3"
 			contentPadding="p-4"
+			class="col-span-2"
 		>
 			{#snippet children()}
 				<div class="space-y-3">
@@ -428,74 +396,6 @@
 							</Badge>
 						</div>
 					{/each}
-				</div>
-			{/snippet}
-		</InfoCard>
-
-		<!-- Community Status Card - New -->
-		<InfoCard
-			title="Community Status"
-			description="Safety and food security"
-			icon={Shield}
-			iconBgColor="bg-emerald-50 dark:bg-emerald-500/10"
-			iconTextColor="text-emerald-600 dark:text-emerald-400"
-			headerClass="pb-3"
-			contentPadding="p-4"
-		>
-			{#snippet children()}
-				<div class="space-y-4">
-					<!-- Peace and Order -->
-					<div class="rounded-xl border border-slate-100 p-4 dark:border-slate-700">
-						{#if peaceOrderStatus}
-							{@const StatusIcon = peaceOrderStatus.icon}
-							<div class="flex items-center gap-3">
-								<div class="rounded-lg {peaceOrderStatus.bg} p-2.5">
-									<StatusIcon class="size-5 {peaceOrderStatus.color}" />
-								</div>
-								<div class="flex-1">
-									<p class="text-xs tracking-wide text-muted-foreground uppercase">Peace & Order</p>
-									<p class="text-lg font-semibold {peaceOrderStatus.color}">
-										{peaceOrderStatus.label}
-									</p>
-								</div>
-							</div>
-						{/if}
-					</div>
-
-					<!-- Food Security -->
-					<div class="rounded-xl border border-slate-100 p-4 dark:border-slate-700">
-						<div class="flex items-center gap-3">
-							<div class="rounded-lg {foodSecurityStatus.bg} p-2.5">
-								<Wheat class="size-5 {foodSecurityStatus.color}" />
-							</div>
-							<div class="flex-1">
-								<p class="text-xs tracking-wide text-muted-foreground uppercase">Food Security</p>
-								<p class="text-lg font-semibold {foodSecurityStatus.color}">
-									{foodSecurityStatus.label}
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<!-- Agriculture Quick Stats -->
-					{#if sitio.agriculture.numberOfFarmers > 0}
-						<div
-							class="flex items-center gap-2 rounded-lg bg-green-50/50 p-2.5 dark:bg-green-500/5"
-						>
-							<Leaf class="size-4 text-green-600 dark:text-green-400" />
-							<span class="text-sm text-muted-foreground">
-								<span class="font-semibold text-foreground"
-									>{formatNumber(sitio.agriculture.numberOfFarmers)}</span
-								>
-								farmers
-								{#if sitio.agriculture.estimatedFarmAreaHectares > 0}
-									· <span class="font-semibold text-foreground"
-										>{sitio.agriculture.estimatedFarmAreaHectares}</span
-									> hectares
-								{/if}
-							</span>
-						</div>
-					{/if}
 				</div>
 			{/snippet}
 		</InfoCard>

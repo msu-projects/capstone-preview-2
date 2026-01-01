@@ -750,11 +750,6 @@ export interface SafetyAggregation {
 	droughtFrequencyCounts: Map<string, number>;
 	earthquakeFrequencyCounts: Map<string, number>;
 
-	// Peace and order
-	peaceOrderStable: number;
-	peaceOrderTensions: number;
-	peaceOrderUnstable: number;
-
 	// Food security
 	foodSecure: number;
 	foodSeasonalScarcity: number;
@@ -767,10 +762,6 @@ export function aggregateSafety(sitios: SitioRecord[]): SafetyAggregation {
 		landslideFrequencyCounts: new Map(),
 		droughtFrequencyCounts: new Map(),
 		earthquakeFrequencyCounts: new Map(),
-
-		peaceOrderStable: 0,
-		peaceOrderTensions: 0,
-		peaceOrderUnstable: 0,
 
 		foodSecure: 0,
 		foodSeasonalScarcity: 0,
@@ -807,19 +798,6 @@ export function aggregateSafety(sitios: SitioRecord[]): SafetyAggregation {
 			earthquakeFreq,
 			(result.earthquakeFrequencyCounts.get(earthquakeFreq) || 0) + 1
 		);
-
-		// Peace and Order
-		switch (profile.peaceOrder) {
-			case 'stable':
-				result.peaceOrderStable++;
-				break;
-			case 'occasional_tensions':
-				result.peaceOrderTensions++;
-				break;
-			case 'unstable':
-				result.peaceOrderUnstable++;
-				break;
-		}
 
 		// Food Security
 		switch (profile.foodSecurity) {

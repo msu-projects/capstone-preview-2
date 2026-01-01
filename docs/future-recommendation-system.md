@@ -157,7 +157,7 @@ SitioProfile
 │   ├── crops (array), livestock (array)
 ├── Section I: Safety & Risk Context
 │   ├── hazards (flood, landslide, drought, earthquake)
-│   ├── peaceOrder, foodSecurity
+│   ├── foodSecurity
 └── Section J: Sitio Priority Needs
     ├── priorities (array of {name, rating} objects)
 ```
@@ -166,16 +166,16 @@ SitioProfile
 
 The recommendation engine will evaluate these critical aspects:
 
-| Aspect               | Data Sources Used                                                        |
-| -------------------- | ------------------------------------------------------------------------ |
-| Infrastructure Gaps  | facilities, waterSources, householdsWithElectricity, infrastructure      |
-| Socioeconomic Status | averageDailyIncome, vulnerableGroups.unemployedCount, laborForceCount    |
-| Health & Safety      | hazards, peaceOrder, foodSecurity, sanitationTypes, householdsWithToilet |
-| Geographic Context   | sitioClassification (gida, indigenous, conflict), mainAccess             |
-| Community Needs      | priorities (array of intervention ratings)                               |
-| Population Impact    | totalPopulation, totalHouseholds                                         |
-| Education Needs      | studentsPerRoom, schoolAgeChildren, vulnerableGroups.outOfSchoolYouth    |
-| Agricultural Context | workerClass, agriculture, crops, livestock                               |
+| Aspect               | Data Sources Used                                                     |
+| -------------------- | --------------------------------------------------------------------- |
+| Infrastructure Gaps  | facilities, waterSources, householdsWithElectricity, infrastructure   |
+| Socioeconomic Status | averageDailyIncome, vulnerableGroups.unemployedCount, laborForceCount |
+| Health & Safety      | hazards, foodSecurity, sanitationTypes, householdsWithToilet          |
+| Geographic Context   | sitioClassification (gida, indigenous, conflict), mainAccess          |
+| Community Needs      | priorities (array of intervention ratings)                            |
+| Population Impact    | totalPopulation, totalHouseholds                                      |
+| Education Needs      | studentsPerRoom, schoolAgeChildren, vulnerableGroups.outOfSchoolYouth |
+| Agricultural Context | workerClass, agriculture, crops, livestock                            |
 
 ---
 

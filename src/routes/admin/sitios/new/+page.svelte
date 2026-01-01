@@ -194,8 +194,6 @@
 		drought: { frequency: '0' },
 		earthquake: { frequency: '0' }
 	});
-	/** Current Peace and Order Status */
-	let peaceOrder = $state<'stable' | 'occasional_tensions' | 'unstable'>('stable');
 	/** Primary food security concern */
 	let foodSecurity = $state<'secure' | 'seasonal_scarcity' | 'critical_shortage'>('secure');
 
@@ -484,12 +482,7 @@
 										bind:sanitationTypes
 									/>
 								{:else if activeStep === 'needs-assessment'}
-									<NeedsAssessmentTab
-										bind:hazards
-										bind:peaceOrder
-										bind:foodSecurity
-										bind:priorities
-									/>
+									<NeedsAssessmentTab bind:hazards bind:foodSecurity bind:priorities />
 								{:else if activeStep === 'images'}
 									<SitioImagesTab bind:images />
 								{/if}
