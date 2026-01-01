@@ -40,7 +40,7 @@
 			title: 'Main',
 			items: [
 				{ title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
-				{ title: 'Sitios List', url: '/admin/sitios/list', icon: List }
+				{ title: 'Sitios List', url: '/admin/sitios', icon: List }
 			]
 		},
 		{
