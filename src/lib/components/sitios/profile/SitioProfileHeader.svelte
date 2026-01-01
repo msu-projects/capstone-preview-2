@@ -139,10 +139,10 @@
 					<Card.Content class="relative z-10 flex h-full flex-col justify-between p-5">
 						<div class="flex items-start justify-between">
 							<div>
-								<h3 class="mb-1 text-xs font-bold tracking-wider text-muted-foreground uppercase">
+								<h3 class="mb-1 text-xs font-medium tracking-wider text-muted-foreground uppercase">
 									{metric.label}
 								</h3>
-								<p class="text-3xl font-black text-slate-900 dark:text-white">
+								<p class="text-3xl font-bold text-slate-900 dark:text-white">
 									{metric.value}
 								</p>
 							</div>
@@ -151,7 +151,7 @@
 							</div>
 						</div>
 						<div
-							class="flex items-center gap-1 text-xs font-bold {metric.trendNeutral
+							class="flex items-center gap-1 text-xs font-medium {metric.trendNeutral
 								? 'text-muted-foreground'
 								: metric.trendPositive
 									? 'text-green-500'

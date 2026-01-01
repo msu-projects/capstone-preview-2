@@ -1,9 +1,9 @@
 <script lang="ts">
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
+	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioProfile } from '$lib/types';
 	import {
-		Baby,
 		Briefcase,
 		Clock,
 		CreditCard,
@@ -75,6 +75,18 @@
 
 	// Cultural groups data
 	const culturalGroups = $derived([
+		{
+			icon: School,
+			label: 'School-Age Children',
+			value: sitio.schoolAgeChildren,
+			percentage:
+				sitio.totalPopulation > 0
+					? ((sitio.schoolAgeChildren / sitio.totalPopulation) * 100).toFixed(1)
+					: '0',
+			color: 'bg-blue-500',
+			lightBg: 'bg-blue-50 dark:bg-blue-500/10',
+			description: 'Ages 5-17'
+		},
 		{
 			icon: Landmark,
 			label: 'Muslim',
@@ -257,6 +269,7 @@
 								<span class="text-xs font-medium text-purple-700 dark:text-purple-300"
 									>Labor Force</span
 								>
+								<HelpTooltip content="Ages 15-64" class="text-purple-700" />
 							</div>
 							<p class="text-2xl font-bold text-slate-900 dark:text-white">
 								{laborMetrics().laborForce.toLocaleString()}
@@ -312,9 +325,15 @@
 								<div class="rounded-lg bg-orange-500/10 p-1.5">
 									<Clock class="size-4 text-orange-600 dark:text-orange-400" />
 								</div>
-								<span class="text-xs font-medium text-orange-700 dark:text-orange-300"
-									>Senior Workers</span
-								>
+								<div class="flex items-center gap-1">
+									<span class="text-xs font-medium text-orange-700 dark:text-orange-300">
+										Senior Workers
+									</span>
+									<HelpTooltip
+										content="Ages 60-64 included in the labor force"
+										class="text-orange-700"
+									/>
+								</div>
 							</div>
 							<p class="text-2xl font-bold text-slate-900 dark:text-white">
 								{laborMetrics().seniorWorkforce.toLocaleString()}
@@ -333,11 +352,6 @@
 							<h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
 								Employment Distribution
 							</h4>
-							<span
-								class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-							>
-								{laborMetrics().laborForce.toLocaleString()} workers
-							</span>
 						</div>
 
 						<!-- Stacked Bar -->
@@ -393,20 +407,26 @@
 							<div class="rounded-xl bg-amber-500/15 p-2.5 dark:bg-amber-500/20">
 								<Scale class="size-5 text-amber-600 dark:text-amber-400" />
 							</div>
-							<div>
-								<h4 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-									Dependency Ratio
-								</h4>
-								<p class="text-xs text-muted-foreground">Non-working population per 100 workers</p>
+							<div class="flex-1">
+								<div class="flex items-center gap-2">
+									<h4 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+										Economic Dependency
+									</h4>
+									<HelpTooltip
+										content="Measures the relationship between working and non-working population. Calculated as (Total Population - Labor Force) / Labor Force × 100."
+										class="text-amber-700"
+									/>
+								</div>
+								<p class="text-xs text-muted-foreground">Population economic support structure</p>
 							</div>
 						</div>
 
-						<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-							<!-- Total Dependency Ratio -->
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<!-- Dependency Ratio -->
 							<div
-								class="flex flex-col items-center justify-center rounded-xl bg-white/70 p-4 shadow-sm dark:bg-slate-800/50"
+								class="flex flex-col items-center justify-center rounded-xl bg-white/70 p-6 shadow-sm dark:bg-slate-800/50"
 							>
-								<div class="relative mb-2 size-20">
+								<div class="relative mb-3 size-24">
 									<svg class="size-full -rotate-90" viewBox="0 0 36 36">
 										<circle
 											class="stroke-amber-200 dark:stroke-amber-900/50"
@@ -414,7 +434,7 @@
 											cy="18"
 											fill="none"
 											r="15.9155"
-											stroke-width="4"
+											stroke-width="3.5"
 										></circle>
 										<circle
 											class="stroke-amber-500 dark:stroke-amber-400"
@@ -427,98 +447,35 @@
 												100
 											)} 100"
 											stroke-linecap="round"
-											stroke-width="4"
+											stroke-width="3.5"
 										></circle>
 									</svg>
 									<div class="absolute inset-0 flex flex-col items-center justify-center">
-										<span class="text-lg font-bold text-slate-900 dark:text-white">
+										<span class="text-2xl font-bold text-slate-900 dark:text-white">
 											{laborMetrics().dependencyRatio}
 										</span>
 									</div>
 								</div>
-								<span class="text-xs font-semibold text-amber-700 dark:text-amber-300"
-									>Total Ratio</span
+								<span class="text-sm font-semibold text-amber-700 dark:text-amber-300"
+									>Dependency Ratio</span
 								>
-								<span class="text-[10px] text-muted-foreground">per 100 workers</span>
+								<span class="text-xs text-muted-foreground">per 100 workers</span>
 							</div>
 
-							<!-- Dependents Breakdown -->
-							<div class="col-span-1 flex flex-col justify-center gap-3 sm:col-span-2">
-								<!-- Young Dependents -->
-								<div
-									class="flex items-center gap-3 rounded-lg bg-white/70 p-3 dark:bg-slate-800/50"
-								>
-									<div class="rounded-lg bg-blue-500/10 p-2">
-										<Baby class="size-4 text-blue-600 dark:text-blue-400" />
-									</div>
-									<div class="flex-1">
-										<div class="flex items-center justify-between">
-											<span class="text-xs font-medium text-slate-600 dark:text-slate-300"
-												>School-Age Children</span
-											>
-											<span class="text-sm font-bold text-slate-900 dark:text-white">
-												{laborMetrics().youngDependents.toLocaleString()}
-											</span>
-										</div>
-										<div
-											class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900/30"
-										>
-											<div
-												class="h-full rounded-full bg-blue-500 transition-all duration-500"
-												style="width: {sitio.totalPopulation > 0
-													? Math.min(
-															(laborMetrics().youngDependents / sitio.totalPopulation) * 100,
-															100
-														)
-													: 0}%"
-											></div>
-										</div>
-									</div>
+							<!-- Dependent Population -->
+							<div
+								class="flex flex-col items-center justify-center rounded-xl bg-white/70 p-6 shadow-sm dark:bg-slate-800/50"
+							>
+								<div class="mb-3 rounded-full bg-amber-500/15 p-4 dark:bg-amber-500/20">
+									<Users class="size-10 text-amber-600 dark:text-amber-400" />
 								</div>
-
-								<!-- Elderly Dependents -->
-								<div
-									class="flex items-center gap-3 rounded-lg bg-white/70 p-3 dark:bg-slate-800/50"
+								<span class="text-2xl font-bold text-slate-900 dark:text-white">
+									{laborMetrics().dependentPopulation.toLocaleString()}
+								</span>
+								<span class="text-sm font-semibold text-amber-700 dark:text-amber-300"
+									>Dependent Population</span
 								>
-									<div class="rounded-lg bg-purple-500/10 p-2">
-										<UserRound class="size-4 text-purple-600 dark:text-purple-400" />
-									</div>
-									<div class="flex-1">
-										<div class="flex items-center justify-between">
-											<span class="text-xs font-medium text-slate-600 dark:text-slate-300"
-												>Senior Citizens (60+)</span
-											>
-											<span class="text-sm font-bold text-slate-900 dark:text-white">
-												{laborMetrics().elderlyDependents.toLocaleString()}
-											</span>
-										</div>
-										<div
-											class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-purple-100 dark:bg-purple-900/30"
-										>
-											<div
-												class="h-full rounded-full bg-purple-500 transition-all duration-500"
-												style="width: {sitio.totalPopulation > 0
-													? Math.min(
-															(laborMetrics().elderlyDependents / sitio.totalPopulation) * 100,
-															100
-														)
-													: 0}%"
-											></div>
-										</div>
-									</div>
-								</div>
-
-								<!-- Total Dependents Summary -->
-								<div
-									class="flex items-center justify-between rounded-lg border border-dashed border-amber-300 bg-amber-100/50 px-3 py-2 dark:border-amber-700 dark:bg-amber-900/20"
-								>
-									<span class="text-xs font-medium text-amber-700 dark:text-amber-300"
-										>Total Dependent Population</span
-									>
-									<span class="text-sm font-bold text-amber-800 dark:text-amber-200">
-										{laborMetrics().dependentPopulation.toLocaleString()}
-									</span>
-								</div>
+								<span class="text-xs text-muted-foreground">non-working residents</span>
 							</div>
 						</div>
 					</div>
@@ -548,6 +505,9 @@
 									<span class="text-sm font-medium text-slate-700 dark:text-slate-300"
 										>{group.label}</span
 									>
+									{#if group.description}
+										<span class="text-xs text-muted-foreground">({group.description})</span>
+									{/if}
 								</div>
 								<span class="text-lg font-bold text-slate-900 dark:text-white">
 									{group.value.toLocaleString()}
