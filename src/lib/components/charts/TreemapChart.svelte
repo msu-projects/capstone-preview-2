@@ -15,9 +15,10 @@
 		height?: number;
 		title?: string;
 		distributed?: boolean;
+		onSegmentClick?: (data: { label: string; value: number; index: number }) => void;
 	}
 
-	let { data, height = 350, title, distributed = true }: Props = $props();
+	let { data, height = 350, title, distributed = true, onSegmentClick }: Props = $props();
 
 	// Get theme-aware colors
 	const chartColors = $derived(getChartColors());
@@ -58,6 +59,18 @@
 			fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
 			toolbar: {
 				show: false
+			},
+			events: {
+				dataPointSelection: (_event, _chartContext, config) => {
+					if (onSegmentClick && config.dataPointIndex >= 0) {
+						const selectedData = data[config.dataPointIndex];
+						onSegmentClick({
+							label: selectedData.label,
+							value: selectedData.value,
+							index: config.dataPointIndex
+						});
+					}
+				}
 			}
 		},
 		series: [
@@ -103,7 +116,7 @@
 	});
 </script>
 
-<div class="treemap-chart">
+<div class="treemap-chart" class:cursor-pointer={!!onSegmentClick}>
 	{#key themeStore.resolvedTheme}
 		<Chart {options} />
 	{/key}

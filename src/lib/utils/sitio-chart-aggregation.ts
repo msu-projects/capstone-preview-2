@@ -55,6 +55,10 @@ export interface DemographicsAggregation {
 	totalOSY: number;
 	sitiosWithOSY: number;
 
+	// Additional demographics
+	totalLaborForce60to64: number;
+	totalSchoolAgeChildren: number;
+
 	// Calculated metrics
 	averageHouseholdSize: number;
 	malePercent: number;
@@ -89,6 +93,8 @@ export function aggregateDemographics(sitios: SitioRecord[]): DemographicsAggreg
 	let totalIP = 0;
 	let totalOSY = 0;
 	let sitiosWithOSY = 0;
+	let totalLaborForce60to64 = 0;
+	let totalSchoolAgeChildren = 0;
 
 	let gidaCount = 0;
 	let indigenousCount = 0;
@@ -110,6 +116,8 @@ export function aggregateDemographics(sitios: SitioRecord[]): DemographicsAggreg
 		totalNoNationalID += profile.vulnerableGroups.noNationalIDCount || 0;
 		totalMuslim += profile.vulnerableGroups.muslimCount || 0;
 		totalIP += profile.vulnerableGroups.ipCount || 0;
+		totalLaborForce60to64 += profile.vulnerableGroups.laborForce60to64Count || 0;
+		totalSchoolAgeChildren += profile.schoolAgeChildren || 0;
 
 		// OSY data
 		const osyCount = profile.vulnerableGroups.outOfSchoolYouth || 0;
@@ -147,6 +155,8 @@ export function aggregateDemographics(sitios: SitioRecord[]): DemographicsAggreg
 		totalIP,
 		totalOSY,
 		sitiosWithOSY,
+		totalLaborForce60to64,
+		totalSchoolAgeChildren,
 
 		averageHouseholdSize: totalHouseholds > 0 ? totalPopulation / totalHouseholds : 0,
 		malePercent: safePercentage(totalMale, totalPopulation),
@@ -384,7 +394,7 @@ export interface LivelihoodAggregation {
 	workerGovernment: number;
 	workerSelfEmployed: number;
 	workerEmployer: number;
-	workerUnpaidFamily: number;
+	workerOFW: number;
 
 	// Crops and livestock counts
 	cropCounts: Map<string, number>;
@@ -407,7 +417,7 @@ export function aggregateLivelihood(sitios: SitioRecord[]): LivelihoodAggregatio
 	let workerGovernment = 0;
 	let workerSelfEmployed = 0;
 	let workerEmployer = 0;
-	let workerUnpaidFamily = 0;
+	let workerOFW = 0;
 
 	let povertyCount = 0;
 	let vulnerableCount = 0;
@@ -434,12 +444,12 @@ export function aggregateLivelihood(sitios: SitioRecord[]): LivelihoodAggregatio
 		}
 
 		// Worker class
-		if (profile.workerClass.privateHousehold) workerPrivateHousehold++;
-		if (profile.workerClass.privateEstablishment) workerPrivateEstablishment++;
-		if (profile.workerClass.government) workerGovernment++;
-		if (profile.workerClass.selfEmployed) workerSelfEmployed++;
-		if (profile.workerClass.employer) workerEmployer++;
-		if (profile.workerClass.ofw) workerUnpaidFamily++;
+		workerPrivateHousehold += profile.workerClass.privateHousehold || 0;
+		workerPrivateEstablishment += profile.workerClass.privateEstablishment || 0;
+		workerGovernment += profile.workerClass.government || 0;
+		workerSelfEmployed += profile.workerClass.selfEmployed || 0;
+		workerEmployer += profile.workerClass.employer || 0;
+		workerOFW += profile.workerClass.ofw || 0;
 
 		// Crops
 		for (const crop of profile.crops || []) {
@@ -466,7 +476,7 @@ export function aggregateLivelihood(sitios: SitioRecord[]): LivelihoodAggregatio
 		workerGovernment,
 		workerSelfEmployed,
 		workerEmployer,
-		workerUnpaidFamily,
+		workerOFW,
 
 		cropCounts,
 		livestockCounts,
@@ -867,5 +877,277 @@ export function aggregateGeographic(sitios: SitioRecord[]): GeographicAggregatio
 		totalMunicipalities: municipalityMap.size,
 		totalBarangays: barangaySet.size,
 		municipalities: Array.from(municipalityMap.values()).sort((a, b) => b.population - a.population)
+	};
+}
+
+// ==========================================
+// BARANGAY AGGREGATION (for drill-down)
+// ==========================================
+
+export interface BarangayData {
+	barangay: string;
+	municipality: string;
+	sitioCount: number;
+	population: number;
+	households: number;
+}
+
+export function aggregateBarangays(sitios: SitioRecord[], municipality?: string): BarangayData[] {
+	const barangayMap = new Map<string, BarangayData>();
+
+	for (const sitio of sitios) {
+		const profile = getLatestYearData(sitio);
+		if (!profile) continue;
+
+		// Filter by municipality if specified
+		if (municipality && profile.municipality !== municipality) continue;
+
+		const key = `${profile.municipality}-${profile.barangay}`;
+
+		if (!barangayMap.has(key)) {
+			barangayMap.set(key, {
+				barangay: profile.barangay,
+				municipality: profile.municipality,
+				sitioCount: 0,
+				population: 0,
+				households: 0
+			});
+		}
+
+		const data = barangayMap.get(key)!;
+		data.sitioCount++;
+		data.population += profile.totalPopulation || 0;
+		data.households += profile.totalHouseholds || 0;
+	}
+
+	return Array.from(barangayMap.values()).sort((a, b) => b.population - a.population);
+}
+
+// ==========================================
+// ACCESS MODES AGGREGATION
+// ==========================================
+
+export interface AccessModesAggregation {
+	pavedRoad: number;
+	unpavedRoad: number;
+	footpath: number;
+	boat: number;
+}
+
+export function aggregateAccessModes(sitios: SitioRecord[]): AccessModesAggregation {
+	let pavedRoad = 0;
+	let unpavedRoad = 0;
+	let footpath = 0;
+	let boat = 0;
+
+	for (const sitio of sitios) {
+		const profile = getLatestYearData(sitio);
+		if (!profile) continue;
+
+		if (profile.mainAccess.pavedRoad) pavedRoad++;
+		if (profile.mainAccess.unpavedRoad) unpavedRoad++;
+		if (profile.mainAccess.footpath) footpath++;
+		if (profile.mainAccess.boat) boat++;
+	}
+
+	return { pavedRoad, unpavedRoad, footpath, boat };
+}
+
+// ==========================================
+// HELPER FUNCTIONS FOR DASHBOARD
+// ==========================================
+
+/**
+ * Get all available years across all sitios
+ */
+export function getAllAvailableYears(sitios: SitioRecord[]): number[] {
+	const yearSet = new Set<number>();
+	for (const sitio of sitios) {
+		for (const year of sitio.availableYears || []) {
+			yearSet.add(year);
+		}
+	}
+	return Array.from(yearSet).sort((a, b) => b - a);
+}
+
+/**
+ * Get sitio data for a specific year
+ */
+export function getYearSpecificData(sitioRecord: SitioRecord, year: number): SitioProfile | null {
+	return sitioRecord.yearlyData[year.toString()] || null;
+}
+
+/**
+ * Export safe percentage for use in components
+ */
+export function calculatePercentage(numerator: number, denominator: number): number {
+	return safePercentage(numerator, denominator);
+}
+
+// ==========================================
+// COORDINATES AGGREGATION (for maps)
+// ==========================================
+
+export interface SitioCoordinate {
+	id: number;
+	name: string;
+	barangay: string;
+	municipality: string;
+	latitude: number;
+	longitude: number;
+}
+
+export interface CoordinatesAggregation {
+	sitios: SitioCoordinate[];
+	bounds: {
+		minLat: number;
+		maxLat: number;
+		minLng: number;
+		maxLng: number;
+	};
+	center: {
+		lat: number;
+		lng: number;
+	};
+}
+
+export function aggregateCoordinates(sitios: SitioRecord[]): CoordinatesAggregation {
+	const coordinates: SitioCoordinate[] = [];
+	let minLat = Infinity;
+	let maxLat = -Infinity;
+	let minLng = Infinity;
+	let maxLng = -Infinity;
+	let totalLat = 0;
+	let totalLng = 0;
+	let validCount = 0;
+
+	for (const sitio of sitios) {
+		const profile = getLatestYearData(sitio);
+		if (!profile) continue;
+
+		const lat = profile.latitude;
+		const lng = profile.longitude;
+
+		// Only include sitios with valid coordinates
+		if (lat && lng && lat !== 0 && lng !== 0) {
+			coordinates.push({
+				id: sitio.id,
+				name: profile.sitioName,
+				barangay: profile.barangay,
+				municipality: profile.municipality,
+				latitude: lat,
+				longitude: lng
+			});
+
+			minLat = Math.min(minLat, lat);
+			maxLat = Math.max(maxLat, lat);
+			minLng = Math.min(minLng, lng);
+			maxLng = Math.max(maxLng, lng);
+			totalLat += lat;
+			totalLng += lng;
+			validCount++;
+		}
+	}
+
+	return {
+		sitios: coordinates,
+		bounds: {
+			minLat: validCount > 0 ? minLat : 0,
+			maxLat: validCount > 0 ? maxLat : 0,
+			minLng: validCount > 0 ? minLng : 0,
+			maxLng: validCount > 0 ? maxLng : 0
+		},
+		center: {
+			lat: validCount > 0 ? totalLat / validCount : 0,
+			lng: validCount > 0 ? totalLng / validCount : 0
+		}
+	};
+}
+
+// ==========================================
+// RECOMMENDATIONS AGGREGATION (Section K)
+// ==========================================
+
+export interface RecommendationsAggregation {
+	/** Average need score across all sitios */
+	averageNeedScore: number;
+	/** Total number of recommendations across all sitios */
+	totalRecommendations: number;
+	/** Count of sitios by need score ranges */
+	needScoreDistribution: {
+		critical: number; // score >= 3.5
+		high: number; // score >= 2.5 && < 3.5
+		medium: number; // score >= 1.5 && < 2.5
+		low: number; // score < 1.5
+	};
+	/** Recommendations grouped by PPA type */
+	recommendationsByPPA: Map<string, number>;
+	/** Sitios with most recommendations */
+	sitiosWithMostRecommendations: Array<{ sitioName: string; count: number }>;
+}
+
+export function aggregateRecommendations(sitios: SitioRecord[]): RecommendationsAggregation {
+	let totalNeedScore = 0;
+	let sitiosWithScore = 0;
+	let totalRecommendations = 0;
+
+	const needScoreDistribution = {
+		critical: 0,
+		high: 0,
+		medium: 0,
+		low: 0
+	};
+
+	const recommendationsByPPA = new Map<string, number>();
+	const sitioRecommendationCounts: Array<{ sitioName: string; count: number }> = [];
+
+	for (const sitio of sitios) {
+		const profile = getLatestYearData(sitio);
+		if (!profile) continue;
+
+		// Aggregate need scores
+		if (profile.averageNeedScore !== undefined && profile.averageNeedScore > 0) {
+			totalNeedScore += profile.averageNeedScore;
+			sitiosWithScore++;
+
+			// Categorize by need score
+			if (profile.averageNeedScore >= 3.5) {
+				needScoreDistribution.critical++;
+			} else if (profile.averageNeedScore >= 2.5) {
+				needScoreDistribution.high++;
+			} else if (profile.averageNeedScore >= 1.5) {
+				needScoreDistribution.medium++;
+			} else {
+				needScoreDistribution.low++;
+			}
+		}
+
+		// Aggregate recommendations
+		const recommendations = profile.recommendations || [];
+		totalRecommendations += recommendations.length;
+
+		if (recommendations.length > 0) {
+			sitioRecommendationCounts.push({
+				sitioName: profile.sitioName,
+				count: recommendations.length
+			});
+		}
+
+		for (const rec of recommendations) {
+			const ppa = rec.ppa?.name || 'Unknown';
+			recommendationsByPPA.set(ppa, (recommendationsByPPA.get(ppa) || 0) + 1);
+		}
+	}
+
+	// Sort sitios by recommendation count (descending) and take top 10
+	sitioRecommendationCounts.sort((a, b) => b.count - a.count);
+	const topSitios = sitioRecommendationCounts.slice(0, 10);
+
+	return {
+		averageNeedScore: sitiosWithScore > 0 ? totalNeedScore / sitiosWithScore : 0,
+		totalRecommendations,
+		needScoreDistribution,
+		recommendationsByPPA,
+		sitiosWithMostRecommendations: topSitios
 	};
 }

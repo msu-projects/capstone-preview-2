@@ -18,6 +18,7 @@
 		title?: string;
 		rotate?: number;
 		rotateAlways?: boolean;
+		onBarClick?: (data: { label: string; value: number; index: number }) => void;
 	}
 
 	let {
@@ -27,7 +28,8 @@
 		showGrid = true,
 		title,
 		rotateAlways,
-		rotate = -30
+		rotate = -30,
+		onBarClick
 	}: Props = $props();
 
 	// Get theme-aware colors
@@ -50,6 +52,18 @@
 			fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
 			toolbar: {
 				show: false
+			},
+			events: {
+				dataPointSelection: (_event, _chartContext, config) => {
+					if (onBarClick && config.dataPointIndex >= 0) {
+						const selectedData = data[config.dataPointIndex];
+						onBarClick({
+							label: selectedData.label,
+							value: selectedData.value,
+							index: config.dataPointIndex
+						});
+					}
+				}
 			}
 		},
 		plotOptions: {
@@ -140,7 +154,7 @@
 	});
 </script>
 
-<div class="w-full">
+<div class="w-full" class:cursor-pointer={!!onBarClick}>
 	{#if title}
 		<h3 class="mb-2 text-sm font-semibold text-foreground">{title}</h3>
 	{/if}
