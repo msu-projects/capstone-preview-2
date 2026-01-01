@@ -162,7 +162,7 @@
 	];
 
 	// Selected year as number for components
-	const selectedYearNumber = $derived(() => {
+	const selectedYearNumber = $derived.by(() => {
 		if (selectedYear === 'latest') {
 			return availableYears()[0];
 		}
@@ -331,31 +331,28 @@
 				<div class="mt-6">
 					<!-- Tab Contents -->
 					<Tabs.Content value="overview">
-						<SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber()} />
+						<SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
 					</Tabs.Content>
 
 					<Tabs.Content value="demographics">
-						<SitioDashboardDemographics
-							sitios={filteredSitios}
-							selectedYear={selectedYearNumber()}
-						/>
+						<SitioDashboardDemographics sitios={filteredSitios} selectedYear={selectedYearNumber} />
 					</Tabs.Content>
 
 					<Tabs.Content value="infrastructure">
 						<SitioDashboardInfrastructure
 							sitios={filteredSitios}
-							selectedYear={selectedYearNumber()}
+							selectedYear={selectedYearNumber}
 						/>
 					</Tabs.Content>
 
 					<Tabs.Content value="economic">
-						<SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber()} />
+						<SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
 					</Tabs.Content>
 
 					<Tabs.Content value="maps">
 						<SitioDashboardMaps
 							sitios={filteredSitios}
-							selectedYear={selectedYearNumber()}
+							selectedYear={selectedYearNumber}
 							onSitioClick={handleSitioClick}
 						/>
 					</Tabs.Content>
