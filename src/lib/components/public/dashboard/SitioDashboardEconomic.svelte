@@ -17,7 +17,6 @@
 		type YearComparison
 	} from '$lib/utils/sitio-chart-aggregation';
 	import {
-		AlertTriangle,
 		Banknote,
 		Bird,
 		Briefcase,
@@ -60,9 +59,7 @@
 	const incomeTrendData = $derived(prepareTimeSeriesData(sitios, ['averageDailyIncome']));
 
 	// Time series data for poverty trend
-	const povertyTrendData = $derived(
-		prepareTimeSeriesData(sitios, ['povertyCount', 'vulnerableCount'])
-	);
+	const povertyTrendData = $derived(prepareTimeSeriesData(sitios, ['povertyCount']));
 
 	// Total workers
 	const totalWorkers = $derived(
@@ -140,57 +137,39 @@
 	);
 
 	// Income class distribution (poverty levels)
+	// Based on 2025 DEPDev poverty threshold: ₱668/day for a family of 5
 	const incomeClassData = $derived([
 		{
 			label: 'Below Poverty',
-			fullLabel: 'Below Poverty Line (<₱400/day)',
+			fullLabel: 'Below Poverty Line (<₱668/day)',
 			value: livelihood.povertyCount,
 			color: 'hsl(0, 84%, 60%)',
 			icon: TrendingDown,
-			description: 'Sitios with average daily income below ₱400, indicating high poverty risk.'
-		},
-		{
-			label: 'Vulnerable',
-			fullLabel: 'Vulnerable (₱400-600/day)',
-			value: livelihood.vulnerableCount,
-			color: 'hsl(45, 93%, 47%)',
-			icon: AlertTriangle,
 			description:
-				'Sitios with average daily income between ₱400-600, at risk of falling into poverty.'
+				'Sitios with average daily income below ₱668/day (2025 DEPDev poverty threshold for a family of 5).'
 		},
 		{
-			label: 'Above Threshold',
-			fullLabel: 'Above Threshold (>₱600/day)',
-			value: Math.max(
-				0,
-				livelihood.sitiosWithIncome - livelihood.povertyCount - livelihood.vulnerableCount
-			),
+			label: 'Above Poverty',
+			fullLabel: 'Above Poverty Line (≥₱668/day)',
+			value: Math.max(0, livelihood.sitiosWithIncome - livelihood.povertyCount),
 			color: 'hsl(142, 71%, 45%)',
 			icon: TrendingUp,
-			description: 'Sitios with average daily income above ₱600, meeting basic income threshold.'
+			description:
+				'Sitios with average daily income at or above ₱668/day (2025 DEPDev poverty threshold for a family of 5).'
 		}
 	]);
 
-	// Income level indicator
+	// Income level indicator (2025 DEPDev threshold: ₱668/day)
 	const incomeLevel = $derived(() => {
 		const daily = livelihood.averageDailyIncomeOverall;
-		if (daily >= 600)
+		if (daily >= 668)
 			return {
-				label: 'Above Threshold',
+				label: 'Above Poverty Line',
 				color: 'text-emerald-600 dark:text-emerald-400',
 				bg: 'bg-emerald-500',
 				bgLight: 'bg-emerald-100 dark:bg-emerald-900/40',
 				icon: TrendingUp,
 				trend: 'up'
-			};
-		if (daily >= 400)
-			return {
-				label: 'Vulnerable',
-				color: 'text-amber-600 dark:text-amber-400',
-				bg: 'bg-amber-500',
-				bgLight: 'bg-amber-100 dark:bg-amber-900/40',
-				icon: AlertTriangle,
-				trend: 'neutral'
 			};
 		return {
 			label: 'Below Poverty Line',
@@ -211,7 +190,7 @@
 
 	// Above threshold count
 	const aboveThresholdCount = $derived(
-		Math.max(0, livelihood.sitiosWithIncome - livelihood.povertyCount - livelihood.vulnerableCount)
+		Math.max(0, livelihood.sitiosWithIncome - livelihood.povertyCount)
 	);
 
 	// Top crops
@@ -334,7 +313,7 @@
 					</div>
 
 					<!-- Income Distribution Stats -->
-					<div class="grid grid-cols-3 gap-3">
+					<div class="grid grid-cols-2 gap-3">
 						<div
 							class="group relative overflow-hidden rounded-xl border border-red-100 bg-white p-4 transition-all hover:shadow-md dark:border-red-800/30 dark:bg-slate-800/50"
 						>
@@ -346,39 +325,21 @@
 									<TrendingDown class="size-5 text-red-600 dark:text-red-400" />
 								</div>
 								<div>
-									<span
-										class="text-[10px] font-semibold tracking-wide text-red-700 uppercase dark:text-red-300"
-									>
-										Below Poverty
-									</span>
+									<div class="flex items-center gap-1">
+										<span
+											class="text-[10px] font-semibold tracking-wide text-red-700 uppercase dark:text-red-300"
+										>
+											Below Poverty
+										</span>
+										<HelpTooltip side="top">
+											Based on 2025 DEPDev poverty threshold of ₱668/day (₱20,000/month) for a
+											family of 5
+										</HelpTooltip>
+									</div>
 									<p class="text-2xl font-bold text-slate-900 dark:text-white">
 										{livelihood.povertyCount}
 									</p>
-									<p class="text-[10px] text-muted-foreground">&lt;₱400/day</p>
-								</div>
-							</div>
-						</div>
-
-						<div
-							class="group relative overflow-hidden rounded-xl border border-amber-100 bg-white p-4 transition-all hover:shadow-md dark:border-amber-800/30 dark:bg-slate-800/50"
-						>
-							<div
-								class="absolute inset-0 bg-linear-to-br from-amber-50/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100 dark:from-amber-900/20"
-							></div>
-							<div class="relative flex items-center gap-3">
-								<div class="rounded-xl bg-amber-100 p-2.5 dark:bg-amber-800/40">
-									<AlertTriangle class="size-5 text-amber-600 dark:text-amber-400" />
-								</div>
-								<div>
-									<span
-										class="text-[10px] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-300"
-									>
-										Vulnerable
-									</span>
-									<p class="text-2xl font-bold text-slate-900 dark:text-white">
-										{livelihood.vulnerableCount}
-									</p>
-									<p class="text-[10px] text-muted-foreground">₱400-600/day</p>
+									<p class="text-[10px] text-muted-foreground">&lt;₱668/day</p>
 								</div>
 							</div>
 						</div>
@@ -394,15 +355,21 @@
 									<TrendingUp class="size-5 text-emerald-600 dark:text-emerald-400" />
 								</div>
 								<div>
-									<span
-										class="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
-									>
-										Above Threshold
-									</span>
+									<div class="flex items-center gap-1">
+										<span
+											class="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
+										>
+											Above Poverty
+										</span>
+										<HelpTooltip side="top">
+											Based on 2025 DEPDev poverty threshold of ₱668/day (₱20,000/month) for a
+											family of 5
+										</HelpTooltip>
+									</div>
 									<p class="text-2xl font-bold text-slate-900 dark:text-white">
 										{aboveThresholdCount}
 									</p>
-									<p class="text-[10px] text-muted-foreground">&gt;₱600/day</p>
+									<p class="text-[10px] text-muted-foreground">≥₱668/day</p>
 								</div>
 							</div>
 						</div>

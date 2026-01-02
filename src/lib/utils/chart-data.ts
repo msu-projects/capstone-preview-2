@@ -141,24 +141,17 @@ export function aggregateDemographics(sitios: SitioProfile[]) {
 
 /**
  * Aggregate income distribution based on averageDailyIncome
- * Categories based on Philippine poverty thresholds
+ * Categories based on Philippine poverty thresholds (2025 DEPDev update)
+ * Total poverty: ₱668/day for a family of 5
  */
 export function aggregateIncomeDistribution(sitios: SitioProfile[]) {
 	// Count sitios by income bracket based on average daily income
-	const subsistence = sitios.filter((s) => s.averageDailyIncome < 250).length;
-	const poor = sitios.filter(
-		(s) => s.averageDailyIncome >= 250 && s.averageDailyIncome < 400
-	).length;
-	const lowIncome = sitios.filter(
-		(s) => s.averageDailyIncome >= 400 && s.averageDailyIncome < 600
-	).length;
-	const middleClass = sitios.filter((s) => s.averageDailyIncome >= 600).length;
+	const belowPoverty = sitios.filter((s) => s.averageDailyIncome < 668).length;
+	const abovePoverty = sitios.filter((s) => s.averageDailyIncome >= 668).length;
 
 	return {
-		subsistence,
-		poor,
-		lowIncome,
-		middleClass
+		belowPoverty,
+		abovePoverty
 	};
 }
 
@@ -167,8 +160,8 @@ export function aggregateIncomeDistribution(sitios: SitioProfile[]) {
  */
 export function calculatePovertyRate(sitios: SitioProfile[]): number {
 	const totalSitios = sitios.length;
-	// Consider sitios with averageDailyIncome below 400 PHP as in poverty
-	const povertyCount = sitios.filter((s) => s.averageDailyIncome < 400).length;
+	// Consider sitios with averageDailyIncome below 668 PHP as in poverty (2025 DEPDev threshold)
+	const povertyCount = sitios.filter((s) => s.averageDailyIncome < 668).length;
 
 	return totalSitios > 0 ? (povertyCount / totalSitios) * 100 : 0;
 }

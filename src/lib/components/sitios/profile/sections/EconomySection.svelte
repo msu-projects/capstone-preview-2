@@ -115,38 +115,20 @@
 		}))
 	);
 
-	// Income level indicator with more context
+	// Income level indicator (2025 DEPDev threshold: ₱668/day)
 	const incomeLevel = $derived(() => {
 		const daily = sitio.averageDailyIncome;
-		if (daily >= 500)
+		if (daily >= 668)
 			return {
-				label: 'Above Average',
+				label: 'Above Poverty Line',
 				color: 'text-emerald-600 dark:text-emerald-400',
 				bg: 'bg-emerald-500',
 				bgLight: 'bg-emerald-100 dark:bg-emerald-900/40',
 				icon: TrendingUp,
 				trend: 'up'
 			};
-		if (daily >= 300)
-			return {
-				label: 'Average',
-				color: 'text-blue-600 dark:text-blue-400',
-				bg: 'bg-blue-500',
-				bgLight: 'bg-blue-100 dark:bg-blue-900/40',
-				icon: TrendingUp,
-				trend: 'neutral'
-			};
-		if (daily >= 150)
-			return {
-				label: 'Below Average',
-				color: 'text-amber-600 dark:text-amber-400',
-				bg: 'bg-amber-500',
-				bgLight: 'bg-amber-100 dark:bg-amber-900/40',
-				icon: TrendingDown,
-				trend: 'down'
-			};
 		return {
-			label: 'Low Income',
+			label: 'Below Poverty Line',
 			color: 'text-red-600 dark:text-red-400',
 			bg: 'bg-red-500',
 			bgLight: 'bg-red-100 dark:bg-red-900/40',
@@ -158,6 +140,11 @@
 	// Employment rate calculation
 	const employmentRate = $derived(
 		sitio.laborForceCount > 0 ? Math.round((totalWorkers / sitio.laborForceCount) * 100) : 0
+	);
+
+	// Poverty status (2025 DEPDev threshold)
+	const povertyStatus = $derived(
+		sitio.averageDailyIncome < 668 ? 'Below Poverty' : 'Above Poverty'
 	);
 
 	// Food security configuration
@@ -322,6 +309,53 @@
 							<p class="mt-1 text-[10px] text-muted-foreground">
 								{totalWorkers} of {sitio.laborForceCount}
 							</p>
+						</div>
+					</div>
+
+					<!-- Poverty Classification Card -->
+					<div
+						class="rounded-2xl border p-4 {povertyStatus === 'Below Poverty'
+							? 'border-red-100 bg-linear-to-br from-red-50 to-red-100/50 dark:border-red-800/40 dark:from-red-900/20 dark:to-red-950/10'
+							: 'border-emerald-100 bg-linear-to-br from-emerald-50 to-emerald-100/50 dark:border-emerald-800/40 dark:from-emerald-900/20 dark:to-emerald-950/10'}"
+					>
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								{#if povertyStatus === 'Below Poverty'}
+									<div class="rounded-lg bg-red-100 p-1.5 dark:bg-red-800/40">
+										<TrendingDown class="size-4 text-red-600 dark:text-red-400" />
+									</div>
+								{:else}
+									<div class="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-800/40">
+										<TrendingUp class="size-4 text-emerald-600 dark:text-emerald-400" />
+									</div>
+								{/if}
+								<div>
+									<div class="flex items-center gap-1">
+										<span
+											class="text-xs font-semibold {povertyStatus === 'Below Poverty'
+												? 'text-red-700 dark:text-red-300'
+												: 'text-emerald-700 dark:text-emerald-300'}"
+										>
+											{povertyStatus} Line
+										</span>
+										<HelpTooltip side="top">
+											Based on 2025 DEPDev poverty threshold of ₱668/day (₱20,000/month) for a
+											family of 5
+										</HelpTooltip>
+									</div>
+									<p class="mt-0.5 text-xs text-muted-foreground">
+										{povertyStatus === 'Below Poverty' ? '<' : '≥'}₱668/day
+									</p>
+								</div>
+							</div>
+							<div
+								class="rounded-full px-3 py-1.5 text-xs font-semibold {povertyStatus ===
+								'Below Poverty'
+									? 'bg-red-100 text-red-700 dark:bg-red-800/40 dark:text-red-300'
+									: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-800/40 dark:text-emerald-300'}"
+							>
+								{formatCurrency(sitio.averageDailyIncome)}/day
+							</div>
 						</div>
 					</div>
 

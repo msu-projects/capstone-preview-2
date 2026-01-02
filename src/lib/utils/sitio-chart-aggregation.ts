@@ -111,7 +111,6 @@ export interface YearlyMetrics {
 	internetPercent: number;
 	totalRoadLength: number;
 	povertyCount: number;
-	vulnerableCount: number;
 	sitioCount: number;
 }
 
@@ -132,7 +131,6 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 	let sitiosWithIncome = 0;
 	let totalRoadLength = 0;
 	let povertyCount = 0;
-	let vulnerableCount = 0;
 	let sitioCount = 0;
 
 	for (const sitio of sitios) {
@@ -162,9 +160,8 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 			totalDailyIncome += profile.averageDailyIncome;
 			sitiosWithIncome++;
 
-			// Poverty classification
-			if (profile.averageDailyIncome < 400) povertyCount++;
-			else if (profile.averageDailyIncome <= 600) vulnerableCount++;
+			// Poverty classification (2025 DEPDev threshold: ₱668/day)
+			if (profile.averageDailyIncome < 668) povertyCount++;
 		}
 	}
 
@@ -188,7 +185,6 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 		internetPercent: totalHouseholds > 0 ? (householdsWithInternet / totalHouseholds) * 100 : 0,
 		totalRoadLength,
 		povertyCount,
-		vulnerableCount,
 		sitioCount
 	};
 }
@@ -297,8 +293,7 @@ export function prepareTimeSeriesData(
 		toiletPercent: 'Sanitation',
 		internetPercent: 'Internet',
 		totalRoadLength: 'Road Length (km)',
-		povertyCount: 'Below Poverty',
-		vulnerableCount: 'Vulnerable'
+		povertyCount: 'Below Poverty'
 	};
 
 	const metricColors: Record<string, string> = {
@@ -314,8 +309,7 @@ export function prepareTimeSeriesData(
 		toiletPercent: 'hsl(187, 85%, 43%)',
 		internetPercent: 'hsl(217, 91%, 60%)',
 		totalRoadLength: 'hsl(25, 95%, 53%)',
-		povertyCount: 'hsl(0, 84%, 60%)',
-		vulnerableCount: 'hsl(45, 93%, 47%)'
+		povertyCount: 'hsl(0, 84%, 60%)'
 	};
 
 	const series: MultiSeriesTimeData[] = metrics.map((metric) => ({
@@ -711,8 +705,7 @@ export interface LivelihoodAggregation {
 	livestockCounts: Map<string, number>;
 
 	// Poverty estimate (based on daily income thresholds)
-	povertyCount: number; // Below 400 PHP/day
-	vulnerableCount: number; // 400-600 PHP/day
+	povertyCount: number; // Below 668 PHP/day (2025 DEPDev threshold)
 }
 
 export function aggregateLivelihood(sitios: SitioRecord[], year?: number): LivelihoodAggregation {
@@ -730,7 +723,6 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
 	let workerOFW = 0;
 
 	let povertyCount = 0;
-	let vulnerableCount = 0;
 
 	const cropCounts = new Map<string, number>();
 	const livestockCounts = new Map<string, number>();
@@ -749,8 +741,8 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
 			averageDailyIncomeTotal += profile.averageDailyIncome;
 			sitiosWithIncome++;
 
-			if (profile.averageDailyIncome < 400) povertyCount++;
-			else if (profile.averageDailyIncome < 600) vulnerableCount++;
+			// Poverty classification (2025 DEPDev threshold)
+			if (profile.averageDailyIncome < 668) povertyCount++;
 		}
 
 		// Worker class
@@ -791,8 +783,7 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
 		cropCounts,
 		livestockCounts,
 
-		povertyCount,
-		vulnerableCount
+		povertyCount
 	};
 }
 
