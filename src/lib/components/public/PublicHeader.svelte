@@ -61,7 +61,7 @@
 		<!-- Desktop Actions -->
 		<div class="hidden items-center gap-2 md:flex">
 			<ThemeToggle />
-			<!-- {#if authStore.isAuthenticated}
+			{#if authStore.isAuthenticated}
 				<Button href="/admin" variant="default" size="sm">
 					<LayoutDashboard class="mr-2 size-4" />
 					Dashboard
@@ -71,7 +71,7 @@
 					<LogIn class="mr-2 size-4" />
 					Admin Login
 				</Button>
-			{/if} -->
+			{/if}
 			<!-- {#each navLinks as link}
 				{@const active = isActive(link.href)}
 				<a
