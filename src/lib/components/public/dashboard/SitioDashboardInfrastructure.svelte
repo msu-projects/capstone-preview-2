@@ -464,7 +464,7 @@
 							>
 								<Zap class="size-3" />
 								Electricity {yearComparison.trends.electricityAccess.value >= 0 ? '+' : ''}
-								{yearComparison.trends.electricityAccess.value.toFixed(1)}%
+								{yearComparison.trends.electricityAccess.value.toFixed(1)}% vs last year
 							</Badge>
 						{/if}
 						{#if yearComparison.trends.toiletAccess}
@@ -474,7 +474,7 @@
 							>
 								<Droplets class="size-3" />
 								Sanitation {yearComparison.trends.toiletAccess.value >= 0 ? '+' : ''}
-								{yearComparison.trends.toiletAccess.value.toFixed(1)}%
+								{yearComparison.trends.toiletAccess.value.toFixed(1)}% vs last year
 							</Badge>
 						{/if}
 						{#if yearComparison.trends.internetAccess}
@@ -486,7 +486,7 @@
 							>
 								<Router class="size-3" />
 								Internet {yearComparison.trends.internetAccess.value >= 0 ? '+' : ''}
-								{yearComparison.trends.internetAccess.value.toFixed(1)}%
+								{yearComparison.trends.internetAccess.value.toFixed(1)}% vs last year
 							</Badge>
 						{/if}
 					</div>

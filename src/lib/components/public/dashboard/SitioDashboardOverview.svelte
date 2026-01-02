@@ -264,12 +264,13 @@
 										<p class="truncate text-xs text-muted-foreground/70">{stat.subtext}</p>
 										{#if stat.trend && hasMultipleYears}
 											<span
-												class="inline-flex items-center text-xs font-medium {stat.trend.isPositive
+												class="inline-flex items-center gap-0.5 text-xs font-medium {stat.trend
+													.isPositive
 													? 'text-emerald-600 dark:text-emerald-400'
 													: 'text-rose-600 dark:text-rose-400'}"
 											>
 												{stat.trend.value >= 0 ? '↑' : '↓'}
-												{Math.abs(stat.trend.value)}%
+												{Math.abs(stat.trend.value)}% vs last year
 											</span>
 										{/if}
 									</div>
@@ -362,12 +363,13 @@
 								<p class="text-xs text-muted-foreground/70">{util.subtext}</p>
 								{#if util.trend && hasMultipleYears}
 									<span
-										class="inline-flex items-center text-xs font-medium {util.trend.isPositive
+										class="inline-flex items-center gap-0.5 text-xs font-medium {util.trend
+											.isPositive
 											? 'text-emerald-600 dark:text-emerald-400'
 											: 'text-rose-600 dark:text-rose-400'}"
 									>
 										{util.trend.value >= 0 ? '↑' : '↓'}
-										{Math.abs(util.trend.value)}%
+										{Math.abs(util.trend.value)}% vs last year
 									</span>
 								{/if}
 							</div>
