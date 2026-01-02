@@ -3,6 +3,10 @@
 	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
+	import {
+		LABOR_EMPLOYMENT_AVERAGES,
+		getLaborComparisonStatus
+	} from '$lib/config/national-averages';
 	import type { SitioRecord } from '$lib/types';
 	import {
 		aggregateDemographics,
@@ -13,13 +17,18 @@
 		type YearComparison
 	} from '$lib/utils/sitio-chart-aggregation';
 	import {
+		ArrowDown,
+		ArrowUp,
 		Baby,
+		BarChart3,
 		Briefcase,
 		Clock,
 		CreditCard,
+		ExternalLink,
 		Heart,
 		IdCard,
 		Landmark,
+		Minus,
 		PersonStanding,
 		PieChart,
 		Scale,
@@ -142,6 +151,46 @@
 		},
 		{ label: 'No PhilSys ID', value: demographics.totalNoNationalID, color: 'hsl(200, 18%, 46%)' }
 	]);
+
+	// Labor & Employment Analytics (comparison with national averages)
+	const laborAnalytics = $derived(() => {
+		const metrics = laborMetrics();
+		const unemploymentRate = metrics.laborForce > 0 ? 100 - metrics.employmentRate : 0;
+
+		// Get comparison statuses
+		const unemploymentComparison = getLaborComparisonStatus(
+			unemploymentRate,
+			LABOR_EMPLOYMENT_AVERAGES.unemploymentRate.percent,
+			'unemployment'
+		);
+
+		const employmentComparison = getLaborComparisonStatus(
+			metrics.employmentRate,
+			LABOR_EMPLOYMENT_AVERAGES.employmentRate.percent,
+			'employment'
+		);
+
+		const participationComparison = getLaborComparisonStatus(
+			metrics.participationRate,
+			LABOR_EMPLOYMENT_AVERAGES.laborForceParticipationRate.percent,
+			'participation'
+		);
+
+		const dependencyComparison = getLaborComparisonStatus(
+			parseFloat(metrics.dependencyRatio),
+			LABOR_EMPLOYMENT_AVERAGES.ageDependencyRatio.percent,
+			'dependency'
+		);
+
+		return {
+			unemploymentRate,
+			unemploymentComparison,
+			employmentComparison,
+			participationComparison,
+			dependencyComparison,
+			nationalAverages: LABOR_EMPLOYMENT_AVERAGES
+		};
+	});
 </script>
 
 <div class="space-y-6">
@@ -611,6 +660,247 @@
 									>Dependent Population</span
 								>
 								<span class="text-xs text-muted-foreground">non-working residents</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Labor & Employment Analytics Section -->
+					<div
+						class="rounded-xl border border-blue-100 bg-linear-to-br from-blue-50 to-indigo-50/50 p-4 dark:border-blue-900/30 dark:from-blue-900/15 dark:to-indigo-900/10"
+					>
+						<div class="mb-4 flex items-center gap-3">
+							<div class="rounded-xl bg-blue-500/15 p-2 dark:bg-blue-500/20">
+								<BarChart3 class="size-5 text-blue-600 dark:text-blue-400" />
+							</div>
+							<div class="flex-1">
+								<div class="flex items-center gap-2">
+									<h4 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+										Labor & Employment Analytics
+									</h4>
+									<HelpTooltip
+										content="Comparison of aggregated labor metrics against Philippine national averages. Data sources include PSA Labor Force Survey and World Bank."
+										class="text-blue-700"
+									/>
+								</div>
+								<p class="text-xs text-muted-foreground">
+									Aggregated vs. Philippine National Averages
+								</p>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+							<!-- Unemployment Rate Comparison -->
+							<div class="rounded-lg bg-white/70 p-3 dark:bg-slate-800/50">
+								<div class="mb-2 flex items-center justify-between">
+									<span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+										Unemployment
+									</span>
+									{#if laborAnalytics().unemploymentComparison.status === 'better'}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+										>
+											<ArrowDown class="size-3" />
+											Better
+										</span>
+									{:else if laborAnalytics().unemploymentComparison.status === 'worse'}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-red-600 dark:text-red-400"
+										>
+											<ArrowUp class="size-3" />
+											Higher
+										</span>
+									{:else}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"
+										>
+											<Minus class="size-3" />
+											Similar
+										</span>
+									{/if}
+								</div>
+								<div class="flex items-baseline justify-between gap-2">
+									<p class="text-lg font-bold text-slate-900 dark:text-white">
+										{laborAnalytics().unemploymentRate.toFixed(1)}%
+									</p>
+									<p class="text-xs text-muted-foreground">
+										vs {laborAnalytics().nationalAverages.unemploymentRate.percent}%
+									</p>
+								</div>
+								<div class="mt-2 space-y-1">
+									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+										<div
+											class="h-full rounded-full transition-all duration-500 {laborAnalytics()
+												.unemploymentComparison.status === 'better'
+												? 'bg-emerald-500'
+												: laborAnalytics().unemploymentComparison.status === 'worse'
+													? 'bg-red-500'
+													: 'bg-slate-400'}"
+											style="width: {Math.min(laborAnalytics().unemploymentRate * 5, 100)}%"
+										></div>
+									</div>
+									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+										<div
+											class="h-full rounded-full bg-blue-400 transition-all duration-500"
+											style="width: {laborAnalytics().nationalAverages.unemploymentRate.percent *
+												5}%"
+										></div>
+									</div>
+								</div>
+								<p class="mt-1 text-center text-[10px] text-muted-foreground">
+									Local • PH National
+								</p>
+							</div>
+
+							<!-- Labor Force Participation Comparison -->
+							<div class="rounded-lg bg-white/70 p-3 dark:bg-slate-800/50">
+								<div class="mb-2 flex items-center justify-between">
+									<span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+										Participation
+									</span>
+									{#if laborAnalytics().participationComparison.status === 'better'}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+										>
+											<ArrowUp class="size-3" />
+											Higher
+										</span>
+									{:else if laborAnalytics().participationComparison.status === 'worse'}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+										>
+											<ArrowDown class="size-3" />
+											Lower
+										</span>
+									{:else}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"
+										>
+											<Minus class="size-3" />
+											Similar
+										</span>
+									{/if}
+								</div>
+								<div class="flex items-baseline justify-between gap-2">
+									<p class="text-lg font-bold text-slate-900 dark:text-white">
+										{laborMetrics().participationRate}%
+									</p>
+									<p class="text-xs text-muted-foreground">
+										vs {laborAnalytics().nationalAverages.laborForceParticipationRate.percent}%
+									</p>
+								</div>
+								<div class="mt-2 space-y-1">
+									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+										<div
+											class="h-full rounded-full transition-all duration-500 {laborAnalytics()
+												.participationComparison.status === 'better'
+												? 'bg-emerald-500'
+												: laborAnalytics().participationComparison.status === 'worse'
+													? 'bg-amber-500'
+													: 'bg-slate-400'}"
+											style="width: {laborMetrics().participationRate}%"
+										></div>
+									</div>
+									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+										<div
+											class="h-full rounded-full bg-blue-400 transition-all duration-500"
+											style="width: {laborAnalytics().nationalAverages.laborForceParticipationRate
+												.percent}%"
+										></div>
+									</div>
+								</div>
+								<p class="mt-1 text-center text-[10px] text-muted-foreground">
+									Local • PH National
+								</p>
+							</div>
+
+							<!-- Dependency Ratio Comparison -->
+							<div class="rounded-lg bg-white/70 p-3 dark:bg-slate-800/50">
+								<div class="mb-2 flex items-center justify-between">
+									<span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+										Dependency
+									</span>
+									{#if laborAnalytics().dependencyComparison.status === 'better'}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+										>
+											<ArrowDown class="size-3" />
+											Lower
+										</span>
+									{:else if laborAnalytics().dependencyComparison.status === 'worse'}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+										>
+											<ArrowUp class="size-3" />
+											Higher
+										</span>
+									{:else}
+										<span
+											class="flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"
+										>
+											<Minus class="size-3" />
+											Similar
+										</span>
+									{/if}
+								</div>
+								<div class="flex items-baseline justify-between gap-2">
+									<p class="text-lg font-bold text-slate-900 dark:text-white">
+										{laborMetrics().dependencyRatio}
+									</p>
+									<p class="text-xs text-muted-foreground">
+										vs {laborAnalytics().nationalAverages.ageDependencyRatio.percent}
+									</p>
+								</div>
+								<div class="mt-2 space-y-1">
+									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+										<div
+											class="h-full rounded-full transition-all duration-500 {laborAnalytics()
+												.dependencyComparison.status === 'better'
+												? 'bg-emerald-500'
+												: laborAnalytics().dependencyComparison.status === 'worse'
+													? 'bg-amber-500'
+													: 'bg-slate-400'}"
+											style="width: {Math.min(parseFloat(laborMetrics().dependencyRatio), 100)}%"
+										></div>
+									</div>
+									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+										<div
+											class="h-full rounded-full bg-blue-400 transition-all duration-500"
+											style="width: {laborAnalytics().nationalAverages.ageDependencyRatio.percent}%"
+										></div>
+									</div>
+								</div>
+								<p class="mt-1 text-center text-[10px] text-muted-foreground">
+									Local • PH National
+								</p>
+							</div>
+						</div>
+
+						<!-- Data Sources -->
+						<div
+							class="mt-3 rounded-lg border border-slate-200 bg-slate-50/50 p-2.5 dark:border-slate-700 dark:bg-slate-800/30"
+						>
+							<p class="mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+								Data Sources:
+							</p>
+							<div class="flex flex-wrap gap-1.5">
+								<a
+									href={laborAnalytics().nationalAverages.unemploymentRate.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-[10px] text-blue-600 shadow-sm transition-colors hover:bg-blue-50 dark:bg-slate-700 dark:text-blue-400 dark:hover:bg-slate-600"
+								>
+									PSA Labor Force Survey
+									<ExternalLink class="size-2.5" />
+								</a>
+								<a
+									href={laborAnalytics().nationalAverages.ageDependencyRatio.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-[10px] text-blue-600 shadow-sm transition-colors hover:bg-blue-50 dark:bg-slate-700 dark:text-blue-400 dark:hover:bg-slate-600"
+								>
+									World Bank Data
+									<ExternalLink class="size-2.5" />
+								</a>
 							</div>
 						</div>
 					</div>
