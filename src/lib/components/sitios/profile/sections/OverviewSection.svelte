@@ -27,9 +27,7 @@
 
 	interface Props {
 		sitio: SitioProfile;
-		changeTab: (
-			tab: 'overview' | 'demographics' | 'infrastructure' | 'economy' | 'assessment'
-		) => void;
+		changeTab: (tab: 'overview' | 'demographics' | 'infrastructure' | 'economy') => void;
 	}
 
 	const { sitio, changeTab }: Props = $props();

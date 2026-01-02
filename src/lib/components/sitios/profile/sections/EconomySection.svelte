@@ -273,7 +273,7 @@
 											Average Daily Income
 										</span>
 										<HelpTooltip>
-											Average daily income per household head based on survey data
+											Average daily income per household based on survey data
 										</HelpTooltip>
 									</div>
 									<p
@@ -289,7 +289,7 @@
 											{level.label}
 										</span>
 									</div>
-									<span class="text-xs text-muted-foreground">per household head</span>
+									<span class="text-xs text-muted-foreground">per household</span>
 								</div>
 							</div>
 						</div>
