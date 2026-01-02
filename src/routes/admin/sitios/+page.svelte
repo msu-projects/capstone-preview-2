@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
+	import CsvImportDialog from '$lib/components/admin/sitios/CsvImportDialog.svelte';
 	import SitiosTable from '$lib/components/admin/sitios/SitiosTable.svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Badge } from '$lib/components/ui/badge';
@@ -19,6 +20,7 @@
 		Calendar,
 		CalendarPlus,
 		Copy,
+		FileSpreadsheet,
 		FilterX,
 		House,
 		MapPin,
@@ -62,6 +64,7 @@
 	// Dialog states
 	let isDeleteDialogOpen = $state(false);
 	let isManageYearsDialogOpen = $state(false);
+	let isCsvImportDialogOpen = $state(false);
 	let selectedSitio = $state<SitioRecord | null>(null);
 	let newYearToAdd = $state<number>(new Date().getFullYear());
 	let copyFromYear = $state<string>('none');
@@ -250,6 +253,19 @@
 		barangayFilter = 'all';
 		selectedYear = 'latest';
 		currentPage = 1;
+	}
+
+	function handleCsvImportComplete(results: {
+		totalProcessed: number;
+		successful: number;
+		byYear: Record<number, { count: number }>;
+	}) {
+		// Refresh data after import
+		refreshData();
+		const yearSummary = Object.entries(results.byYear)
+			.map(([year, data]) => `${year}: ${data.count}`)
+			.join(', ');
+		toast.success(`Imported ${results.successful} records (${yearSummary})`);
 	}
 
 	function openManageYears(sitio: SitioRecord) {
@@ -458,6 +474,10 @@
 	>
 		{#snippet actions()}
 			{#if canCreateSitio}
+				<Button variant="outline" size="sm" onclick={() => (isCsvImportDialogOpen = true)}>
+					<FileSpreadsheet class="size-4 sm:mr-2" />
+					<span class="hidden sm:inline">Import CSV</span>
+				</Button>
 				<Button href="/admin/sitios/new" size="sm">
 					<Plus class="size-4 sm:mr-2" />
 					<span class="hidden sm:inline">Add Sitio</span>
@@ -704,3 +724,6 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<!-- CSV Import Dialog -->
+<CsvImportDialog bind:open={isCsvImportDialogOpen} onImportComplete={handleCsvImportComplete} />
