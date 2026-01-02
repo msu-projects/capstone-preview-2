@@ -328,8 +328,8 @@
 		<div class="flex-1 p-4 md:p-6 lg:p-8">
 			<div class="mx-auto max-w-4xl">
 				<!-- Form Content -->
-				<Card.Root class="overflow-hidden border-0 shadow-xl">
-					<Card.Header class="border-b bg-muted/30">
+				<Card.Root class="gap-0 overflow-hidden border-0 py-0 shadow-xl">
+					<Card.Header class="border-b bg-muted/30 p-5">
 						<div class="flex items-center gap-3">
 							<div
 								class="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20"
