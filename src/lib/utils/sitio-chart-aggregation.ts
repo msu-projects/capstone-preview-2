@@ -368,10 +368,18 @@ export interface DemographicsAggregation {
 	unemploymentRate: number;
 	seniorPercent: number;
 
-	// Age groups (estimated)
-	children: number;
+	// Age groups (calculated from available data)
+	/** Youth (0-14): totalPopulation - laborForce - seniorsCount + laborForce60to64Count */
+	youth: number;
+	/** Working Age (15-64): laborForceCount */
 	workingAge: number;
+	/** Elderly (65+): seniorsCount - laborForce60to64Count */
 	elderly: number;
+
+	// Age group percentages
+	youthPercent: number;
+	workingAgePercent: number;
+	elderlyPercent: number;
 
 	// Classification counts
 	gidaCount: number;
@@ -436,13 +444,13 @@ export function aggregateDemographics(
 		if (sitio.sitioClassification.conflict) conflictCount++;
 	}
 
-	// Estimate age groups
-	const children = sitios.reduce((sum, s) => {
-		const p = getDataForYearOrLatest(s, year);
-		return sum + (p?.schoolAgeChildren || 0);
-	}, 0);
+	// Calculate age groups based on available data
+	// Working Age (15-64) = laborForceCount
 	const workingAge = totalLaborWorkforce;
-	const elderly = totalSeniors;
+	// Elderly (65+) = seniorsCount (60+) - laborForce60to64Count (60-64 who still work)
+	const elderly = Math.max(0, totalSeniors - totalLaborForce60to64);
+	// Youth (0-14) = totalPopulation - workingAge - elderly
+	const youth = Math.max(0, totalPopulation - workingAge - elderly);
 
 	return {
 		totalPopulation,
@@ -469,9 +477,13 @@ export function aggregateDemographics(
 		unemploymentRate: safePercentage(totalUnemployed, totalLaborWorkforce),
 		seniorPercent: safePercentage(totalSeniors, totalPopulation),
 
-		children,
+		youth,
 		workingAge,
 		elderly,
+
+		youthPercent: safePercentage(youth, totalPopulation),
+		workingAgePercent: safePercentage(workingAge, totalPopulation),
+		elderlyPercent: safePercentage(elderly, totalPopulation),
 
 		gidaCount,
 		indigenousCount,

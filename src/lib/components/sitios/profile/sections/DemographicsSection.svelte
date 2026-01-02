@@ -4,12 +4,14 @@
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioProfile } from '$lib/types';
 	import {
+		Baby,
 		Briefcase,
 		Clock,
 		CreditCard,
 		IdCard,
 		Landmark,
 		PersonStanding,
+		PieChart,
 		Scale,
 		School,
 		TrendingDown,
@@ -36,6 +38,53 @@
 			label: 'Female',
 			value: sitio.population.totalFemale,
 			color: 'hsl(330, 81%, 60%)'
+		}
+	]);
+
+	// Age distribution data for donut chart
+	// Working Age (15-64) = laborForceCount
+	// Elderly (65+) = seniorsCount (60+) - laborForce60to64Count (60-64 who still work)
+	// Youth (0-14) = totalPopulation - workingAge - elderly
+	const ageDistribution = $derived(() => {
+		const laborForce = sitio.laborForceCount || 0;
+		const seniors = sitio.vulnerableGroups.seniorsCount || 0;
+		const seniorWorkers = sitio.vulnerableGroups.laborForce60to64Count || 0;
+
+		const workingAge = laborForce;
+		const elderly = Math.max(0, seniors - seniorWorkers);
+		const youth = Math.max(0, sitio.totalPopulation - workingAge - elderly);
+
+		const total = youth + workingAge + elderly;
+		const youthPercent = total > 0 ? ((youth / total) * 100).toFixed(1) : '0';
+		const workingAgePercent = total > 0 ? ((workingAge / total) * 100).toFixed(1) : '0';
+		const elderlyPercent = total > 0 ? ((elderly / total) * 100).toFixed(1) : '0';
+
+		return {
+			youth,
+			workingAge,
+			elderly,
+			youthPercent,
+			workingAgePercent,
+			elderlyPercent
+		};
+	});
+
+	// Age distribution donut chart data
+	const ageData = $derived([
+		{
+			label: 'Youth (0-14)',
+			value: ageDistribution().youth,
+			color: 'hsl(25, 95%, 60%)' // Orange
+		},
+		{
+			label: 'Working Age (15-64)',
+			value: ageDistribution().workingAge,
+			color: 'hsl(217, 91%, 60%)' // Blue
+		},
+		{
+			label: 'Elderly (65+)',
+			value: ageDistribution().elderly,
+			color: 'hsl(200, 18%, 60%)' // Gray
 		}
 	]);
 
@@ -238,6 +287,102 @@
 							</div>
 							<p class="text-2xl font-bold text-slate-900 dark:text-white">
 								{sitio.population.totalFemale.toLocaleString()}
+							</p>
+							<p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+						</div>
+					</div>
+				</div>
+			{/snippet}
+		</InfoCard>
+
+		<!-- Age Distribution Card -->
+		<InfoCard
+			title="Population by Age Group"
+			description="Breakdown of population by age brackets"
+			icon={PieChart}
+			iconBgColor="bg-teal-50 dark:bg-teal-900/20"
+			iconTextColor="text-teal-600 dark:text-teal-400"
+		>
+			{#snippet children()}
+				<div class="flex flex-col items-center justify-around gap-8 p-2 md:flex-row">
+					<!-- Donut Chart -->
+					<div class="relative w-48 shrink-0 md:w-56">
+						<DonutChart
+							data={ageData}
+							centerLabel="Total"
+							centerValue={sitio.totalPopulation.toLocaleString()}
+							height={224}
+							showLegend={false}
+						/>
+					</div>
+
+					<!-- Age Group Stats -->
+					<div class="flex w-full max-w-xs flex-col gap-4">
+						<!-- Youth Stats -->
+						<div
+							class="rounded-xl border border-orange-100 bg-orange-50 p-4 transition-all hover:shadow-md dark:border-orange-900/20 dark:bg-orange-900/10"
+						>
+							<div class="mb-1 flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<Baby class="size-4 text-orange-600 dark:text-orange-400" />
+									<span class="text-sm font-semibold text-orange-900 dark:text-orange-200">
+										Youth (0-14)
+									</span>
+								</div>
+								<span
+									class="rounded bg-white px-2 py-0.5 text-xs font-bold text-orange-600 shadow-sm dark:bg-slate-800/80"
+								>
+									{ageDistribution().youthPercent}%
+								</span>
+							</div>
+							<p class="text-2xl font-bold text-slate-900 dark:text-white">
+								{ageDistribution().youth.toLocaleString()}
+							</p>
+							<p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+						</div>
+
+						<!-- Working Age Stats -->
+						<div
+							class="rounded-xl border border-blue-100 bg-blue-50 p-4 transition-all hover:shadow-md dark:border-blue-900/20 dark:bg-blue-900/10"
+						>
+							<div class="mb-1 flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<Briefcase class="size-4 text-blue-600 dark:text-blue-400" />
+									<span class="text-sm font-semibold text-blue-900 dark:text-blue-200">
+										Working Age (15-64)
+									</span>
+								</div>
+								<span
+									class="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-600 shadow-sm dark:bg-slate-800/80"
+								>
+									{ageDistribution().workingAgePercent}%
+								</span>
+							</div>
+							<p class="text-2xl font-bold text-slate-900 dark:text-white">
+								{ageDistribution().workingAge.toLocaleString()}
+							</p>
+							<p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+						</div>
+
+						<!-- Elderly Stats -->
+						<div
+							class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-800/30"
+						>
+							<div class="mb-1 flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<UserRound class="size-4 text-slate-600 dark:text-slate-400" />
+									<span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+										Elderly (65+)
+									</span>
+								</div>
+								<span
+									class="rounded bg-white px-2 py-0.5 text-xs font-bold text-slate-600 shadow-sm dark:bg-slate-700"
+								>
+									{ageDistribution().elderlyPercent}%
+								</span>
+							</div>
+							<p class="text-2xl font-bold text-slate-900 dark:text-white">
+								{ageDistribution().elderly.toLocaleString()}
 							</p>
 							<p class="mt-1 text-xs text-muted-foreground">Individuals</p>
 						</div>
