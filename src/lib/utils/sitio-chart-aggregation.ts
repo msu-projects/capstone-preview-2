@@ -793,10 +793,42 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
 
 export interface InfrastructureAggregation {
 	// Road types with existence and condition
-	roadAsphalt: { exists: number; avgCondition: number; totalLength: number };
-	roadConcrete: { exists: number; avgCondition: number; totalLength: number };
-	roadGravel: { exists: number; avgCondition: number; totalLength: number };
-	roadNatural: { exists: number; avgCondition: number; totalLength: number };
+	roadAsphalt: {
+		exists: number;
+		totalLength: number;
+		excellent: number;
+		good: number;
+		fair: number;
+		poor: number;
+		bad: number;
+	};
+	roadConcrete: {
+		exists: number;
+		totalLength: number;
+		excellent: number;
+		good: number;
+		fair: number;
+		poor: number;
+		bad: number;
+	};
+	roadGravel: {
+		exists: number;
+		totalLength: number;
+		excellent: number;
+		good: number;
+		fair: number;
+		poor: number;
+		bad: number;
+	};
+	roadNatural: {
+		exists: number;
+		totalLength: number;
+		excellent: number;
+		good: number;
+		fair: number;
+		poor: number;
+		bad: number;
+	};
 
 	// Water sources
 	waterNatural: { exists: number; functioning: number; notFunctioning: number };
@@ -823,10 +855,10 @@ export function aggregateInfrastructure(
 	year?: number
 ): InfrastructureAggregation {
 	const result: InfrastructureAggregation = {
-		roadAsphalt: { exists: 0, avgCondition: 0, totalLength: 0 },
-		roadConcrete: { exists: 0, avgCondition: 0, totalLength: 0 },
-		roadGravel: { exists: 0, avgCondition: 0, totalLength: 0 },
-		roadNatural: { exists: 0, avgCondition: 0, totalLength: 0 },
+		roadAsphalt: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
+		roadConcrete: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
+		roadGravel: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
+		roadNatural: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
 
 		waterNatural: { exists: 0, functioning: 0, notFunctioning: 0 },
 		waterLevel1: { exists: 0, functioning: 0, notFunctioning: 0 },
@@ -845,12 +877,17 @@ export function aggregateInfrastructure(
 		studentsPerRoomNoClassroom: 0
 	};
 
-	// Accumulators for road conditions
-	const roadConditions = {
-		asphalt: { total: 0, count: 0 },
-		concrete: { total: 0, count: 0 },
-		gravel: { total: 0, count: 0 },
-		natural: { total: 0, count: 0 }
+	// Helper to categorize condition (1-5 scale)
+	const categorizeCondition = (
+		condition: number | undefined,
+		road: { excellent: number; good: number; fair: number; poor: number; bad: number }
+	) => {
+		if (!condition) return;
+		if (condition === 5) road.excellent++;
+		else if (condition === 4) road.good++;
+		else if (condition === 3) road.fair++;
+		else if (condition === 2) road.poor++;
+		else if (condition === 1) road.bad++;
 	};
 
 	for (const sitio of sitios) {
@@ -863,37 +900,25 @@ export function aggregateInfrastructure(
 		if (infra.asphalt.exists === 'yes') {
 			result.roadAsphalt.exists++;
 			result.roadAsphalt.totalLength += infra.asphalt.length || 0;
-			if (infra.asphalt.condition) {
-				roadConditions.asphalt.total += infra.asphalt.condition;
-				roadConditions.asphalt.count++;
-			}
+			categorizeCondition(infra.asphalt.condition, result.roadAsphalt);
 		}
 
 		if (infra.concrete.exists === 'yes') {
 			result.roadConcrete.exists++;
 			result.roadConcrete.totalLength += infra.concrete.length || 0;
-			if (infra.concrete.condition) {
-				roadConditions.concrete.total += infra.concrete.condition;
-				roadConditions.concrete.count++;
-			}
+			categorizeCondition(infra.concrete.condition, result.roadConcrete);
 		}
 
 		if (infra.gravel.exists === 'yes') {
 			result.roadGravel.exists++;
 			result.roadGravel.totalLength += infra.gravel.length || 0;
-			if (infra.gravel.condition) {
-				roadConditions.gravel.total += infra.gravel.condition;
-				roadConditions.gravel.count++;
-			}
+			categorizeCondition(infra.gravel.condition, result.roadGravel);
 		}
 
 		if (infra.natural.exists === 'yes') {
 			result.roadNatural.exists++;
 			result.roadNatural.totalLength += infra.natural.length || 0;
-			if (infra.natural.condition) {
-				roadConditions.natural.total += infra.natural.condition;
-				roadConditions.natural.count++;
-			}
+			categorizeCondition(infra.natural.condition, result.roadNatural);
 		}
 
 		// Water sources
@@ -948,22 +973,6 @@ export function aggregateInfrastructure(
 				break;
 		}
 	}
-
-	// Calculate average conditions
-	result.roadAsphalt.avgCondition =
-		roadConditions.asphalt.count > 0
-			? roadConditions.asphalt.total / roadConditions.asphalt.count
-			: 0;
-	result.roadConcrete.avgCondition =
-		roadConditions.concrete.count > 0
-			? roadConditions.concrete.total / roadConditions.concrete.count
-			: 0;
-	result.roadGravel.avgCondition =
-		roadConditions.gravel.count > 0 ? roadConditions.gravel.total / roadConditions.gravel.count : 0;
-	result.roadNatural.avgCondition =
-		roadConditions.natural.count > 0
-			? roadConditions.natural.total / roadConditions.natural.count
-			: 0;
 
 	return result;
 }

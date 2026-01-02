@@ -4,7 +4,6 @@
 	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Card from '$lib/components/ui/card';
-	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import type { SitioRecord } from '$lib/types';
 	import {
@@ -113,28 +112,28 @@
 			color: 'bg-blue-500',
 			sitioCount: infrastructure.roadConcrete.exists,
 			length: infrastructure.roadConcrete.totalLength,
-			avgCondition: infrastructure.roadConcrete.avgCondition
+			data: infrastructure.roadConcrete
 		},
 		{
 			type: 'Asphalt',
 			color: 'bg-slate-400 dark:bg-slate-500',
 			sitioCount: infrastructure.roadAsphalt.exists,
 			length: infrastructure.roadAsphalt.totalLength,
-			avgCondition: infrastructure.roadAsphalt.avgCondition
+			data: infrastructure.roadAsphalt
 		},
 		{
 			type: 'Gravel',
 			color: 'bg-orange-400',
 			sitioCount: infrastructure.roadGravel.exists,
 			length: infrastructure.roadGravel.totalLength,
-			avgCondition: infrastructure.roadGravel.avgCondition
+			data: infrastructure.roadGravel
 		},
 		{
 			type: 'Natural',
 			color: 'bg-stone-500',
 			sitioCount: infrastructure.roadNatural.exists,
 			length: infrastructure.roadNatural.totalLength,
-			avgCondition: infrastructure.roadNatural.avgCondition
+			data: infrastructure.roadNatural
 		}
 	]);
 
@@ -300,27 +299,6 @@
 			color: 'hsl(0, 84%, 60%)'
 		}
 	]);
-
-	// Condition labels helper
-	function getConditionLabel(condition: number): { text: string; class: string } {
-		if (condition >= 4.5)
-			return { text: 'Excellent', class: 'text-emerald-600 dark:text-emerald-400' };
-		if (condition >= 3.5) return { text: 'Good', class: 'text-green-600 dark:text-green-400' };
-		if (condition >= 2.5) return { text: 'Fair', class: 'text-yellow-600 dark:text-yellow-400' };
-		if (condition >= 1.5) return { text: 'Poor', class: 'text-orange-600 dark:text-orange-400' };
-		if (condition > 0) return { text: 'Bad', class: 'text-red-600 dark:text-red-400' };
-		return { text: 'N/A', class: 'text-slate-400' };
-	}
-
-	// Road condition tooltip
-	function getRoadConditionTooltip(condition: number): string {
-		if (condition >= 4.5) return 'Average: Optimal condition across sitios';
-		if (condition >= 3.5) return 'Average: Sound structure with minimal wear';
-		if (condition >= 2.5) return 'Average: Functional but with minor issues';
-		if (condition >= 1.5) return 'Average: Significant potholes and damage';
-		if (condition > 0) return 'Average: Severe damage reported';
-		return 'No condition data available';
-	}
 </script>
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -520,7 +498,7 @@
 						<div class="col-span-3">Type</div>
 						<div class="col-span-3 text-right">Sitios</div>
 						<div class="col-span-3 text-right">Total Length</div>
-						<div class="col-span-3 text-right">Avg. Condition</div>
+						<div class="col-span-3 text-right">Condition</div>
 					</div>
 					{#each roadTypes as road}
 						<div
@@ -559,14 +537,40 @@
 									<span class="text-sm text-slate-400">—</span>
 								{/if}
 							</div>
-							<div class="col-span-3 flex items-center justify-end gap-1">
-								{#if road.sitioCount > 0 && road.avgCondition > 0}
-									{@const conditionInfo = getConditionLabel(road.avgCondition)}
-									{@const tooltip = getRoadConditionTooltip(road.avgCondition)}
-									<span class="text-xs font-bold {conditionInfo.class}">
-										{conditionInfo.text}
-									</span>
-									<HelpTooltip content={tooltip} />
+							<div class="col-span-3 flex flex-col items-end gap-0.5">
+								{#if road.sitioCount > 0}
+									<div class="flex gap-1">
+										{#if road.data.excellent > 0}
+											<Badge
+												variant="outline"
+												class="border-emerald-100 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400"
+												>{road.data.excellent} exc</Badge
+											>
+										{/if}
+										{#if road.data.good > 0}
+											<Badge
+												variant="outline"
+												class="border-green-100 bg-green-50 px-1.5 py-0 text-[10px] text-green-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-400"
+												>{road.data.good} good</Badge
+											>
+										{/if}
+									</div>
+									<div class="flex gap-1">
+										{#if road.data.fair > 0}
+											<Badge
+												variant="outline"
+												class="border-yellow-100 bg-yellow-50 px-1.5 py-0 text-[10px] text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-400"
+												>{road.data.fair} fair</Badge
+											>
+										{/if}
+										{#if road.data.poor > 0 || road.data.bad > 0}
+											<Badge
+												variant="outline"
+												class="border-red-100 bg-red-50 px-1.5 py-0 text-[10px] text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
+												>{road.data.poor + road.data.bad} poor</Badge
+											>
+										{/if}
+									</div>
 								{:else}
 									<span class="text-sm text-slate-400">—</span>
 								{/if}
