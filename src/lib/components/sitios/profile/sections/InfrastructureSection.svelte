@@ -2,6 +2,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
+	import { NATIONAL_AVERAGES } from '$lib/config/national-averages';
 	import type { SitioProfile } from '$lib/types';
 	import {
 		Building2,
@@ -17,35 +18,6 @@
 		TrendingUp,
 		Zap
 	} from '@lucide/svelte';
-
-	// Philippine National Averages for Utility Access
-	const NATIONAL_AVERAGES = {
-		electricity: {
-			percent: 93.12,
-			source: 'Department of Energy (DOE), 2024',
-			url: 'https://www.pna.gov.ph/articles/1228482'
-		},
-		sanitaryToilet: {
-			percent: 91.7,
-			source: 'PSA 2020 Census of Population and Housing',
-			url: 'https://psa.gov.ph/content/household-characteristics-2020-census-population-and-housing'
-		},
-		internet: {
-			percent: 48.8,
-			source: 'PSA/DICT 2024 NICTHS Survey',
-			url: 'https://ptvnews.ph/psa-dict-record-spike-in-internet-connected-households-increased-online-access-among-filipino-populace/'
-		},
-		pavedRoads: {
-			percent: 99.11,
-			source: 'DPWH Atlas 2024',
-			url: 'https://www.dpwh.gov.ph/dpwh/DPWH_ATLAS_2024/Road%20Data%202024/index.htm'
-		},
-		unpavedRoads: {
-			percent: 0.89,
-			source: 'DPWH Atlas 2024',
-			url: 'https://www.dpwh.gov.ph/dpwh/DPWH_ATLAS_2024/Road%20Data%202024/index.htm'
-		}
-	} as const;
 
 	interface Props {
 		sitio: SitioProfile;
