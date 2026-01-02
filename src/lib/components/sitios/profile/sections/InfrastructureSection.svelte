@@ -13,8 +13,29 @@
 		Navigation,
 		Router,
 		Ship,
+		TrendingDown,
+		TrendingUp,
 		Zap
 	} from '@lucide/svelte';
+
+	// Philippine National Averages for Utility Access
+	const NATIONAL_AVERAGES = {
+		electricity: {
+			percent: 93.12,
+			source: 'Department of Energy (DOE), 2024',
+			url: 'https://www.pna.gov.ph/articles/1228482'
+		},
+		sanitaryToilet: {
+			percent: 91.7,
+			source: 'PSA 2020 Census of Population and Housing',
+			url: 'https://psa.gov.ph/content/household-characteristics-2020-census-population-and-housing'
+		},
+		internet: {
+			percent: 48.8,
+			source: 'PSA/DICT 2024 NICTHS Survey',
+			url: 'https://ptvnews.ph/psa-dict-record-spike-in-internet-connected-households-increased-online-access-among-filipino-populace/'
+		}
+	} as const;
 
 	interface Props {
 		sitio: SitioProfile;
@@ -35,11 +56,78 @@
 			: 0
 	);
 
+	// Sanitation types data
+	const sanitationTypes = $derived([
+		{
+			label: 'Water-Sealed',
+			enabled: sitio.sanitationTypes.waterSealed,
+			color: 'bg-blue-500',
+			description: 'Modern flush toilets with water seal'
+		},
+		{
+			label: 'Pit Latrine',
+			enabled: sitio.sanitationTypes.pitLatrine,
+			color: 'bg-amber-500',
+			description: 'Traditional pit latrines'
+		},
+		{
+			label: 'Community CR',
+			enabled: sitio.sanitationTypes.communityCR,
+			color: 'bg-purple-500',
+			description: 'Shared community comfort rooms'
+		},
+		{
+			label: 'Open Defecation',
+			enabled: sitio.sanitationTypes.openDefecation,
+			color: 'bg-red-500',
+			description: 'No proper sanitation facility'
+		}
+	]);
+
+	// Zero Open Defecation (ZOD) Analytics
+	const zodAnalytics = $derived(() => {
+		const hasOpenDefecation = sitio.sanitationTypes.openDefecation;
+		return {
+			hasWarning: hasOpenDefecation,
+			message: hasOpenDefecation
+				? 'Open defecation practice detected - requires immediate intervention'
+				: 'No open defecation reported - ZOD compliant'
+		};
+	});
+
 	const internetPercent = $derived(
 		sitio.totalHouseholds > 0
 			? Math.round((sitio.householdsWithInternet / sitio.totalHouseholds) * 100)
 			: 0
 	);
+
+	// Analytics: Compare against national averages
+	const electricityAnalytics = $derived(() => {
+		const diff = electricityPercent - NATIONAL_AVERAGES.electricity.percent;
+		return {
+			diff: Math.abs(diff).toFixed(1),
+			isAbove: diff >= 0,
+			status: diff >= 0 ? 'above' : 'below'
+		};
+	});
+
+	const toiletAnalytics = $derived(() => {
+		const diff = toiletPercent - NATIONAL_AVERAGES.sanitaryToilet.percent;
+		return {
+			diff: Math.abs(diff).toFixed(1),
+			isAbove: diff >= 0,
+			status: diff >= 0 ? 'above' : 'below'
+		};
+	});
+
+	const internetAnalytics = $derived(() => {
+		const diff = internetPercent - NATIONAL_AVERAGES.internet.percent;
+		return {
+			diff: Math.abs(diff).toFixed(1),
+			isAbove: diff >= 0,
+			status: diff >= 0 ? 'above' : 'below'
+		};
+	});
 
 	const electricitySources = $derived([
 		{
@@ -292,6 +380,87 @@
 			iconTextColor="text-yellow-500"
 		>
 			{#snippet children()}
+				<!-- Analytics Summary -->
+				<div
+					class="mb-3 rounded-lg border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-800/30"
+				>
+					<div class="mb-3 flex items-center gap-2">
+						<p class="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+							Comparison vs. Philippine National Average
+						</p>
+						<HelpTooltip>
+							{#snippet children()}
+								<div class="space-y-2 text-xs">
+									<p class="font-semibold">National Average Sources:</p>
+									<ul class="list-inside list-disc space-y-1">
+										<li>
+											<strong>Electricity ({NATIONAL_AVERAGES.electricity.percent}%):</strong>
+											{NATIONAL_AVERAGES.electricity.source}
+										</li>
+										<li>
+											<strong
+												>Sanitary Toilets ({NATIONAL_AVERAGES.sanitaryToilet.percent}%):</strong
+											>
+											{NATIONAL_AVERAGES.sanitaryToilet.source}
+										</li>
+										<li>
+											<strong>Internet ({NATIONAL_AVERAGES.internet.percent}%):</strong>
+											{NATIONAL_AVERAGES.internet.source}
+										</li>
+									</ul>
+								</div>
+							{/snippet}
+						</HelpTooltip>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<!-- Electricity Badge -->
+						<Badge
+							variant="outline"
+							class="gap-1.5 {electricityAnalytics().isAbove
+								? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+								: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}"
+						>
+							{#if electricityAnalytics().isAbove}
+								<TrendingUp class="size-3.5" />
+							{:else}
+								<TrendingDown class="size-3.5" />
+							{/if}
+							<Zap class="size-3" />
+							Electricity {electricityAnalytics().diff}% {electricityAnalytics().status} avg
+						</Badge>
+						<!-- Sanitary Toilet Badge -->
+						<Badge
+							variant="outline"
+							class="gap-1.5 {toiletAnalytics().isAbove
+								? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+								: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}"
+						>
+							{#if toiletAnalytics().isAbove}
+								<TrendingUp class="size-3.5" />
+							{:else}
+								<TrendingDown class="size-3.5" />
+							{/if}
+							<Droplets class="size-3" />
+							Sanitation {toiletAnalytics().diff}% {toiletAnalytics().status} avg
+						</Badge>
+						<!-- Internet Badge -->
+						<Badge
+							variant="outline"
+							class="gap-1.5 {internetAnalytics().isAbove
+								? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+								: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}"
+						>
+							{#if internetAnalytics().isAbove}
+								<TrendingUp class="size-3.5" />
+							{:else}
+								<TrendingDown class="size-3.5" />
+							{/if}
+							<Router class="size-3" />
+							Internet {internetAnalytics().diff}% {internetAnalytics().status} avg
+						</Badge>
+					</div>
+				</div>
+
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 					<!-- Electricity Section -->
 					<div class="flex flex-col gap-4">
@@ -310,9 +479,14 @@
 									style="width: {electricityPercent}%"
 								></div>
 							</div>
-							<p class="mt-2 text-xs text-muted-foreground">
-								{sitio.householdsWithElectricity} of {sitio.totalHouseholds} households
-							</p>
+							<div class="mt-2 flex items-center justify-between">
+								<p class="text-xs text-muted-foreground">
+									{sitio.householdsWithElectricity} of {sitio.totalHouseholds} households
+								</p>
+								<span class="text-[10px] text-muted-foreground">
+									PH Avg: {NATIONAL_AVERAGES.electricity.percent}%
+								</span>
+							</div>
 							<div
 								class="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50"
 							>
@@ -322,7 +496,7 @@
 									Source Breakdown (per Household)
 								</p>
 								<div class="space-y-2">
-									{#each electricitySources.filter((v) => v.value > 0) as source}
+									{#each electricitySources as source}
 										<div class="flex items-center gap-2 text-xs">
 											<span class="w-16 text-slate-500 dark:text-slate-400">{source.label}</span>
 											<div class="mx-2 h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
@@ -362,9 +536,78 @@
 									style="width: {toiletPercent}%"
 								></div>
 							</div>
-							<p class="mt-2 text-xs text-muted-foreground">
-								{sitio.householdsWithToilet} of {sitio.totalHouseholds} households
-							</p>
+							<div class="mt-2 flex items-center justify-between">
+								<p class="text-xs text-muted-foreground">
+									{sitio.householdsWithToilet} of {sitio.totalHouseholds} households
+								</p>
+								<span class="text-[10px] text-muted-foreground">
+									PH Avg: {NATIONAL_AVERAGES.sanitaryToilet.percent}%
+								</span>
+							</div>
+							<div
+								class="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50"
+							>
+								<p
+									class="mb-2 text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+								>
+									Sanitation Types Used
+								</p>
+								<div class="flex flex-wrap gap-2">
+									{#each sanitationTypes.filter((v) => v.enabled) as sanitation}
+										<div
+											class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800"
+											title={sanitation.description}
+										>
+											<div class="h-2 w-2 rounded-full {sanitation.color}"></div>
+											<span class="text-xs font-medium text-slate-700 dark:text-slate-300">
+												{sanitation.label}
+											</span>
+										</div>
+									{/each}
+									{#if !sanitationTypes.some((v) => v.enabled)}
+										<span class="text-xs text-muted-foreground italic">No data available</span>
+									{/if}
+								</div>
+
+								<!-- ZOD Analytics Warning -->
+								{#if zodAnalytics().hasWarning}
+									<div
+										class="mt-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-2.5 dark:border-red-500/30 dark:bg-red-500/10"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											class="size-4 shrink-0 text-red-600 dark:text-red-400"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+											/>
+										</svg>
+										<div class="flex-1">
+											<p class="text-xs font-semibold text-red-800 dark:text-red-300">
+												Zero Open Defecation (ZOD) Alert
+											</p>
+											<p class="mt-0.5 text-xs text-red-700 dark:text-red-400">
+												{zodAnalytics().message}
+											</p>
+										</div>
+									</div>
+								{:else}
+									<div
+										class="mt-3 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+									>
+										<Check class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+										<p class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+											{zodAnalytics().message}
+										</p>
+									</div>
+								{/if}
+							</div>
 						</div>
 
 						<!-- Internet Connectivity -->
@@ -382,9 +625,14 @@
 									class="h-2.5 rounded-full bg-blue-400 transition-all duration-500"
 									style="width: {internetPercent}%"
 								></div>
-								<p class="mt-2 text-xs text-muted-foreground">
+							</div>
+							<div class="mt-2 flex items-center justify-between">
+								<p class="text-xs text-muted-foreground">
 									{sitio.householdsWithInternet} of {sitio.totalHouseholds} households
 								</p>
+								<span class="text-[10px] text-muted-foreground">
+									PH Avg: {NATIONAL_AVERAGES.internet.percent}%
+								</span>
 							</div>
 						</div>
 					</div>
