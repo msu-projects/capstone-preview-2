@@ -2,6 +2,7 @@
 	import { FormSection } from '$lib/components/ui/form-section';
 	import { HelpTooltip } from '$lib/components/ui/help-tooltip';
 	import { Label } from '$lib/components/ui/label';
+	import NumberInput from '$lib/components/ui/number-input/NumberInput.svelte';
 	import * as Select from '$lib/components/ui/select';
 	import type { PriorityItem, PriorityName, PriorityRating } from '$lib/types';
 	import { cn } from '$lib/utils';
@@ -23,8 +24,8 @@
 
 	// Helper type for hazard details matching the document specification
 	type HazardDetails = {
-		/** Frequency description (text description like "0", "1", "2-3", etc.) */
-		frequency: string;
+		/** Frequency (number of occurrences) */
+		frequency: number;
 	};
 
 	// Props matching SitioProfile Sections I and J per documentation
@@ -36,10 +37,10 @@
 			drought: HazardDetails;
 			earthquake: HazardDetails;
 		}>({
-			flood: { frequency: '0' },
-			landslide: { frequency: '0' },
-			drought: { frequency: '0' },
-			earthquake: { frequency: '0' }
+			flood: { frequency: 0 },
+			landslide: { frequency: 0 },
+			drought: { frequency: 0 },
+			earthquake: { frequency: 0 }
 		}),
 		/** Primary food security concern */
 		foodSecurity = $bindable<'secure' | 'seasonal_scarcity' | 'critical_shortage'>('secure'),
@@ -72,9 +73,6 @@
 		drought: { name: 'Drought', icon: Flame },
 		earthquake: { name: 'Earthquake', icon: Waves }
 	};
-
-	// Frequency options for hazards
-	const frequencyOptions = ['0', '1', '2-3', '4-5', 'More than 5', 'Seasonal'];
 
 	// Priority labels and icons
 	const priorityLabels: Record<
@@ -127,7 +125,7 @@
 	};
 
 	// Section completion checks
-	const hasHazards = $derived(Object.values(hazards).some((h) => h.frequency !== '0'));
+	const hasHazards = $derived(Object.values(hazards).some((h) => h.frequency > 0));
 	const hasPriorities = $derived(priorities.some((p) => p.rating > 0));
 
 	// Helper function to update a priority rating
@@ -152,14 +150,14 @@
 				<div
 					class={cn(
 						'rounded-xl border-2 p-4 transition-all',
-						hazards[k].frequency !== '0' && 'border-rose-500/30 bg-rose-500/5 shadow-sm'
+						hazards[k].frequency > 0 && 'border-rose-500/30 bg-rose-500/5 shadow-sm'
 					)}
 				>
 					<div class="mb-3 flex items-center gap-2">
 						<div
 							class={cn(
 								'flex size-8 items-center justify-center rounded-lg',
-								hazards[k].frequency !== '0'
+								hazards[k].frequency > 0
 									? 'bg-rose-500/20 text-rose-600'
 									: 'bg-muted text-muted-foreground'
 							)}
@@ -171,31 +169,20 @@
 						</Label>
 					</div>
 					<div class="space-y-1.5">
-						<Label class="text-xs text-muted-foreground">Frequency in past 12 months</Label>
-						<Select.Root
-							type="single"
-							value={hazards[k].frequency}
-							onValueChange={(v) => {
-								if (v) hazards[k].frequency = v;
-							}}
-						>
-							<Select.Trigger
-								id={`hazard-${k}`}
-								class={cn(
-									'h-11 rounded-lg',
-									hazards[k].frequency !== '0' && 'border-rose-500/30 bg-rose-500/5'
-								)}
-							>
-								{hazards[k].frequency === '0' ? 'None' : hazards[k].frequency}
-							</Select.Trigger>
-							<Select.Content>
-								{#each frequencyOptions as option}
-									<Select.Item value={option}>
-										{option === '0' ? 'None' : option}
-									</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
+						<Label for={`hazard-${k}`} class="text-xs text-muted-foreground">
+							Frequency in past 12 months
+						</Label>
+						<NumberInput
+							id={`hazard-${k}`}
+							bind:value={hazards[k].frequency}
+							min="0"
+							clearZeroOnFocus={true}
+							class={cn(
+								'h-11 rounded-lg',
+								hazards[k].frequency > 0 && 'border-rose-500/30 bg-rose-500/5'
+							)}
+							placeholder="0"
+						/>
 					</div>
 				</div>
 			{/each}
@@ -278,6 +265,7 @@
 		icon={ListChecks}
 		variant="success"
 		isComplete={hasPriorities}
+		class="hidden"
 	>
 		<div class="space-y-4">
 			<div class="flex items-center gap-1.5">

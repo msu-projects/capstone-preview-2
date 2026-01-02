@@ -180,7 +180,7 @@ export const POTABLE_WATER_SYSTEM_CONFIG: PPAConfig = {
 			enabled: true,
 			evaluate: (profile) => {
 				// Check if there are water-related hazards (flood can indicate waterborne disease risk)
-				if (profile.hazards.flood.frequency && profile.hazards.flood.frequency !== '0') {
+				if (profile.hazards.flood.frequency > 0) {
 					return {
 						points: 1.5,
 						reason: 'Flooding risk indicates potential waterborne disease concern'
@@ -281,8 +281,7 @@ export const CONCRETE_TIRE_PATH_CONFIG: PPAConfig = {
 			maxPoints: 2.0,
 			enabled: true,
 			evaluate: (profile) => {
-				const hasSteepRisk =
-					profile.hazards.landslide.frequency && profile.hazards.landslide.frequency !== '0';
+				const hasSteepRisk = profile.hazards.landslide.frequency > 0;
 				if (hasSteepRisk) {
 					return {
 						points: 2.0,
@@ -999,7 +998,7 @@ export const SANITARY_TOILET_CONFIG: PPAConfig = {
 			maxPoints: 1.0,
 			enabled: true,
 			evaluate: (profile) => {
-				if (profile.hazards.flood.frequency && profile.hazards.flood.frequency !== '0') {
+				if (profile.hazards.flood.frequency > 0) {
 					return {
 						points: 1.0,
 						reason: 'Flooding risk indicates potential sanitation health issues'
@@ -1041,7 +1040,7 @@ export const SLOPE_PROTECTION_CONFIG: PPAConfig = {
 			maxPoints: 3.5,
 			enabled: true,
 			evaluate: (profile) => {
-				if (profile.hazards.flood.frequency && profile.hazards.flood.frequency !== '0') {
+				if (profile.hazards.flood.frequency > 0) {
 					return {
 						points: 3.5,
 						reason: 'Flooding is a common risk in the area'
@@ -1057,7 +1056,7 @@ export const SLOPE_PROTECTION_CONFIG: PPAConfig = {
 			maxPoints: 3.0,
 			enabled: true,
 			evaluate: (profile) => {
-				if (profile.hazards.landslide.frequency && profile.hazards.landslide.frequency !== '0') {
+				if (profile.hazards.landslide.frequency > 0) {
 					return {
 						points: 3.0,
 						reason: 'Landslides are a common risk - slope protection needed'
@@ -1080,10 +1079,8 @@ export const SLOPE_PROTECTION_CONFIG: PPAConfig = {
 					profile.infrastructure.natural
 				];
 				const existingRoads = roads.filter((r) => r.exists === 'yes' && r.condition);
-				const hasFloodRisk =
-					profile.hazards.flood.frequency && profile.hazards.flood.frequency !== '0';
-				const hasLandslideRisk =
-					profile.hazards.landslide.frequency && profile.hazards.landslide.frequency !== '0';
+				const hasFloodRisk = profile.hazards.flood.frequency > 0;
+				const hasLandslideRisk = profile.hazards.landslide.frequency > 0;
 
 				if (existingRoads.length > 0) {
 					const worstCondition = Math.min(...existingRoads.map((r) => r.condition!));
@@ -1120,8 +1117,7 @@ export const SLOPE_PROTECTION_CONFIG: PPAConfig = {
 			maxPoints: 0.5,
 			enabled: true,
 			evaluate: (profile) => {
-				const hasFloodRisk =
-					profile.hazards.flood.frequency && profile.hazards.flood.frequency !== '0';
+				const hasFloodRisk = profile.hazards.flood.frequency > 0;
 				if (hasFloodRisk && profile.agriculture.numberOfFarmers > 0) {
 					return {
 						points: 0.5,
@@ -1195,11 +1191,9 @@ export const SERVICE_CARAVAN_CONFIG: PPAConfig = {
 			enabled: true,
 			evaluate: (profile) => {
 				let concerns = 0;
-				if (profile.hazards.flood.frequency && profile.hazards.flood.frequency !== '0') concerns++;
-				if (profile.hazards.landslide.frequency && profile.hazards.landslide.frequency !== '0')
-					concerns++;
-				if (profile.hazards.drought.frequency && profile.hazards.drought.frequency !== '0')
-					concerns++;
+				if (profile.hazards.flood.frequency > 0) concerns++;
+				if (profile.hazards.landslide.frequency > 0) concerns++;
+				if (profile.hazards.drought.frequency > 0) concerns++;
 				if (
 					profile.foodSecurity === 'critical_shortage' ||
 					profile.foodSecurity === 'seasonal_scarcity'

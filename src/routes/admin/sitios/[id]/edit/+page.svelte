@@ -63,7 +63,7 @@
 	};
 
 	type HazardDetails = {
-		frequency: string;
+		frequency: number;
 	};
 
 	interface Props {
@@ -210,10 +210,10 @@
 		drought: HazardDetails;
 		earthquake: HazardDetails;
 	}>({
-		flood: { frequency: '0' },
-		landslide: { frequency: '0' },
-		drought: { frequency: '0' },
-		earthquake: { frequency: '0' }
+		flood: { frequency: 0 },
+		landslide: { frequency: 0 },
+		drought: { frequency: 0 },
+		earthquake: { frequency: 0 }
 	});
 	let foodSecurity = $state<'secure' | 'seasonal_scarcity' | 'critical_shortage'>('secure');
 
@@ -517,10 +517,10 @@
 					crops: [],
 					livestock: [],
 					hazards: {
-						flood: { frequency: '0' },
-						landslide: { frequency: '0' },
-						drought: { frequency: '0' },
-						earthquake: { frequency: '0' }
+						flood: { frequency: 0 },
+						landslide: { frequency: 0 },
+						drought: { frequency: 0 },
+						earthquake: { frequency: 0 }
 					},
 					foodSecurity: 'secure' as const,
 					priorities: [

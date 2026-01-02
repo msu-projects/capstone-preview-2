@@ -187,25 +187,25 @@
 	const hazardsList = $derived([
 		{
 			name: 'Flood',
-			frequency: parseInt(sitio.hazards.flood.frequency) || 0,
+			frequency: sitio.hazards.flood.frequency || 0,
 			icon: Droplets,
 			color: 'blue'
 		},
 		{
 			name: 'Landslide',
-			frequency: parseInt(sitio.hazards.landslide.frequency) || 0,
+			frequency: sitio.hazards.landslide.frequency || 0,
 			icon: Mountain,
 			color: 'amber'
 		},
 		{
 			name: 'Drought',
-			frequency: parseInt(sitio.hazards.drought.frequency) || 0,
+			frequency: sitio.hazards.drought.frequency || 0,
 			icon: Flame,
 			color: 'orange'
 		},
 		{
 			name: 'Earthquake',
-			frequency: parseInt(sitio.hazards.earthquake.frequency) || 0,
+			frequency: sitio.hazards.earthquake.frequency || 0,
 			icon: AlertTriangle,
 			color: 'red'
 		}

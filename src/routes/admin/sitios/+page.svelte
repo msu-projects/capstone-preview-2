@@ -424,10 +424,10 @@
 			crops: [],
 			livestock: [],
 			hazards: {
-				flood: { frequency: '0' },
-				landslide: { frequency: '0' },
-				drought: { frequency: '0' },
-				earthquake: { frequency: '0' }
+				flood: { frequency: 0 },
+				landslide: { frequency: 0 },
+				drought: { frequency: 0 },
+				earthquake: { frequency: 0 }
 			},
 			foodSecurity: 'secure',
 			priorities: [

@@ -345,8 +345,7 @@ export interface WaterSourceStatus {
  */
 export interface HazardDetails {
 	/**
-	 * Frequency description (e.g., number of times or text description).
-	 * Mapped to the open text field in the form.
+	 * Frequency (number of occurrences in the past 12 months)
 	 */
-	frequency: string;
+	frequency: number;
 }

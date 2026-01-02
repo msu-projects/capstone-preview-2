@@ -538,26 +538,34 @@ function generateHazardDetails(
 			hazardType as keyof typeof municipalityProfile.hazardProfile
 		] ?? 0.2;
 
+	// Generate a frequency number (0-10 times in past 12 months)
 	// Weight toward less frequent occurrences
-	const frequencies = ['0', '1', '2-3', '4-5', 'More than 5', 'Seasonal'];
 	let weights: number[];
 
 	if (hazardProbability < 0.2) {
-		weights = [0.6, 0.25, 0.1, 0.03, 0.02, 0.0];
+		// Low probability: mostly 0-1 times
+		weights = [0.6, 0.25, 0.1, 0.03, 0.015, 0.005]; // for [0, 1, 2, 3, 4-5, 6+]
 	} else if (hazardProbability < 0.4) {
-		weights = [0.35, 0.3, 0.2, 0.08, 0.02, 0.05];
+		// Medium-low: some occurrences
+		weights = [0.35, 0.3, 0.2, 0.1, 0.04, 0.01];
 	} else if (hazardProbability < 0.6) {
-		weights = [0.15, 0.25, 0.3, 0.15, 0.05, 0.1];
+		// Medium-high: regular occurrences
+		weights = [0.15, 0.25, 0.3, 0.15, 0.1, 0.05];
 	} else {
-		weights = [0.05, 0.15, 0.3, 0.25, 0.1, 0.15];
+		// High: frequent occurrences
+		weights = [0.05, 0.15, 0.3, 0.25, 0.15, 0.1];
 	}
 
-	// Earthquake is special - uses different pattern (rare but when happens, happens)
+	// Earthquake is special - uses different pattern (rare but when happens, might happen multiple times)
 	if (hazardType === 'earthquake') {
-		weights = [0.7, 0.2, 0.08, 0.02, 0.0, 0.0];
+		weights = [0.7, 0.2, 0.08, 0.015, 0.004, 0.001];
 	}
 
-	return { frequency: rng.pickWeighted(frequencies, weights) };
+	// Map weights to frequency ranges
+	const frequencyRanges = [0, 1, 2, 3, rng.nextInt(4, 5), rng.nextInt(6, 10)];
+	const selectedRange = rng.pickWeighted(frequencyRanges, weights);
+
+	return { frequency: selectedRange };
 }
 
 /**

@@ -155,10 +155,10 @@
 			crops: [] as string[],
 			livestock: [] as string[],
 			hazards: {
-				flood: { frequency: '0' },
-				landslide: { frequency: '0' },
-				drought: { frequency: '0' },
-				earthquake: { frequency: '0' }
+				flood: { frequency: 0 },
+				landslide: { frequency: 0 },
+				drought: { frequency: 0 },
+				earthquake: { frequency: 0 }
 			},
 			foodSecurity: 'secure' as const,
 			priorities: [

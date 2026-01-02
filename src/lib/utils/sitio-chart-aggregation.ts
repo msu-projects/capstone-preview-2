@@ -1080,10 +1080,10 @@ export function aggregatePriorities(sitios: SitioRecord[], year?: number): Prior
 
 export interface SafetyAggregation {
 	// Hazard frequency counts
-	floodFrequencyCounts: Map<string, number>;
-	landslideFrequencyCounts: Map<string, number>;
-	droughtFrequencyCounts: Map<string, number>;
-	earthquakeFrequencyCounts: Map<string, number>;
+	floodFrequencyCounts: Map<number, number>;
+	landslideFrequencyCounts: Map<number, number>;
+	droughtFrequencyCounts: Map<number, number>;
+	earthquakeFrequencyCounts: Map<number, number>;
 
 	// Food security
 	foodSecure: number;
@@ -1110,25 +1110,25 @@ export function aggregateSafety(sitios: SitioRecord[], year?: number): SafetyAgg
 		// Hazards
 		const hz = profile.hazards;
 
-		const floodFreq = hz.flood.frequency || '0';
+		const floodFreq = hz.flood.frequency || 0;
 		result.floodFrequencyCounts.set(
 			floodFreq,
 			(result.floodFrequencyCounts.get(floodFreq) || 0) + 1
 		);
 
-		const landslideFreq = hz.landslide.frequency || '0';
+		const landslideFreq = hz.landslide.frequency || 0;
 		result.landslideFrequencyCounts.set(
 			landslideFreq,
 			(result.landslideFrequencyCounts.get(landslideFreq) || 0) + 1
 		);
 
-		const droughtFreq = hz.drought.frequency || '0';
+		const droughtFreq = hz.drought.frequency || 0;
 		result.droughtFrequencyCounts.set(
 			droughtFreq,
 			(result.droughtFrequencyCounts.get(droughtFreq) || 0) + 1
 		);
 
-		const earthquakeFreq = hz.earthquake.frequency || '0';
+		const earthquakeFreq = hz.earthquake.frequency || 0;
 		result.earthquakeFrequencyCounts.set(
 			earthquakeFreq,
 			(result.earthquakeFrequencyCounts.get(earthquakeFreq) || 0) + 1
