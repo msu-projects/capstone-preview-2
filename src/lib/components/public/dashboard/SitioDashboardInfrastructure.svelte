@@ -52,6 +52,16 @@
 			percent: 48.8,
 			source: 'PSA/DICT 2024 NICTHS Survey',
 			url: 'https://ptvnews.ph/psa-dict-record-spike-in-internet-connected-households-increased-online-access-among-filipino-populace/'
+		},
+		pavedRoads: {
+			percent: 99.11,
+			source: 'DPWH Atlas 2024',
+			url: 'https://www.dpwh.gov.ph/dpwh/DPWH_ATLAS_2024/Road%20Data%202024/index.htm'
+		},
+		unpavedRoads: {
+			percent: 0.89,
+			source: 'DPWH Atlas 2024',
+			url: 'https://www.dpwh.gov.ph/dpwh/DPWH_ATLAS_2024/Road%20Data%202024/index.htm'
 		}
 	} as const;
 
@@ -348,6 +358,45 @@
 			diff: Math.abs(diff).toFixed(1),
 			isAbove: diff >= 0,
 			status: diff >= 0 ? 'above' : 'below'
+		};
+	});
+
+	// Road Network Analytics: Aggregate paved vs unpaved percentages across all sitios
+	const roadNetworkAnalytics = $derived(() => {
+		const pavedLength =
+			infrastructure.roadConcrete.totalLength + infrastructure.roadAsphalt.totalLength;
+		const unpavedLength =
+			infrastructure.roadGravel.totalLength + infrastructure.roadNatural.totalLength;
+		const totalLength = pavedLength + unpavedLength;
+
+		if (totalLength === 0) {
+			return {
+				hasData: false,
+				pavedPercent: 0,
+				unpavedPercent: 0,
+				pavedDiff: 0,
+				unpavedDiff: 0,
+				pavedIsAbove: false,
+				unpavedIsAbove: false
+			};
+		}
+
+		const pavedPercent = (pavedLength / totalLength) * 100;
+		const unpavedPercent = (unpavedLength / totalLength) * 100;
+		const pavedDiff = pavedPercent - NATIONAL_AVERAGES.pavedRoads.percent;
+		const unpavedDiff = unpavedPercent - NATIONAL_AVERAGES.unpavedRoads.percent;
+
+		return {
+			hasData: true,
+			pavedPercent: pavedPercent,
+			unpavedPercent: unpavedPercent,
+			pavedDiff: Math.abs(pavedDiff).toFixed(1),
+			unpavedDiff: Math.abs(unpavedDiff).toFixed(1),
+			pavedIsAbove: pavedDiff >= 0,
+			unpavedIsAbove: unpavedDiff >= 0,
+			totalLength: totalLength.toFixed(2),
+			pavedLength: pavedLength.toFixed(2),
+			unpavedLength: unpavedLength.toFixed(2)
 		};
 	});
 
@@ -651,6 +700,120 @@
 			iconTextColor="text-slate-400"
 		>
 			{#snippet children()}
+				<!-- Road Network Analytics: Paved vs Unpaved Comparison -->
+				{#if roadNetworkAnalytics().hasData}
+					<div
+						class="mb-6 rounded-lg border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/20"
+					>
+						<div class="mb-3 flex items-start gap-2">
+							<h4 class="text-sm font-bold text-slate-900 dark:text-white">
+								Aggregate Road Network Summary
+							</h4>
+							<HelpTooltip>
+								<div class="space-y-1 text-xs">
+									<p>
+										<strong>Paved Roads ({NATIONAL_AVERAGES.pavedRoads.percent}%):</strong> Concrete +
+										Asphalt
+									</p>
+									<p>
+										<strong>Unpaved Roads ({NATIONAL_AVERAGES.unpavedRoads.percent}%):</strong> Gravel
+										+ Natural
+									</p>
+									<p class="border-t border-slate-200 pt-1 dark:border-slate-700">
+										<em>Source: {NATIONAL_AVERAGES.pavedRoads.source}</em>
+									</p>
+								</div>
+							</HelpTooltip>
+						</div>
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+							<!-- Paved Roads Analytics -->
+							<div class="flex flex-col gap-2">
+								<div class="flex items-baseline justify-between">
+									<span class="text-xs text-muted-foreground">Paved Roads (Concrete + Asphalt)</span
+									>
+									<span class="text-lg font-bold text-slate-900 dark:text-white">
+										{roadNetworkAnalytics().pavedPercent.toFixed(1)}%
+									</span>
+								</div>
+								<div class="flex items-center justify-between text-xs">
+									<span class="text-muted-foreground"
+										>PH Avg: {NATIONAL_AVERAGES.pavedRoads.percent}%</span
+									>
+									<Badge
+										variant="outline"
+										class={roadNetworkAnalytics().pavedIsAbove
+											? 'border-green-100 bg-green-50 text-green-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-400'
+											: 'border-orange-100 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400'}
+									>
+										{#if roadNetworkAnalytics().pavedIsAbove}
+											<TrendingUp class="mr-1 size-3" />
+										{:else}
+											<TrendingDown class="mr-1 size-3" />
+										{/if}
+										{roadNetworkAnalytics().pavedDiff}%
+										{roadNetworkAnalytics().pavedIsAbove ? 'above' : 'below'}
+									</Badge>
+								</div>
+								<p class="text-xs text-muted-foreground">
+									Total: <span class="font-semibold text-slate-700 dark:text-slate-300"
+										>{roadNetworkAnalytics().pavedLength} km</span
+									>
+								</p>
+							</div>
+							<!-- Unpaved Roads Analytics -->
+							<div class="flex flex-col gap-2">
+								<div class="flex items-baseline justify-between">
+									<span class="text-xs text-muted-foreground">Unpaved Roads (Gravel + Natural)</span
+									>
+									<span class="text-lg font-bold text-slate-900 dark:text-white">
+										{roadNetworkAnalytics().unpavedPercent.toFixed(1)}%
+									</span>
+								</div>
+								<div class="flex items-center justify-between text-xs">
+									<span class="text-muted-foreground"
+										>PH Avg: {NATIONAL_AVERAGES.unpavedRoads.percent}%</span
+									>
+									<Badge
+										variant="outline"
+										class={roadNetworkAnalytics().unpavedIsAbove
+											? 'border-orange-100 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400'
+											: 'border-green-100 bg-green-50 text-green-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-400'}
+									>
+										{#if roadNetworkAnalytics().unpavedIsAbove}
+											<TrendingUp class="mr-1 size-3" />
+										{:else}
+											<TrendingDown class="mr-1 size-3" />
+										{/if}
+										{roadNetworkAnalytics().unpavedDiff}%
+										{roadNetworkAnalytics().unpavedIsAbove ? 'above' : 'below'}
+									</Badge>
+								</div>
+								<p class="text-xs text-muted-foreground">
+									Total: <span class="font-semibold text-slate-700 dark:text-slate-300"
+										>{roadNetworkAnalytics().unpavedLength} km</span
+									>
+								</p>
+							</div>
+						</div>
+						<div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+							<p class="text-xs text-muted-foreground">
+								Total road network across all sitios: <span
+									class="font-semibold text-slate-700 dark:text-slate-300"
+									>{roadNetworkAnalytics().totalLength} km</span
+								>
+							</p>
+						</div>
+					</div>
+				{:else}
+					<div
+						class="mb-6 rounded-lg border border-amber-100 bg-amber-50/50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10"
+					>
+						<p class="text-sm text-amber-700 dark:text-amber-400">
+							No road data available across sitios for analytics comparison.
+						</p>
+					</div>
+				{/if}
+
 				<div class="flex flex-col gap-4">
 					<div
 						class="grid grid-cols-12 gap-2 border-b border-slate-100 pb-2 text-[10px] font-bold tracking-wider text-muted-foreground uppercase dark:border-slate-800"
