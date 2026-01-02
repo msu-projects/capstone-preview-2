@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Tabs from '$lib/components/ui/tabs';
 	import type { SitioProfile } from '$lib/types';
-	import { FileText, Home, Shield, ToolCase, Users } from '@lucide/svelte';
+	import { FileText, Home, ToolCase, Users } from '@lucide/svelte';
 
 	import AppBreadcrumb from '$lib/components/AppBreadcrumb.svelte';
 	import SitioProfileHeader from './SitioProfileHeader.svelte';
@@ -22,8 +22,8 @@
 		{ id: 'overview', label: 'Overview', icon: FileText } as const,
 		{ id: 'demographics', label: 'Demographics', icon: Users } as const,
 		{ id: 'infrastructure', label: 'Infrastructure', icon: Home } as const,
-		{ id: 'economy', label: 'Economy', icon: ToolCase } as const,
-		{ id: 'assessment', label: 'Assessment', icon: Shield } as const
+		{ id: 'economy', label: 'Economy', icon: ToolCase } as const
+		// { id: 'assessment', label: 'Assessment', icon: Shield } as const
 	];
 
 	type Tabs = (typeof tabs)[0]['id'];

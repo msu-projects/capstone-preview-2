@@ -21,7 +21,6 @@
 		Building2,
 		Calendar,
 		FileText,
-		Lightbulb,
 		List,
 		Map,
 		MapPin,
@@ -215,7 +214,7 @@
 						View Sitio List
 					</Button>
 
-					<Button
+					<!-- <Button
 						variant="outline"
 						size="default"
 						href="/recommendations"
@@ -223,7 +222,7 @@
 					>
 						<Lightbulb class="size-4" />
 						Find Recommended Sitios
-					</Button>
+					</Button> -->
 				</div>
 			</div>
 		</div>
