@@ -122,9 +122,9 @@
 	</div>
 
 	<!-- Main Map Card -->
-	<Card.Root class="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+	<Card.Root class="gap-0 overflow-hidden border-slate-200 py-0 shadow-sm dark:border-slate-700">
 		<Card.Header
-			class="border-b border-slate-100 bg-slate-50/50 pb-3 dark:border-slate-800 dark:bg-slate-800/50"
+			class="border-b border-slate-100 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-800/50"
 		>
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">

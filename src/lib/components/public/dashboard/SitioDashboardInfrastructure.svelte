@@ -1,5 +1,4 @@
 <script lang="ts">
-	import BarChart from '$lib/components/charts/BarChart.svelte';
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
@@ -374,16 +373,71 @@
 
 	// Students per room distribution
 	const studentsPerRoomData = $derived([
-		{ label: '<46', value: infrastructure.studentsPerRoomLessThan46, color: 'hsl(142, 71%, 45%)' },
-		{ label: '46-50', value: infrastructure.studentsPerRoom46_50, color: 'hsl(217, 91%, 60%)' },
-		{ label: '51-55', value: infrastructure.studentsPerRoom51_55, color: 'hsl(45, 93%, 47%)' },
-		{ label: '>56', value: infrastructure.studentsPerRoomMoreThan56, color: 'hsl(25, 95%, 53%)' },
 		{
-			label: 'No Classroom',
+			label: '<46 (Blue)',
+			value: infrastructure.studentsPerRoomLessThan46,
+			color: 'hsl(217, 91%, 60%)',
+			remark: 'Meet RA 7880 with one shift'
+		},
+		{
+			label: '46-50 (Yellow)',
+			value: infrastructure.studentsPerRoom46_50,
+			color: 'hsl(45, 93%, 47%)',
+			remark: 'Fails to meet RA 7880 with one shift'
+		},
+		{
+			label: '51-55 (Gold)',
+			value: infrastructure.studentsPerRoom51_55,
+			color: 'hsl(25, 95%, 53%)',
+			remark: 'Does not meet RA 7880 even with double shifting'
+		},
+		{
+			label: '>56 (Red)',
+			value: infrastructure.studentsPerRoomMoreThan56,
+			color: 'hsl(0, 84%, 60%)',
+			remark: 'Severe shortage of classrooms'
+		},
+		{
+			label: 'No Classroom (Black)',
 			value: infrastructure.studentsPerRoomNoClassroom,
-			color: 'hsl(0, 84%, 60%)'
+			color: 'hsl(0, 0%, 30%)',
+			remark: 'No existing instructional rooms'
 		}
 	]);
+
+	// Classroom Density Analytics (Pupil:Room Ratio)
+	const classroomDensityAnalytics = $derived(() => {
+		const compliantSitios = infrastructure.studentsPerRoomLessThan46;
+		const warningSitios = infrastructure.studentsPerRoom46_50;
+		const criticalSitios = infrastructure.studentsPerRoom51_55;
+		const severeSitios = infrastructure.studentsPerRoomMoreThan56;
+		const noClassroomSitios = infrastructure.studentsPerRoomNoClassroom;
+
+		const totalWithData = totalSitios;
+		const sitiosNeedingIntervention =
+			warningSitios + criticalSitios + severeSitios + noClassroomSitios;
+		const compliancePercent =
+			totalWithData > 0 ? Math.round((compliantSitios / totalWithData) * 100) : 0;
+		const interventionPercent =
+			totalWithData > 0 ? Math.round((sitiosNeedingIntervention / totalWithData) * 100) : 0;
+
+		return {
+			compliantSitios,
+			warningSitios,
+			criticalSitios,
+			severeSitios,
+			noClassroomSitios,
+			sitiosNeedingIntervention,
+			compliancePercent,
+			interventionPercent,
+			hasCompliance: compliantSitios > 0,
+			hasWarnings: sitiosNeedingIntervention > 0,
+			message:
+				compliantSitios === totalWithData
+					? 'All sitios meet RA 7880 classroom standards'
+					: `${sitiosNeedingIntervention} sitio${sitiosNeedingIntervention > 1 ? 's' : ''} (${interventionPercent}%) require intervention for classroom shortage`
+		};
+	});
 </script>
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -986,6 +1040,7 @@
 				icon={Droplets}
 				iconBgColor="bg-teal-50 dark:bg-teal-900/20"
 				iconTextColor="text-teal-500"
+				class="col-span-2"
 			>
 				{#snippet children()}
 					<DonutChart data={sanitationData} centerLabel="Sitios" height={220} />
@@ -1034,7 +1089,7 @@
 			</InfoCard>
 
 			<!-- Classroom Density -->
-			<InfoCard
+			<!-- <InfoCard
 				title="Classroom Density"
 				description="Students per classroom ratio"
 				icon={GraduationCap}
@@ -1044,7 +1099,7 @@
 				{#snippet children()}
 					<BarChart data={studentsPerRoomData} height={220} title="Sitios" />
 				{/snippet}
-			</InfoCard>
+			</InfoCard> -->
 		</div>
 	</div>
 
@@ -1149,6 +1204,122 @@
 							{/each}
 						</div>
 					</div>
+				</div>
+			{/snippet}
+		</InfoCard>
+
+		<!-- Classroom Density Analytics Card -->
+		<InfoCard
+			title="Classroom Density"
+			description="Pupil:Room Ratio Analysis"
+			icon={GraduationCap}
+			iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
+			iconTextColor="text-indigo-600 dark:text-indigo-400"
+		>
+			{#snippet children()}
+				<!-- Summary Analytics -->
+				<div
+					class="mb-4 rounded-lg border p-3 {classroomDensityAnalytics().hasWarnings
+						? 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10'
+						: 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10'}"
+				>
+					<div class="mb-2 flex items-center gap-2">
+						<span
+							class="text-[10px] font-bold tracking-wider uppercase {classroomDensityAnalytics()
+								.hasWarnings
+								? 'text-amber-700 dark:text-amber-300'
+								: 'text-emerald-700 dark:text-emerald-300'}"
+						>
+							RA 7880 Compliance Summary
+						</span>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<p class="text-xs text-muted-foreground">Compliant Sitios</p>
+							<p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+								{classroomDensityAnalytics().compliantSitios}
+							</p>
+							<p class="text-[10px] text-muted-foreground">
+								{classroomDensityAnalytics().compliancePercent}% of total
+							</p>
+						</div>
+						<div>
+							<p class="text-xs text-muted-foreground">Need Intervention</p>
+							<p
+								class="text-2xl font-bold {classroomDensityAnalytics().hasWarnings
+									? 'text-red-600 dark:text-red-400'
+									: 'text-slate-400'}"
+							>
+								{classroomDensityAnalytics().sitiosNeedingIntervention}
+							</p>
+							<p class="text-[10px] text-muted-foreground">
+								{classroomDensityAnalytics().interventionPercent}% of total
+							</p>
+						</div>
+					</div>
+					<p
+						class="mt-2 text-xs {classroomDensityAnalytics().hasWarnings
+							? 'text-amber-700 dark:text-amber-300'
+							: 'text-emerald-700 dark:text-emerald-300'}"
+					>
+						{classroomDensityAnalytics().message}
+					</p>
+				</div>
+
+				<!-- Breakdown by Category -->
+				<div class="space-y-2">
+					<p class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+						Breakdown by Pupil:Room Ratio
+					</p>
+					{#each studentsPerRoomData as category}
+						<div
+							class="rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-800/50"
+						>
+							<div class="mb-1.5 flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<span class="h-2.5 w-2.5 rounded-full" style="background-color: {category.color}"
+									></span>
+									<span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+										{category.label}
+									</span>
+								</div>
+								<span class="text-sm font-bold text-slate-900 dark:text-white">
+									{category.value} sitio{category.value !== 1 ? 's' : ''}
+								</span>
+							</div>
+							<p class="text-[11px] leading-tight text-muted-foreground">
+								{category.remark}
+							</p>
+						</div>
+					{/each}
+				</div>
+
+				<!-- RA 7880 Information -->
+				<div
+					class="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-2.5 dark:border-blue-800/30 dark:bg-blue-900/10"
+				>
+					<p
+						class="text-[10px] font-bold tracking-wider text-blue-700 uppercase dark:text-blue-300"
+					>
+						Republic Act 7880
+					</p>
+					<p class="mt-1 text-[11px] leading-tight text-blue-600 dark:text-blue-400">
+						Fair and Equitable Access to Education Act - mandates reasonable pupil-classroom ratio
+						to ensure quality education delivery.
+					</p>
+					<p
+						class="mt-2 border-t border-blue-200 pt-2 text-[10px] leading-tight text-blue-500 dark:border-blue-700 dark:text-blue-400"
+					>
+						<span class="font-semibold">Source:</span>
+						<a
+							href="https://rtei.okfn.org/documents/The_Basic_Education_Information_System_BEIS_.pdf"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="underline hover:text-blue-700 dark:hover:text-blue-300"
+						>
+							Basic Education Information System (BEIS)
+						</a>
+					</p>
 				</div>
 			{/snippet}
 		</InfoCard>

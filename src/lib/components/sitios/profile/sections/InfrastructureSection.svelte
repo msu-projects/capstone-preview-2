@@ -10,6 +10,7 @@
 		Check,
 		Droplets,
 		Footprints,
+		GraduationCap,
 		Milestone,
 		Navigation,
 		Router,
@@ -75,6 +76,74 @@
 				? 'Open defecation practice detected - requires immediate intervention'
 				: 'No open defecation reported - ZOD compliant'
 		};
+	});
+
+	// Classroom Density Analytics (Pupil:Room Ratio)
+	const classroomDensityAnalytics = $derived(() => {
+		const studentsPerRoom = sitio.studentsPerRoom;
+
+		switch (studentsPerRoom) {
+			case 'less_than_46':
+				return {
+					status: 'excellent',
+					colorCode: 'blue',
+					label: 'Less than 46',
+					remark: 'Meet Republic Act 7880 with one shift',
+					bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+					textColor: 'text-blue-700 dark:text-blue-300',
+					borderColor: 'border-blue-200 dark:border-blue-800/30',
+					badgeBg: 'bg-blue-500',
+					severity: 'low'
+				};
+			case '46_50':
+				return {
+					status: 'warning',
+					colorCode: 'yellow',
+					label: '46.00 - 50.99',
+					remark: 'Fails to meet RA 7880 with one shift',
+					bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+					textColor: 'text-yellow-700 dark:text-yellow-300',
+					borderColor: 'border-yellow-200 dark:border-yellow-800/30',
+					badgeBg: 'bg-yellow-500',
+					severity: 'medium'
+				};
+			case '51_55':
+				return {
+					status: 'critical',
+					colorCode: 'gold',
+					label: '51.00 - 55.99',
+					remark: 'Does not meet RA 7880 even with double shifting',
+					bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+					textColor: 'text-amber-700 dark:text-amber-300',
+					borderColor: 'border-amber-200 dark:border-amber-800/30',
+					badgeBg: 'bg-amber-500',
+					severity: 'high'
+				};
+			case 'more_than_56':
+				return {
+					status: 'severe',
+					colorCode: 'red',
+					label: 'More than 56',
+					remark: 'Does not meet RA 7880, schools with severe shortage of classrooms',
+					bgColor: 'bg-red-50 dark:bg-red-900/20',
+					textColor: 'text-red-700 dark:text-red-300',
+					borderColor: 'border-red-200 dark:border-red-800/30',
+					badgeBg: 'bg-red-500',
+					severity: 'critical'
+				};
+			case 'no_classroom':
+				return {
+					status: 'none',
+					colorCode: 'black',
+					label: 'No Classroom Available',
+					remark: 'No existing instructional rooms',
+					bgColor: 'bg-slate-50 dark:bg-slate-900/20',
+					textColor: 'text-slate-700 dark:text-slate-300',
+					borderColor: 'border-slate-200 dark:border-slate-800/30',
+					badgeBg: 'bg-slate-700',
+					severity: 'critical'
+				};
+		}
 	});
 
 	const internetPercent = $derived(
@@ -1010,6 +1079,117 @@
 					</div>
 				{/each}
 			</div>
+		</InfoCard>
+
+		<!-- Classroom Density Analytics Card -->
+		<InfoCard
+			title="Classroom Density"
+			description="Pupil:Room Ratio Analysis"
+			icon={GraduationCap}
+			iconBgColor={classroomDensityAnalytics().bgColor}
+			iconTextColor={classroomDensityAnalytics().textColor}
+			contentPadding="p-4"
+		>
+			{#snippet children()}
+				<div
+					class="rounded-lg border p-4 {classroomDensityAnalytics()
+						.borderColor} {classroomDensityAnalytics().bgColor}"
+				>
+					<div class="mb-3 flex items-start justify-between">
+						<div class="flex items-center gap-2">
+							<div class="h-3 w-3 rounded-full {classroomDensityAnalytics().badgeBg}"></div>
+							<span class="text-sm font-bold {classroomDensityAnalytics().textColor}">
+								{classroomDensityAnalytics().colorCode.toUpperCase()}
+							</span>
+						</div>
+						<Badge
+							variant="outline"
+							class="{classroomDensityAnalytics().borderColor} {classroomDensityAnalytics()
+								.bgColor} {classroomDensityAnalytics().textColor} font-bold"
+						>
+							{classroomDensityAnalytics().label}
+						</Badge>
+					</div>
+					<p class="text-sm leading-relaxed {classroomDensityAnalytics().textColor}">
+						{classroomDensityAnalytics().remark}
+					</p>
+				</div>
+
+				<!-- Severity Indicator -->
+				{#if classroomDensityAnalytics().severity === 'high' || classroomDensityAnalytics().severity === 'critical'}
+					<div
+						class="mt-3 flex items-start gap-2 rounded-md border p-2.5 {classroomDensityAnalytics()
+							.severity === 'critical'
+							? 'border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10'
+							: 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10'}"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="size-4 shrink-0 {classroomDensityAnalytics().severity === 'critical'
+								? 'text-red-600 dark:text-red-400'
+								: 'text-amber-600 dark:text-amber-400'}"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
+						</svg>
+						<div class="flex-1">
+							<p
+								class="text-xs font-semibold {classroomDensityAnalytics().severity === 'critical'
+									? 'text-red-700 dark:text-red-300'
+									: 'text-amber-700 dark:text-amber-300'}"
+							>
+								{classroomDensityAnalytics().severity === 'critical'
+									? 'Critical Intervention Required'
+									: 'Immediate Action Recommended'}
+							</p>
+							<p
+								class="mt-1 text-[11px] leading-tight {classroomDensityAnalytics().severity ===
+								'critical'
+									? 'text-red-600 dark:text-red-400'
+									: 'text-amber-600 dark:text-amber-400'}"
+							>
+								{classroomDensityAnalytics().severity === 'critical'
+									? 'This sitio requires urgent attention to address severe classroom shortage or lack of educational facilities.'
+									: 'Consider implementing classroom expansion programs or double shifting schedules to improve student learning conditions.'}
+							</p>
+						</div>
+					</div>
+				{/if}
+				<!-- RA 7880 Information -->
+				<div
+					class="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-800/30 dark:bg-blue-900/10"
+				>
+					<p
+						class="text-[10px] font-bold tracking-wider text-blue-700 uppercase dark:text-blue-300"
+					>
+						Republic Act 7880
+					</p>
+					<p class="mt-1 text-xs leading-tight text-blue-600 dark:text-blue-400">
+						Fair and Equitable Access to Education Act - mandates reasonable pupil-classroom ratio
+						to ensure quality education delivery.
+					</p>
+					<p
+						class="mt-2 border-t border-blue-200 pt-2 text-[10px] leading-tight text-blue-500 dark:border-blue-700 dark:text-blue-400"
+					>
+						<span class="font-semibold">Source:</span>
+						<a
+							href="https://rtei.okfn.org/documents/The_Basic_Education_Information_System_BEIS_.pdf"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="underline hover:text-blue-700 dark:hover:text-blue-300"
+						>
+							Basic Education Information System (BEIS)
+						</a>
+					</p>
+				</div>
+			{/snippet}
 		</InfoCard>
 
 		<!-- Community Facilities Card -->
