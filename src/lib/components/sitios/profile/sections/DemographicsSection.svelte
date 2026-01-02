@@ -8,6 +8,7 @@
 	} from '$lib/config/national-averages';
 	import type { SitioProfile } from '$lib/types';
 	import {
+		AlertTriangle,
 		ArrowDown,
 		ArrowUp,
 		Baby,
@@ -973,6 +974,19 @@
 				<div class="space-y-6">
 					{#each vulnerableSectors as sector}
 						{@const Icon = sector.icon}
+						{@const hasWarning = sector.value > 1 && sector.label !== 'Senior Citizens'}
+						{@const getWarningMessage = (label: string) => {
+							switch (label) {
+								case 'Out of School Youth':
+									return 'Some youth not attending school. This may indicate barriers to education access, economic hardship, or lack of educational facilities.';
+								case 'No PhilSys ID':
+									return 'A portion of population lacks national ID. This limits access to government services, financial inclusion, and may indicate registration barriers.';
+								case 'No Birth Certificate':
+									return 'Some residents lack birth certificates. This affects legal identity, access to services, education enrollment, and may indicate civil registration gaps.';
+								default:
+									return 'This sector requires attention and targeted interventions.';
+							}
+						}}
 						<div>
 							<div class="mb-2 flex items-end justify-between">
 								<div class="flex items-center gap-2">
@@ -980,6 +994,20 @@
 									<span class="text-sm font-medium text-slate-700 dark:text-slate-300"
 										>{sector.label}</span
 									>
+									{#if hasWarning}
+										<div
+											class="flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 dark:bg-amber-900/30"
+										>
+											<AlertTriangle class="size-3 text-amber-600 dark:text-amber-400" />
+											<span class="text-[10px] font-semibold text-amber-700 dark:text-amber-300"
+												>Alert</span
+											>
+											<HelpTooltip
+												content={getWarningMessage(sector.label)}
+												class="text-amber-700"
+											/>
+										</div>
+									{/if}
 								</div>
 								<span class="text-lg font-bold text-slate-900 dark:text-white">
 									{sector.value.toLocaleString()}

@@ -58,7 +58,7 @@
 			iconBgColor: 'bg-purple-50 dark:bg-purple-500/20',
 			textColor: 'text-purple-600 dark:text-purple-400',
 			trend: `${voterPercentage}% of Population`,
-			trendPositive: true
+			trendNeutral: true
 		}
 	]);
 </script>
@@ -153,9 +153,7 @@
 						<div
 							class="flex items-center gap-1 text-xs font-medium {metric.trendNeutral
 								? 'text-muted-foreground'
-								: metric.trendPositive
-									? 'text-green-500'
-									: 'text-green-500'}"
+								: 'text-green-500'}"
 						>
 							{#if !metric.trendNeutral}
 								<TrendingUp class="size-3.5" />
