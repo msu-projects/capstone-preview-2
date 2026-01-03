@@ -2,19 +2,22 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import AppBreadcrumb from '$lib/components/AppBreadcrumb.svelte';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Base64Gallery } from '$lib/components/ui/base64-gallery';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
+	import { Separator } from '$lib/components/ui/separator';
 	import type { ProjectWithSitios } from '$lib/types';
 	import { formatCurrency } from '$lib/utils/formatters';
 	import { getProjectById, getProjectWithSitios } from '$lib/utils/project-storage';
 	import {
 		ArrowLeft,
+		Banknote,
 		Calendar,
-		ExternalLink,
+		ChevronRight,
+		Clock,
 		FolderKanban,
 		ImageIcon,
+		Info,
 		Loader2,
 		MapPin
 	} from '@lucide/svelte';
@@ -120,26 +123,72 @@
 	{:else if project}
 		<AppBreadcrumb items={breadcrumbItems} isAdminView={false} />
 
-		<!-- Header -->
-		<div class="border-b bg-white/50 dark:bg-slate-900/50">
-			<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-				<div class="flex items-start gap-4">
-					<div class="flex size-14 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-						<FolderKanban class="size-7 text-primary" />
-					</div>
-					<div class="min-w-0 flex-1">
-						<h1 class="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">
-							{project.title}
-						</h1>
-						<div class="mt-2 flex flex-wrap items-center gap-3">
-							<Badge variant="secondary" class="text-base font-semibold">
-								{formatCurrency(project.cost)}
-							</Badge>
-							<span class="text-sm text-muted-foreground">
-								{project.sitioIds.length} sitio{project.sitioIds.length !== 1 ? 's' : ''} involved
-							</span>
+		<!-- Hero Header -->
+		<div
+			class="relative border-b bg-linear-to-br from-primary/5 via-primary/3 to-transparent dark:from-primary/10 dark:via-primary/5"
+		>
+			<div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+				<div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+					<div class="flex items-start gap-5">
+						<div
+							class="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-primary/80 shadow-lg shadow-primary/20"
+						>
+							<FolderKanban class="size-8 text-white" />
+						</div>
+						<div class="min-w-0 flex-1">
+							<h1
+								class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
+							>
+								{project.title}
+							</h1>
+							<p class="mt-3 max-w-3xl text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+								{project.description.length > 180
+									? project.description.slice(0, 180) + '...'
+									: project.description}
+							</p>
+							<div class="mt-4 flex flex-wrap items-center gap-4">
+								<div
+									class="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm dark:bg-slate-800"
+								>
+									<Banknote class="size-5 text-primary" />
+									<div>
+										<p class="text-xs font-medium text-muted-foreground">Total Cost</p>
+										<p class="text-lg font-bold text-slate-900 dark:text-white">
+											{formatCurrency(project.cost)}
+										</p>
+									</div>
+								</div>
+								<div
+									class="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm dark:bg-slate-800"
+								>
+									<MapPin class="size-5 text-primary" />
+									<div>
+										<p class="text-xs font-medium text-muted-foreground">Sitios</p>
+										<p class="text-lg font-bold text-slate-900 dark:text-white">
+											{project.sitioIds.length}
+										</p>
+									</div>
+								</div>
+								{#if project.projectDate}
+									<div
+										class="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm dark:bg-slate-800"
+									>
+										<Calendar class="size-5 text-primary" />
+										<div>
+											<p class="text-xs font-medium text-muted-foreground">Project Date</p>
+											<p class="text-sm font-semibold text-slate-900 dark:text-white">
+												{formatDate(project.projectDate)}
+											</p>
+										</div>
+									</div>
+								{/if}
+							</div>
 						</div>
 					</div>
+					<Button variant="outline" class="shrink-0" onclick={() => history.back()}>
+						<ArrowLeft class="mr-2 size-4" />
+						Go Back
+					</Button>
 				</div>
 			</div>
 		</div>
@@ -147,49 +196,68 @@
 		<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 			<div class="grid gap-8 lg:grid-cols-3">
 				<!-- Main Content -->
-				<div class="space-y-8 lg:col-span-2">
+				<div class="space-y-6 lg:col-span-2">
 					<!-- Project Images -->
 					{#if project.images.length > 0}
-						<Card.Root>
-							<Card.Header>
-								<Card.Title class="flex items-center gap-2">
-									<ImageIcon class="size-5" />
-									Project Images
+						<Card.Root class="overflow-hidden">
+							<Card.Header class="bg-linear-to-r from-slate-50 to-transparent dark:from-slate-900">
+								<Card.Title class="flex items-center gap-2 text-lg">
+									<ImageIcon class="size-5 text-primary" />
+									Project Gallery
 								</Card.Title>
+								<Card.Description>Visual documentation of the project</Card.Description>
 							</Card.Header>
-							<Card.Content>
+							<Card.Content class="p-6">
 								<Base64Gallery images={project.images} />
 							</Card.Content>
 						</Card.Root>
 					{/if}
 
 					<!-- Project Description -->
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>About This Project</Card.Title>
+					<Card.Root class="gap-0 overflow-hidden py-0">
+						<Card.Header
+							class="bg-linear-to-r from-slate-50 to-transparent py-5 dark:from-slate-900"
+						>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<Info class="size-5 text-primary" />
+								Project Overview
+							</Card.Title>
+							<Card.Description>Detailed information about this project</Card.Description>
 						</Card.Header>
-						<Card.Content>
-							<p class="leading-relaxed whitespace-pre-wrap text-muted-foreground">
+						<Card.Content class="p-6">
+							<p
+								class="text-base leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300"
+							>
 								{project.description}
 							</p>
 						</Card.Content>
 					</Card.Root>
 
 					<!-- Project Location Map -->
-					<Card.Root>
-						<Card.Header>
-							<Card.Title class="flex items-center gap-2">
-								<MapPin class="size-5" />
-								Project Location
+					<Card.Root class="gap-0 overflow-hidden py-0">
+						<Card.Header
+							class="bg-linear-to-r from-slate-50 to-transparent py-5 dark:from-slate-900"
+						>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<MapPin class="size-5 text-primary" />
+								Location Map
 							</Card.Title>
+							<Card.Description>Geographic location of the project</Card.Description>
 						</Card.Header>
-						<Card.Content>
-							<div bind:this={mapContainer} class="h-72 w-full rounded-lg border"></div>
-							<p class="mt-2 text-sm text-muted-foreground">
-								Coordinates: {project.location.latitude.toFixed(6)}, {project.location.longitude.toFixed(
-									6
-								)}
-							</p>
+						<Card.Content class="p-6">
+							<div
+								bind:this={mapContainer}
+								class="h-80 w-full overflow-hidden rounded-xl border shadow-sm"
+							></div>
+							<div
+								class="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-900"
+							>
+								<MapPin class="size-4 text-muted-foreground" />
+								<p class="text-sm text-muted-foreground">
+									<span class="font-medium">Coordinates:</span>
+									{project.location.latitude.toFixed(6)}, {project.location.longitude.toFixed(6)}
+								</p>
+							</div>
 						</Card.Content>
 					</Card.Root>
 				</div>
@@ -197,69 +265,112 @@
 				<!-- Sidebar -->
 				<div class="space-y-6">
 					<!-- Sitios Involved -->
-					<Card.Root>
-						<Card.Header>
-							<Card.Title class="flex items-center gap-2">
-								<MapPin class="size-5" />
-								Sitios Involved
+					<Card.Root class="gap-0 overflow-hidden py-0">
+						<Card.Header
+							class="bg-linear-to-r from-slate-50 to-transparent py-5 dark:from-slate-900"
+						>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<MapPin class="size-5 text-primary" />
+								Covered Sitios
 							</Card.Title>
+							<Card.Description>
+								{project.sitioIds.length} sitio{project.sitioIds.length !== 1 ? 's' : ''} benefiting from
+								this project
+							</Card.Description>
 						</Card.Header>
-						<Card.Content>
+						<Card.Content class="p-4">
 							<div class="space-y-2">
 								{#each project.sitioNames as sitioName, index (index)}
 									{@const sitioId = project.sitioIds[index]}
 									<a
 										href="/sitios/{sitioId}"
-										class="flex items-center justify-between rounded-lg border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+										class="group flex items-center justify-between rounded-lg border bg-card p-3 transition-all hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm"
 									>
-										<div class="flex items-center gap-2">
-											<MapPin class="size-4 text-primary" />
+										<div class="flex items-center gap-3">
+											<div
+												class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20"
+											>
+												<MapPin class="size-4 text-primary" />
+											</div>
 											<span class="text-sm font-medium">{sitioName}</span>
 										</div>
-										<ExternalLink class="size-4 text-muted-foreground" />
+										<ChevronRight
+											class="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+										/>
 									</a>
 								{/each}
 							</div>
 						</Card.Content>
 					</Card.Root>
 
-					<!-- Project Info -->
-					<Card.Root>
-						<Card.Header>
-							<Card.Title class="flex items-center gap-2">
-								<Calendar class="size-5" />
-								Project Info
+					<!-- Project Details -->
+					<Card.Root class="gap-0 overflow-hidden py-0">
+						<Card.Header
+							class="bg-linear-to-r from-slate-50 to-transparent py-5 dark:from-slate-900"
+						>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<Info class="size-5 text-primary" />
+								Quick Details
 							</Card.Title>
 						</Card.Header>
-						<Card.Content class="space-y-4">
-							<div>
-								<p class="text-sm text-muted-foreground">Project Cost</p>
-								<p class="text-lg font-semibold">{formatCurrency(project.cost)}</p>
-							</div>
-							<div>
-								<p class="text-sm text-muted-foreground">Project Date</p>
-								<p class="font-medium">
-									{project.projectDate ? formatDate(project.projectDate) : 'Not specified'}
-								</p>
-							</div>
-							<div>
-								<p class="text-sm text-muted-foreground">Date Added</p>
-								<p class="font-medium">{formatDate(project.createdAt)}</p>
-							</div>
-							{#if project.updatedAt !== project.createdAt}
-								<div>
-									<p class="text-sm text-muted-foreground">Last Updated</p>
-									<p class="font-medium">{formatDate(project.updatedAt)}</p>
+						<Card.Content class="p-4">
+							<div class="space-y-4">
+								<div class="flex items-start gap-3">
+									<div
+										class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10"
+									>
+										<Banknote class="size-5 text-primary" />
+									</div>
+									<div>
+										<p class="text-xs font-medium text-muted-foreground">Total Investment</p>
+										<p class="text-xl font-bold text-slate-900 dark:text-white">
+											{formatCurrency(project.cost)}
+										</p>
+									</div>
 								</div>
-							{/if}
+
+								<Separator />
+
+								{#if project.projectDate}
+									<div class="flex items-start gap-3">
+										<div
+											class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10"
+										>
+											<Calendar class="size-5 text-primary" />
+										</div>
+										<div>
+											<p class="text-xs font-medium text-muted-foreground">Project Date</p>
+											<p class="text-sm font-semibold text-slate-900 dark:text-white">
+												{formatDate(project.projectDate)}
+											</p>
+										</div>
+									</div>
+								{/if}
+							</div>
 						</Card.Content>
 					</Card.Root>
+				</div>
+			</div>
 
-					<!-- Back Button -->
-					<Button variant="outline" class="w-full" onclick={() => history.back()}>
-						<ArrowLeft class="mr-2 size-4" />
-						Go Back
-					</Button>
+			<!-- Footer Metadata -->
+			<div class="mt-8 rounded-lg border bg-slate-50/50 px-6 py-4 dark:bg-slate-900/50">
+				<div
+					class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground"
+				>
+					<div class="flex items-center gap-2">
+						<Clock class="size-4" />
+						<span>
+							Added on {formatDate(project.createdAt)}
+						</span>
+					</div>
+					{#if project.updatedAt !== project.createdAt}
+						<div class="flex items-center gap-2">
+							<Clock class="size-4" />
+							<span>
+								Last updated on {formatDate(project.updatedAt)}
+							</span>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
