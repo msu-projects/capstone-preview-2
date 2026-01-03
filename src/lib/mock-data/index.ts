@@ -47,8 +47,8 @@ let sitioRecords: SitioRecord[] = [];
 // Initialize LocalStorage with generated mock data if empty (runs only in browser)
 function initializeSitios(): SitioProfile[] {
 	if (typeof window === 'undefined') {
-		// Server-side: generate fresh data for SSR with 3 years
-		sitioRecords = generateSitios(50, 42, 2023, 3);
+		// Server-side: generate fresh data for SSR with 9 years (2018-2026)
+		sitioRecords = generateSitios(50, 42, 2018, 9);
 		return convertRecordsToProfiles(sitioRecords);
 	}
 
@@ -59,7 +59,7 @@ function initializeSitios(): SitioProfile[] {
 		return convertRecordsToProfiles(generatedSitios);
 	} catch (error) {
 		console.error('Failed to initialize sitios from storage:', error);
-		sitioRecords = generateSitios(50, 42, 2023, 3);
+		sitioRecords = generateSitios(50, 42, 2018, 9);
 		return convertRecordsToProfiles(sitioRecords);
 	}
 }
@@ -84,11 +84,11 @@ export const sitios: SitioProfile[] = initializeSitios();
 // Export function to refresh sitios from storage (useful after imports)
 export function refreshSitios(): SitioProfile[] {
 	if (typeof window === 'undefined') {
-		const records = generateSitios(50, 42, 2023, 3);
+		const records = generateSitios(50, 42, 2018, 9);
 		return convertRecordsToProfiles(records);
 	}
 	const records = loadSitios();
-	sitioRecords = records.length > 0 ? records : generateSitios(50, 42, 2023, 3);
+	sitioRecords = records.length > 0 ? records : generateSitios(50, 42, 2018, 9);
 	return convertRecordsToProfiles(sitioRecords);
 }
 

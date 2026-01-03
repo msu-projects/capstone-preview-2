@@ -318,3 +318,163 @@ export function selectLivestock(rng: SeededRandom, profile: MunicipalityProfile)
 
 	return Array.from(livestock);
 }
+
+/**
+ * Generate facility details with a guaranteed state (for progression tracking)
+ * Used when a facility's existence is tracked in progression state
+ */
+export function generateFacilityDetailsWithState(
+	rng: SeededRandom,
+	exists: boolean,
+	populationSize: number,
+	infrastructureLevel: number,
+	isGida: boolean
+): FacilityDetails {
+	if (exists) {
+		// Count correlates with population
+		const baseCount = populationSize > 800 ? 2 : 1;
+		const count = rng.boolean(0.2) ? baseCount + 1 : baseCount;
+
+		// Condition tends to be better in more developed areas
+		const conditionWeights = isGida
+			? [0.15, 0.25, 0.35, 0.2, 0.05] // GIDA: worse conditions
+			: [0.05, 0.15, 0.35, 0.3, 0.15]; // Non-GIDA: better conditions
+		const condition = rng.pickWeighted([1, 2, 3, 4, 5], conditionWeights) as 1 | 2 | 3 | 4 | 5;
+
+		return { exists: 'yes', count, condition };
+	} else {
+		// Distance is further for GIDA areas
+		const baseDistance = isGida ? 8 : 3;
+		const distanceToNearest = Number((baseDistance + rng.next() * (isGida ? 15 : 8)).toFixed(1));
+		return { exists: 'no', distanceToNearest };
+	}
+}
+
+/**
+ * Generate road details with year-over-year progression
+ * Roads improve over time, with better roads (asphalt, concrete) becoming more common
+ */
+export function generateRoadDetailsWithProgression(
+	rng: SeededRandom,
+	roadType: 'asphalt' | 'concrete' | 'gravel' | 'natural',
+	roadDevelopment: number, // 0-1 scale from progression state
+	isGida: boolean,
+	populationSize: number,
+	yearOffset: number
+): RoadDetails {
+	// Year progression bonus (roads improve over time)
+	const yearBonus = yearOffset * 0.02;
+
+	// Different road types have different probabilities based on development
+	const baseProbs: Record<string, number> = {
+		asphalt: 0.1 + roadDevelopment * 0.5 + yearBonus,
+		concrete: 0.2 + roadDevelopment * 0.45 + yearBonus,
+		gravel: 0.45 + roadDevelopment * 0.25,
+		natural: 0.75 - roadDevelopment * 0.35 - yearBonus // Decreases as development increases
+	};
+
+	let existsProbability = baseProbs[roadType];
+	if (isGida) {
+		existsProbability *= roadType === 'natural' ? 1.2 : 0.6;
+	}
+
+	const exists = rng.boolean(Math.min(0.95, Math.max(0.05, existsProbability)));
+
+	if (exists) {
+		// Road length correlates with population and road type
+		const baseLengthKm =
+			roadType === 'natural'
+				? 0.5 + rng.next() * 2
+				: roadType === 'gravel'
+					? 0.3 + rng.next() * 1.5
+					: 0.2 + rng.next() * 1;
+
+		const length = Number((baseLengthKm * (1 + populationSize / 500)).toFixed(2));
+
+		// Condition: newer roads (later years) tend to be in better condition
+		// Better road types have better conditions generally
+		let conditionWeights: number[];
+		if (roadType === 'asphalt' || roadType === 'concrete') {
+			// Better roads, condition improves slightly with year
+			const goodConditionBonus = Math.min(0.2, yearOffset * 0.02);
+			conditionWeights = [
+				0.05 - goodConditionBonus / 2,
+				0.1 - goodConditionBonus / 2,
+				0.25,
+				0.35 + goodConditionBonus / 2,
+				0.25 + goodConditionBonus / 2
+			].map((w) => Math.max(0.01, w));
+		} else {
+			conditionWeights = [0.15, 0.25, 0.35, 0.2, 0.05];
+		}
+
+		const condition = rng.pickWeighted([1, 2, 3, 4, 5], conditionWeights) as 1 | 2 | 3 | 4 | 5;
+
+		return { exists: 'yes', length, condition };
+	} else {
+		return { exists: 'no' };
+	}
+}
+
+/**
+ * Generate water source status with progression
+ * Water systems improve over time, especially with government programs
+ */
+export function generateWaterSourceStatusWithProgression(
+	rng: SeededRandom,
+	sourceType: 'natural' | 'level1' | 'level2' | 'level3',
+	waterDevelopment: number, // 0-1 scale from progression state
+	isGida: boolean,
+	totalHouseholds: number,
+	yearOffset: number
+): WaterSourceStatus {
+	// Year progression bonus for developed water systems
+	const yearBonus = sourceType === 'natural' ? 0 : yearOffset * 0.015;
+
+	// Different water levels have different probability patterns
+	const baseProbs: Record<string, number> = {
+		natural: 0.6 - waterDevelopment * 0.2, // Decreases as development increases
+		level1: 0.4 + waterDevelopment * 0.3 + yearBonus,
+		level2: 0.2 + waterDevelopment * 0.4 + yearBonus,
+		level3: 0.1 + waterDevelopment * 0.5 + yearBonus * 1.5
+	};
+
+	let existsProbability = baseProbs[sourceType];
+	if (isGida) {
+		// GIDA areas have more natural sources, less developed systems
+		existsProbability *= sourceType === 'natural' ? 1.2 : 0.6;
+	}
+
+	const exists = rng.boolean(Math.min(0.9, existsProbability));
+
+	if (exists) {
+		// Scale based on households and source type
+		const scaleFactor =
+			sourceType === 'level3'
+				? 0.3
+				: sourceType === 'level2'
+					? 0.5
+					: sourceType === 'level1'
+						? 0.7
+						: 1.0;
+		const maxUnits = Math.max(1, Math.ceil((totalHouseholds / 30) * scaleFactor));
+		const total = rng.nextInt(1, Math.max(1, maxUnits));
+
+		// Functioning ratio improves over time
+		const baseFunctioningRatio = 0.5 + waterDevelopment * 0.35;
+		const yearImprovement = yearOffset * 0.02;
+		const functioningRatio = Math.min(
+			0.95,
+			baseFunctioningRatio + yearImprovement + rng.next() * 0.1
+		);
+		const functioning = Math.round(total * functioningRatio);
+
+		return {
+			exists: 'yes',
+			functioningCount: functioning,
+			notFunctioningCount: Math.max(0, total - functioning)
+		};
+	} else {
+		return { exists: 'no' };
+	}
+}

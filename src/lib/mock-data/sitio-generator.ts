@@ -16,16 +16,17 @@ import { getMunicipalityProfile, type MunicipalityProfile } from './municipality
 import { SeededRandom } from './seeded-random';
 import {
 	generateFacilityDetails,
+	generateFacilityDetailsWithState,
 	generateHazardDetails,
-	generateRoadDetails,
+	generateRoadDetailsWithProgression,
 	generateSitioName,
-	generateWaterSourceStatus,
+	generateWaterSourceStatusWithProgression,
 	selectCrops,
 	selectLivestock
 } from './sitio-generator-helpers';
 
 // ===== STORAGE KEYS =====
-export const STORAGE_VERSION = 8; // Increment to clear outdated data (improved mock data realism)
+export const STORAGE_VERSION = 9; // Increment to clear outdated data (2018-2026 yearly data with improved realism)
 export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
 export const MOCK_DATA_INITIALIZED_KEY = 'sccdp_mock_data_initialized';
 
@@ -68,8 +69,8 @@ export function markMockDataInitialized(): void {
 
 export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
 	if (typeof window === 'undefined') {
-		// Server-side: generate fresh data for SSR with 3 years (2023-2025)
-		const sitios = generateSitios(50, 42, 2023, 3);
+		// Server-side: generate fresh data for SSR with 9 years (2018-2026)
+		const sitios = generateSitios(50, 42, 2018, 9);
 		return { sitios };
 	}
 
@@ -85,8 +86,8 @@ export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
 		return { sitios };
 	}
 
-	// Generate and save mock data with 3 years (2023-2025)
-	const sitios = generateSitios(50, 42, 2023, 3);
+	// Generate and save mock data with 9 years (2018-2026)
+	const sitios = generateSitios(50, 42, 2018, 9);
 
 	saveSitios(sitios);
 	markMockDataInitialized();
@@ -106,14 +107,273 @@ export function resetMockData(): { sitios: SitioRecord[] } {
 	localStorage.removeItem(MOCK_DATA_INITIALIZED_KEY);
 	clearSitios();
 
-	// Regenerate with new seed based on current time and 3 years of data (2023-2025)
+	// Regenerate with new seed based on current time and 9 years of data (2018-2026)
 	const seed = Date.now() % 1000000;
-	const sitios = generateSitios(50, seed, 2023, 3);
+	const sitios = generateSitios(50, seed, 2018, 9);
 
 	saveSitios(sitios);
 	markMockDataInitialized();
 
 	return { sitios };
+}
+
+// ===== PROGRESSION STATE FOR MULTI-YEAR DATA =====
+
+/**
+ * Tracks the state of a sitio across years for realistic progression
+ * This enables year-over-year changes that build upon previous years
+ */
+interface ProgressionState {
+	// Demographics
+	population: number;
+	households: number;
+	avgHouseholdSize: number;
+	populationGrowthRate: number; // Base rate for this sitio
+
+	// Infrastructure development (0-1 scale, can only improve over time)
+	electricityAccessRate: number;
+	toiletAccessRate: number;
+	internetAccessRate: number;
+	waterSystemDevelopment: number;
+	roadDevelopment: number;
+
+	// Documentation (improves with government programs)
+	birthCertRegistrationRate: number;
+	nationalIdRegistrationRate: number;
+
+	// Economic indicators
+	baseIncome: number;
+	unemploymentRate: number;
+	farmingRate: number;
+
+	// Facility presence flags (once built, stays)
+	hasHealthCenter: boolean;
+	hasElementarySchool: boolean;
+	hasHighSchool: boolean;
+
+	// Mobile signal can improve with tower rollouts
+	mobileSignalLevel: number; // 0-4 (none to 5g)
+}
+
+/**
+ * Initialize progression state for year 0 (first year of data)
+ */
+function initializeProgressionState(
+	rng: SeededRandom,
+	profile: MunicipalityProfile,
+	classification: { gida: boolean; indigenous: boolean; conflict: boolean }
+): ProgressionState {
+	const isGida = classification.gida;
+	const infraLevel = profile.infrastructureLevel * (isGida ? 0.6 : 1.0);
+
+	// Base household count for year 2018 (earlier years have smaller populations)
+	const householdRange = {
+		urban: { min: 60, max: 200 },
+		'semi-urban': { min: 40, max: 150 },
+		rural: { min: 25, max: 100 },
+		highland: { min: 15, max: 70 }
+	};
+	const range = householdRange[profile.type];
+	const households = rng.nextInt(range.min, range.max);
+
+	// Household size varies by area type
+	const avgHouseholdSize =
+		profile.type === 'urban'
+			? rng.nextGaussianClamped(4.0, 0.5, 3.2, 5.5)
+			: classification.indigenous
+				? rng.nextGaussianClamped(5.5, 0.8, 4.5, 8)
+				: rng.nextGaussianClamped(4.6, 0.6, 3.5, 6.5);
+
+	const population = Math.round(households * avgHouseholdSize);
+
+	// Growth rate varies - rural/highland tend to have slower or even negative growth
+	// due to urban migration
+	const baseGrowthRate =
+		profile.type === 'urban'
+			? rng.nextGaussianClamped(0.022, 0.008, 0.01, 0.04)
+			: profile.type === 'highland'
+				? rng.nextGaussianClamped(0.008, 0.006, -0.01, 0.02)
+				: rng.nextGaussianClamped(0.015, 0.007, 0.005, 0.03);
+
+	// Infrastructure rates in 2018 (lower than current, especially in rural areas)
+	const electricityRate2018 = isGida
+		? rng.nextFloat(0.15, 0.4)
+		: profile.type === 'urban'
+			? rng.nextFloat(0.8, 0.95)
+			: rng.nextFloat(0.45, 0.75);
+
+	const toiletRate2018 = isGida
+		? rng.nextFloat(0.25, 0.5)
+		: profile.type === 'urban'
+			? rng.nextFloat(0.75, 0.92)
+			: rng.nextFloat(0.4, 0.7);
+
+	// Internet in 2018 was much lower
+	const internetRate2018 = isGida
+		? rng.nextFloat(0.01, 0.08)
+		: profile.type === 'urban'
+			? rng.nextFloat(0.15, 0.35)
+			: rng.nextFloat(0.05, 0.18);
+
+	// Water and road development (0-1 scale)
+	const waterDev2018 = infraLevel * rng.nextFloat(0.4, 0.7);
+	const roadDev2018 = infraLevel * rng.nextFloat(0.5, 0.8);
+
+	// Documentation rates in 2018 (before PhilSys rollout)
+	const birthCertRate2018 = isGida
+		? rng.nextFloat(0.7, 0.85)
+		: rng.nextFloat(0.85, 0.96);
+	const nationalIdRate2018 = isGida
+		? rng.nextFloat(0.2, 0.4)
+		: rng.nextFloat(0.35, 0.55);
+
+	// Economic indicators
+	const baseIncome2018 = 280 * profile.baseIncomeMultiplier * rng.nextFloat(0.85, 1.15);
+	const unemploymentRate2018 = isGida
+		? rng.nextFloat(0.12, 0.25)
+		: profile.type === 'urban'
+			? rng.nextFloat(0.06, 0.12)
+			: rng.nextFloat(0.08, 0.18);
+
+	const farmingRate = profile.type === 'urban' ? rng.nextFloat(0.1, 0.3) : rng.nextFloat(0.4, 0.75);
+
+	// Facilities in 2018
+	const hasHealthCenter2018 = rng.boolean(infraLevel * 0.4);
+	const hasElementary2018 = rng.boolean(infraLevel * 0.6);
+	const hasHighSchool2018 = rng.boolean(infraLevel * 0.25);
+
+	// Mobile signal in 2018 (lower than today)
+	let mobileSignal2018: number;
+	if (profile.type === 'urban') {
+		mobileSignal2018 = rng.pickWeighted([0, 1, 2, 3], [0.02, 0.08, 0.35, 0.55]);
+	} else if (isGida || profile.type === 'highland') {
+		mobileSignal2018 = rng.pickWeighted([0, 1, 2, 3], [0.25, 0.35, 0.3, 0.1]);
+	} else {
+		mobileSignal2018 = rng.pickWeighted([0, 1, 2, 3], [0.1, 0.2, 0.45, 0.25]);
+	}
+
+	return {
+		population,
+		households,
+		avgHouseholdSize,
+		populationGrowthRate: baseGrowthRate,
+		electricityAccessRate: electricityRate2018,
+		toiletAccessRate: toiletRate2018,
+		internetAccessRate: internetRate2018,
+		waterSystemDevelopment: waterDev2018,
+		roadDevelopment: roadDev2018,
+		birthCertRegistrationRate: birthCertRate2018,
+		nationalIdRegistrationRate: nationalIdRate2018,
+		baseIncome: baseIncome2018,
+		unemploymentRate: unemploymentRate2018,
+		farmingRate,
+		hasHealthCenter: hasHealthCenter2018,
+		hasElementarySchool: hasElementary2018,
+		hasHighSchool: hasHighSchool2018,
+		mobileSignalLevel: mobileSignal2018
+	};
+}
+
+/**
+ * Update progression state after generating a year's profile
+ * Models realistic year-over-year improvements
+ */
+function updateProgressionState(
+	rng: SeededRandom,
+	state: ProgressionState,
+	_profile: SitioProfile,
+	currentYear: number
+): void {
+	// Population growth with slight yearly variance
+	const yearlyVariance = rng.nextGaussianClamped(1, 0.3, 0.7, 1.5);
+	const effectiveGrowthRate = state.populationGrowthRate * yearlyVariance;
+	state.population = Math.round(state.population * (1 + effectiveGrowthRate));
+
+	// Households grow slightly slower than population (larger families first)
+	const householdGrowth = effectiveGrowthRate * rng.nextFloat(0.7, 0.95);
+	state.households = Math.round(state.households * (1 + householdGrowth));
+
+	// Infrastructure improvements (gradual, with government program boosts)
+	// Electricity: Philippine Electrification Program acceleration
+	const electricityImprovement =
+		state.electricityAccessRate < 0.9
+			? rng.nextFloat(0.015, 0.04) * (currentYear >= 2020 ? 1.3 : 1.0)
+			: rng.nextFloat(0.005, 0.015);
+	state.electricityAccessRate = Math.min(0.99, state.electricityAccessRate + electricityImprovement);
+
+	// Toilet access: Sanitation programs
+	const toiletImprovement = rng.nextFloat(0.01, 0.03);
+	state.toiletAccessRate = Math.min(0.98, state.toiletAccessRate + toiletImprovement);
+
+	// Internet: Rapid improvement especially 2020+ (pandemic drove digital adoption)
+	let internetImprovement = rng.nextFloat(0.02, 0.05);
+	if (currentYear >= 2020) internetImprovement *= 1.8; // Pandemic acceleration
+	if (currentYear >= 2023) internetImprovement *= 1.3; // Continued growth
+	state.internetAccessRate = Math.min(0.85, state.internetAccessRate + internetImprovement);
+
+	// Water and road development (slower, depends on projects)
+	const waterImprovement = rng.boolean(0.3) ? rng.nextFloat(0.02, 0.06) : rng.nextFloat(0, 0.015);
+	state.waterSystemDevelopment = Math.min(1, state.waterSystemDevelopment + waterImprovement);
+
+	const roadImprovement = rng.boolean(0.25) ? rng.nextFloat(0.02, 0.05) : rng.nextFloat(0, 0.01);
+	state.roadDevelopment = Math.min(1, state.roadDevelopment + roadImprovement);
+
+	// Documentation rates
+	// PhilSys (National ID) rollout started 2020, accelerated 2022+
+	let nationalIdImprovement: number;
+	if (currentYear < 2020) {
+		nationalIdImprovement = rng.nextFloat(0.01, 0.03);
+	} else if (currentYear < 2022) {
+		nationalIdImprovement = rng.nextFloat(0.03, 0.08);
+	} else {
+		nationalIdImprovement = rng.nextFloat(0.06, 0.12); // Rapid rollout
+	}
+	state.nationalIdRegistrationRate = Math.min(
+		0.95,
+		state.nationalIdRegistrationRate + nationalIdImprovement
+	);
+
+	// Birth certificate registration also improves
+	const birthCertImprovement = rng.nextFloat(0.01, 0.025);
+	state.birthCertRegistrationRate = Math.min(
+		0.98,
+		state.birthCertRegistrationRate + birthCertImprovement
+	);
+
+	// Income grows with inflation and economic development
+	// Philippine average inflation ~3-6% per year
+	const incomeGrowth = rng.nextFloat(0.025, 0.06);
+	state.baseIncome = state.baseIncome * (1 + incomeGrowth);
+
+	// Unemployment can fluctuate
+	const unemploymentChange = rng.nextGaussianClamped(0, 0.015, -0.03, 0.03);
+	// COVID impact 2020-2021
+	const covidImpact = currentYear === 2020 ? 0.04 : currentYear === 2021 ? 0.02 : 0;
+	state.unemploymentRate = Math.max(
+		0.03,
+		Math.min(0.35, state.unemploymentRate + unemploymentChange + covidImpact)
+	);
+
+	// Facilities: once built, stay (with small probability of new construction each year)
+	if (!state.hasHealthCenter) {
+		state.hasHealthCenter = rng.boolean(0.08);
+	}
+	if (!state.hasElementarySchool) {
+		state.hasElementarySchool = rng.boolean(0.06);
+	}
+	if (!state.hasHighSchool) {
+		state.hasHighSchool = rng.boolean(0.04);
+	}
+
+	// Mobile signal can improve (tower rollouts)
+	if (state.mobileSignalLevel < 4) {
+		// 5G rollout started ~2021 in urban areas
+		const canGet5G = currentYear >= 2021;
+		const upgradeChance = currentYear >= 2020 ? 0.15 : 0.08;
+		if (rng.boolean(upgradeChance)) {
+			state.mobileSignalLevel = Math.min(canGet5G ? 4 : 3, state.mobileSignalLevel + 1);
+		}
+	}
 }
 
 // ===== MAIN SITIO PROFILE GENERATOR =====
@@ -169,9 +429,12 @@ export function generateSitios(
 		const yearlyData: { [year: string]: SitioProfile } = {};
 		const availableYears: number[] = [];
 
-		// Store base values for year-over-year progression
-		let basePopulation = 0;
-		let baseHouseholds = 0;
+		// Initialize progression state for this sitio
+		const progressionState = initializeProgressionState(
+			rng,
+			municipalityProfile,
+			sitioClassification
+		);
 
 		for (let yearOffset = 0; yearOffset < yearsToGenerate; yearOffset++) {
 			const currentYear = startYear + yearOffset;
@@ -192,17 +455,14 @@ export function generateSitios(
 				sitioClassification,
 				municipalityProfile,
 				yearOffset,
-				basePopulation,
-				baseHouseholds
+				currentYear,
+				progressionState
 			);
 
 			yearlyData[String(currentYear)] = profile;
 
-			// Store base values for next year's progression
-			if (yearOffset === 0) {
-				basePopulation = profile.totalPopulation;
-				baseHouseholds = profile.totalHouseholds;
-			}
+			// Update progression state for next year
+			updateProgressionState(yearRng, progressionState, profile, currentYear);
 		}
 
 		// Wrap profile in SitioRecord structure
@@ -241,69 +501,31 @@ function generateYearProfile(
 	sitioClassification: { gida: boolean; indigenous: boolean; conflict: boolean },
 	municipalityProfile: MunicipalityProfile,
 	yearOffset: number,
-	basePopulation: number,
-	baseHouseholds: number
+	currentYear: number,
+	state: ProgressionState
 ): SitioProfile {
 	const isGida = sitioClassification.gida;
 	const isIndigenous = sitioClassification.indigenous;
-	const infraLevel = municipalityProfile.infrastructureLevel * (isGida ? 0.6 : 1.0);
 
 	// ========== A. BASIC SITIO INFORMATION ==========
-	// Access depends on development level and geography
+	// Access improves over time based on road development
+	const roadDevFactor = state.roadDevelopment;
 	const mainAccess = {
-		pavedRoad: rng.boolean(infraLevel * 0.7),
-		unpavedRoad: rng.boolean(0.5 + infraLevel * 0.3),
-		footpath: rng.boolean(isGida ? 0.7 : 0.3),
+		pavedRoad: rng.boolean(roadDevFactor * 0.6 + (yearOffset * 0.02)),
+		unpavedRoad: rng.boolean(0.4 + roadDevFactor * 0.4),
+		footpath: rng.boolean(isGida ? 0.7 - (yearOffset * 0.03) : 0.3),
 		boat: rng.boolean(municipalityProfile.name === 'LAKE SEBU' ? 0.3 : 0.05)
 	};
 
 	// Ensure at least one access method
-	if (
-		!mainAccess.pavedRoad &&
-		!mainAccess.unpavedRoad &&
-		!mainAccess.footpath &&
-		!mainAccess.boat
-	) {
+	if (!mainAccess.pavedRoad && !mainAccess.unpavedRoad && !mainAccess.footpath && !mainAccess.boat) {
 		mainAccess.footpath = true;
 	}
 
 	// ========== B. POPULATION & DEMOGRAPHICS ==========
-	// Use realistic Philippine demographic patterns
-
-	// Base household count - varies by municipality type
-	let totalHouseholds: number;
-	if (yearOffset === 0 || baseHouseholds === 0) {
-		const householdRange = {
-			urban: { min: 80, max: 300 },
-			'semi-urban': { min: 50, max: 200 },
-			rural: { min: 30, max: 150 },
-			highland: { min: 20, max: 100 }
-		};
-		const range = householdRange[municipalityProfile.type];
-		totalHouseholds = rng.nextInt(range.min, range.max);
-	} else {
-		// Year-over-year growth: 1-3% household growth
-		const growthRate = 1 + rng.nextFloat(0.01, 0.03);
-		totalHouseholds = Math.round(baseHouseholds * growthRate);
-	}
-
-	// Realistic Philippine household size: 4.1 average (PSA data)
-	// But varies: urban tends smaller, rural/indigenous tends larger
-	const avgHouseholdSize =
-		municipalityProfile.type === 'urban'
-			? rng.nextGaussianClamped(3.8, 0.5, 3, 6)
-			: isIndigenous
-				? rng.nextGaussianClamped(5.2, 0.8, 4, 8)
-				: rng.nextGaussianClamped(4.4, 0.6, 3, 7);
-
-	let totalPopulation: number;
-	if (yearOffset === 0 || basePopulation === 0) {
-		totalPopulation = Math.round(totalHouseholds * avgHouseholdSize);
-	} else {
-		// Population grows slightly faster than households due to births
-		const growthRate = 1 + rng.nextFloat(0.015, 0.035);
-		totalPopulation = Math.round(basePopulation * growthRate);
-	}
+	// Use progression state values with slight yearly variance
+	const totalHouseholds = Math.round(state.households * (1 + rng.nextFloat(-0.02, 0.02)));
+	const totalPopulation = Math.round(state.population * (1 + rng.nextFloat(-0.015, 0.015)));
 
 	// Gender distribution: Philippines is roughly 50.4% male, 49.6% female
 	const malePercent = rng.nextGaussianClamped(0.504, 0.015, 0.48, 0.52);
@@ -311,9 +533,10 @@ function generateYearProfile(
 	const totalFemale = totalPopulation - totalMale;
 
 	// Age distribution based on Philippine demographics (PSA 2020)
-	// 0-14: ~30%, 15-64: ~64%, 65+: ~6%
-	const childrenPercent = rng.nextGaussianClamped(0.3, 0.04, 0.22, 0.4);
-	const seniorPercent = rng.nextGaussianClamped(0.065, 0.015, 0.04, 0.12);
+	// Children percent decreases slightly over years (demographic transition)
+	const baseChildrenPercent = 0.32 - (yearOffset * 0.003); // Gradual decrease
+	const childrenPercent = rng.nextGaussianClamped(baseChildrenPercent, 0.04, 0.2, 0.4);
+	const seniorPercent = rng.nextGaussianClamped(0.065 + (yearOffset * 0.002), 0.015, 0.04, 0.15);
 	const workingAgePercent = 1 - childrenPercent - seniorPercent;
 
 	const schoolAgeChildren = Math.round(totalPopulation * childrenPercent);
@@ -323,23 +546,21 @@ function generateYearProfile(
 	// 60-64 are about 30-40% of 60+ population
 	const laborForce60to64Count = Math.round(seniorsCount * rng.nextFloat(0.3, 0.4));
 
-	// Registered voters (18+): roughly 55-65% of population
-	const voterEligiblePercent = 1 - childrenPercent * 0.6; // Kids under 18
-	const registrationRate = rng.nextFloat(0.75, 0.92);
+	// Registered voters (18+): improves over time
+	const voterEligiblePercent = 1 - childrenPercent * 0.6;
+	const baseRegistrationRate = 0.72 + (yearOffset * 0.015); // Improves over years
+	const registrationRate = Math.min(0.95, rng.nextFloat(baseRegistrationRate - 0.05, baseRegistrationRate + 0.08));
 	const registeredVoters = Math.round(totalPopulation * voterEligiblePercent * registrationRate);
 
-	// Unemployment varies by area type
-	const baseUnemploymentRate =
-		municipalityProfile.type === 'urban'
-			? 0.08
-			: municipalityProfile.type === 'highland'
-				? 0.15
-				: 0.12;
-	const unemploymentRate = rng.nextGaussianClamped(baseUnemploymentRate, 0.04, 0.03, 0.35);
-	const unemployedCount = Math.round(laborForceCount * unemploymentRate);
+	// Unemployment from state with COVID impact
+	let effectiveUnemploymentRate = state.unemploymentRate;
+	if (currentYear === 2020) effectiveUnemploymentRate += 0.05; // COVID spike
+	if (currentYear === 2021) effectiveUnemploymentRate += 0.025; // Recovery
+	effectiveUnemploymentRate = Math.max(0.03, Math.min(0.35, effectiveUnemploymentRate + rng.nextFloat(-0.02, 0.02)));
+	const unemployedCount = Math.round(laborForceCount * effectiveUnemploymentRate);
 
 	// Vulnerable Groups
-	// Muslim population - more common in certain areas
+	// Muslim population - consistent over time
 	const muslimProbability = sitioClassification.conflict ? 0.4 : 0.15;
 	const muslimCount = rng.boolean(muslimProbability)
 		? Math.round(totalPopulation * rng.nextFloat(0.05, 0.3))
@@ -352,47 +573,28 @@ function generateYearProfile(
 			? Math.round(totalPopulation * rng.nextFloat(0.02, 0.15))
 			: 0;
 
-	// Documentation gaps - worse in GIDA and indigenous areas
-	const birthCertGapRate = isGida
-		? rng.nextFloat(0.08, 0.25)
-		: isIndigenous
-			? rng.nextFloat(0.05, 0.18)
-			: rng.nextFloat(0.01, 0.08);
-	const noBirthCertCount = Math.round(schoolAgeChildren * birthCertGapRate);
+	// Documentation gaps - improve over time using state
+	const birthCertGapRate = 1 - state.birthCertRegistrationRate;
+	const noBirthCertCount = Math.round(schoolAgeChildren * birthCertGapRate * rng.nextFloat(0.85, 1.15));
 
-	const nationalIdGapRate = isGida
-		? rng.nextFloat(0.15, 0.35)
-		: isIndigenous
-			? rng.nextFloat(0.1, 0.28)
-			: rng.nextFloat(0.05, 0.15);
-	const noNationalIDCount = Math.round(laborForceCount * nationalIdGapRate);
+	const nationalIdGapRate = 1 - state.nationalIdRegistrationRate;
+	const noNationalIDCount = Math.round(laborForceCount * nationalIdGapRate * rng.nextFloat(0.85, 1.15));
 
-	// Out of school youth - correlated with poverty and remoteness
-	const osyRate = isGida
-		? rng.nextFloat(0.08, 0.2)
-		: municipalityProfile.type === 'urban'
-			? rng.nextFloat(0.02, 0.08)
-			: rng.nextFloat(0.04, 0.12);
-	const youthPopulation = Math.round(totalPopulation * 0.18); // 15-24 age group
+	// Out of school youth - slowly improves over time
+	const baseOsyRate = isGida ? 0.18 : municipalityProfile.type === 'urban' ? 0.06 : 0.1;
+	const osyRate = Math.max(0.02, baseOsyRate - (yearOffset * 0.008) + rng.nextFloat(-0.02, 0.02));
+	const youthPopulation = Math.round(totalPopulation * 0.18);
 	const outOfSchoolYouth = Math.round(youthPopulation * osyRate);
 
 	// ========== C. BASIC UTILITIES & CONNECTIVITY ==========
+	// Use progression state rates with slight variance
+	const householdsWithToilet = Math.round(
+		totalHouseholds * Math.min(0.99, state.toiletAccessRate * rng.nextFloat(0.95, 1.05))
+	);
 
-	// Toilet access - better in urban, worse in GIDA
-	const toiletRate = isGida
-		? rng.nextFloat(0.35, 0.65)
-		: municipalityProfile.type === 'urban'
-			? rng.nextFloat(0.85, 0.98)
-			: rng.nextFloat(0.55, 0.85);
-	const householdsWithToilet = Math.round(totalHouseholds * toiletRate);
-
-	// Electricity access
-	const electricityRate = isGida
-		? rng.nextFloat(0.25, 0.6)
-		: municipalityProfile.type === 'urban'
-			? rng.nextFloat(0.92, 0.99)
-			: rng.nextFloat(0.65, 0.9);
-	const householdsWithElectricity = Math.round(totalHouseholds * electricityRate);
+	const householdsWithElectricity = Math.round(
+		totalHouseholds * Math.min(0.99, state.electricityAccessRate * rng.nextFloat(0.95, 1.05))
+	);
 
 	// Electricity sources - distribution depends on access and area type
 	const electricitySources = {
@@ -404,64 +606,43 @@ function generateYearProfile(
 
 	if (householdsWithElectricity > 0) {
 		if (isGida) {
-			// GIDA: more solar and alternative sources
-			electricitySources.grid = Math.round(householdsWithElectricity * rng.nextFloat(0.2, 0.5));
-			electricitySources.solar = Math.round(householdsWithElectricity * rng.nextFloat(0.2, 0.5));
-			electricitySources.battery = Math.round(householdsWithElectricity * rng.nextFloat(0.1, 0.3));
-			electricitySources.generator = Math.round(
-				householdsWithElectricity * rng.nextFloat(0.05, 0.2)
-			);
+			// GIDA: more solar and alternative sources, but grid improving over time
+			const gridRatio = 0.2 + (yearOffset * 0.04); // Grid expands over years
+			electricitySources.grid = Math.round(householdsWithElectricity * Math.min(0.6, gridRatio + rng.nextFloat(-0.1, 0.1)));
+			electricitySources.solar = Math.round(householdsWithElectricity * rng.nextFloat(0.15, 0.4));
+			electricitySources.battery = Math.round(householdsWithElectricity * rng.nextFloat(0.05, 0.2));
+			electricitySources.generator = Math.round(householdsWithElectricity * rng.nextFloat(0.03, 0.12));
 		} else {
 			// Non-GIDA: mostly grid
-			electricitySources.grid = Math.round(householdsWithElectricity * rng.nextFloat(0.75, 0.95));
-			electricitySources.solar = rng.boolean(0.3)
+			electricitySources.grid = Math.round(householdsWithElectricity * rng.nextFloat(0.8, 0.95));
+			electricitySources.solar = currentYear >= 2020 && rng.boolean(0.35)
 				? Math.round(householdsWithElectricity * rng.nextFloat(0.02, 0.1))
 				: 0;
-			electricitySources.battery = rng.boolean(0.15) ? rng.nextInt(1, 5) : 0;
-			electricitySources.generator = rng.boolean(0.2) ? rng.nextInt(1, 8) : 0;
+			electricitySources.battery = rng.boolean(0.1) ? rng.nextInt(1, 4) : 0;
+			electricitySources.generator = rng.boolean(0.15) ? rng.nextInt(1, 6) : 0;
 		}
 	}
 
-	// Mobile signal - depends on terrain and remoteness
+	// Mobile signal - uses state with signal level conversion
 	type MobileSignal = 'none' | '2g' | '3g' | '4g' | '5g';
-	const signalOptions: MobileSignal[] = ['none', '2g', '3g', '4g', '5g'];
-	let signalWeights: number[];
+	const signalMap: MobileSignal[] = ['none', '2g', '3g', '4g', '5g'];
+	const mobileSignal = signalMap[Math.min(4, state.mobileSignalLevel)];
 
-	if (municipalityProfile.type === 'urban') {
-		signalWeights = [0.01, 0.02, 0.1, 0.5, 0.37];
-	} else if (municipalityProfile.type === 'semi-urban') {
-		signalWeights = [0.02, 0.05, 0.2, 0.55, 0.18];
-	} else if (isGida || municipalityProfile.type === 'highland') {
-		signalWeights = [0.15, 0.25, 0.35, 0.2, 0.05];
-	} else {
-		signalWeights = [0.05, 0.1, 0.3, 0.45, 0.1];
-	}
-
-	const mobileSignal = rng.pickWeighted(signalOptions, signalWeights);
-
-	// Internet access - strongly correlated with signal quality
-	const internetRateBySignal: Record<MobileSignal, number> = {
-		none: 0.02,
-		'2g': 0.08,
-		'3g': 0.25,
-		'4g': 0.45,
-		'5g': 0.65
-	};
-	const baseInternetRate = internetRateBySignal[mobileSignal];
-	const adjustedInternetRate =
-		baseInternetRate * (municipalityProfile.type === 'urban' ? 1.3 : 1.0);
+	// Internet access from state
 	const householdsWithInternet = Math.round(
-		totalHouseholds * Math.min(0.9, adjustedInternetRate + rng.nextFloat(-0.1, 0.1))
+		totalHouseholds * Math.min(0.9, state.internetAccessRate * rng.nextFloat(0.9, 1.1))
 	);
 
 	// ========== D. COMMUNITY FACILITIES ==========
+	// Use state for permanent facilities, generate details
+	const infraLevel = state.roadDevelopment * (isGida ? 0.7 : 1.0);
 	const facilities = {
-		healthCenter: generateFacilityDetails(rng, 0.5, totalPopulation, infraLevel, isGida),
-		pharmacy: generateFacilityDetails(rng, 0.35, totalPopulation, infraLevel, isGida),
-		communityToilet: generateFacilityDetails(rng, 0.4, totalPopulation, infraLevel, isGida),
-		kindergarten: generateFacilityDetails(rng, 0.6, totalPopulation, infraLevel, isGida),
-		elementarySchool: generateFacilityDetails(rng, 0.7, totalPopulation, infraLevel, isGida),
-		highSchool: generateFacilityDetails(rng, 0.35, totalPopulation, infraLevel, isGida),
+		healthCenter: generateFacilityDetailsWithState(rng, state.hasHealthCenter, totalPopulation, infraLevel, isGida),
+		pharmacy: generateFacilityDetails(rng, 0.3 + (yearOffset * 0.02), totalPopulation, infraLevel, isGida),
+		communityToilet: generateFacilityDetails(rng, 0.35 + (yearOffset * 0.02), totalPopulation, infraLevel, isGida),
+		kindergarten: generateFacilityDetails(rng, 0.55 + (yearOffset * 0.02), totalPopulation, infraLevel, isGida),
+		elementarySchool: generateFacilityDetailsWithState(rng, state.hasElementarySchool, totalPopulation, infraLevel, isGida),
+		highSchool: generateFacilityDetailsWithState(rng, state.hasHighSchool, totalPopulation, infraLevel, isGida),
 		madrasah: generateFacilityDetails(
 			rng,
 			muslimCount > 50 ? 0.6 : muslimCount > 20 ? 0.3 : 0.05,
@@ -469,15 +650,15 @@ function generateYearProfile(
 			infraLevel,
 			isGida
 		),
-		market: generateFacilityDetails(rng, 0.4, totalPopulation, infraLevel, isGida)
+		market: generateFacilityDetails(rng, 0.35 + (yearOffset * 0.015), totalPopulation, infraLevel, isGida)
 	};
 
 	// ========== E. ROADS & INTERNAL INFRASTRUCTURE ==========
 	const infrastructure = {
-		asphalt: generateRoadDetails(rng, 'asphalt', infraLevel, isGida, totalPopulation),
-		concrete: generateRoadDetails(rng, 'concrete', infraLevel, isGida, totalPopulation),
-		gravel: generateRoadDetails(rng, 'gravel', infraLevel, isGida, totalPopulation),
-		natural: generateRoadDetails(rng, 'natural', infraLevel, isGida, totalPopulation)
+		asphalt: generateRoadDetailsWithProgression(rng, 'asphalt', state.roadDevelopment, isGida, totalPopulation, yearOffset),
+		concrete: generateRoadDetailsWithProgression(rng, 'concrete', state.roadDevelopment, isGida, totalPopulation, yearOffset),
+		gravel: generateRoadDetailsWithProgression(rng, 'gravel', state.roadDevelopment, isGida, totalPopulation, yearOffset),
+		natural: generateRoadDetailsWithProgression(rng, 'natural', state.roadDevelopment, isGida, totalPopulation, yearOffset)
 	};
 
 	// ========== F. EDUCATION STATUS ==========
@@ -506,18 +687,19 @@ function generateYearProfile(
 
 	// ========== G. WATER & SANITATION ==========
 	const waterSources = {
-		natural: generateWaterSourceStatus(rng, 'natural', infraLevel, isGida, totalHouseholds),
-		level1: generateWaterSourceStatus(rng, 'level1', infraLevel, isGida, totalHouseholds),
-		level2: generateWaterSourceStatus(rng, 'level2', infraLevel, isGida, totalHouseholds),
-		level3: generateWaterSourceStatus(rng, 'level3', infraLevel, isGida, totalHouseholds)
+		natural: generateWaterSourceStatusWithProgression(rng, 'natural', state.waterSystemDevelopment, isGida, totalHouseholds, yearOffset),
+		level1: generateWaterSourceStatusWithProgression(rng, 'level1', state.waterSystemDevelopment, isGida, totalHouseholds, yearOffset),
+		level2: generateWaterSourceStatusWithProgression(rng, 'level2', state.waterSystemDevelopment, isGida, totalHouseholds, yearOffset),
+		level3: generateWaterSourceStatusWithProgression(rng, 'level3', state.waterSystemDevelopment, isGida, totalHouseholds, yearOffset)
 	};
 
-	// Sanitation types - correlate with development
+	// Sanitation types - improve over time
+	const sanitationImprovement = yearOffset * 0.03;
 	const sanitationTypes = {
-		waterSealed: rng.boolean(infraLevel * 0.8 + 0.2),
-		pitLatrine: rng.boolean(isGida ? 0.6 : 0.25),
-		communityCR: rng.boolean(infraLevel * 0.4),
-		openDefecation: rng.boolean(isGida ? 0.25 : 0.05)
+		waterSealed: rng.boolean(Math.min(0.95, infraLevel * 0.7 + 0.2 + sanitationImprovement)),
+		pitLatrine: rng.boolean(isGida ? Math.max(0.2, 0.6 - sanitationImprovement) : Math.max(0.1, 0.25 - sanitationImprovement)),
+		communityCR: rng.boolean(Math.min(0.8, infraLevel * 0.35 + sanitationImprovement)),
+		openDefecation: rng.boolean(isGida ? Math.max(0.02, 0.25 - sanitationImprovement * 2) : Math.max(0.01, 0.05 - sanitationImprovement))
 	};
 
 	// Ensure at least one sanitation type
@@ -620,24 +802,14 @@ function generateYearProfile(
 
 	const workerClass = workerCounts;
 
-	// Average daily income - based on municipality and employment patterns
-	// Philippine minimum wage in Region XII is around ₱341-400/day (2024)
-	const baseIncome = 350 * municipalityProfile.baseIncomeMultiplier;
-	const incomeVariance = baseIncome * 0.4;
+	// Average daily income - uses progression state with year-appropriate variance
+	// Accounts for inflation and economic development over years
 	const averageDailyIncome = Math.round(
-		rng.nextGaussianClamped(baseIncome, incomeVariance, 200, 1200)
+		state.baseIncome * rng.nextFloat(0.85, 1.15)
 	);
 
-	// Agriculture - more prominent in rural/highland areas
-	const farmingProbability =
-		municipalityProfile.type === 'urban'
-			? 0.3
-			: municipalityProfile.type === 'highland'
-				? 0.85
-				: 0.7;
-
-	const hasFarming = rng.boolean(farmingProbability);
-	const farmerPercent = hasFarming ? rng.nextFloat(0.15, 0.6) : 0;
+	// Agriculture - uses farming rate from state
+	const farmerPercent = state.farmingRate * rng.nextFloat(0.85, 1.15);
 	const numberOfFarmers = Math.round(totalWorkers * farmerPercent);
 
 	const agriculture = {
