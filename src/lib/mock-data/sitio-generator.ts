@@ -1,682 +1,119 @@
+/**
+ * Sitio Generator
+ * Main generator for sitio records with yearly data
+ */
+
 import { MUNICIPALITIES_DATA } from '$lib/config/location-data';
 import type {
-	FacilityDetails,
-	HazardDetails,
 	PriorityItem,
 	PriorityName,
 	PriorityRating,
-	RoadDetails,
 	SitioProfile,
-	SitioRecord,
-	WaterSourceStatus
+	SitioRecord
 } from '$lib/types';
 import { clearSitios, loadSitios, saveSitios } from '$lib/utils/storage';
+import { getMunicipalityProfile, type MunicipalityProfile } from './municipality-profiles';
+import { SeededRandom } from './seeded-random';
+import {
+	generateFacilityDetails,
+	generateHazardDetails,
+	generateRoadDetails,
+	generateSitioName,
+	generateWaterSourceStatus,
+	selectCrops,
+	selectLivestock
+} from './sitio-generator-helpers';
 
-// ===== SEEDED RANDOM NUMBER GENERATOR =====
-// For consistent but random-looking data generation
+// ===== STORAGE KEYS =====
+export const STORAGE_VERSION = 8; // Increment to clear outdated data (improved mock data realism)
+export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
+export const MOCK_DATA_INITIALIZED_KEY = 'sccdp_mock_data_initialized';
 
-class SeededRandom {
-	private seed: number;
+// ===== STORAGE VERSION CHECK =====
 
-	constructor(seed: number = 42) {
-		this.seed = seed;
-	}
+function isStorageOutdated(): boolean {
+	if (typeof window === 'undefined') return false;
+	const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+	return storedVersion !== String(STORAGE_VERSION);
+}
 
-	// Simple LCG (Linear Congruential Generator)
-	next(): number {
-		this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
-		return this.seed / 0x7fffffff;
-	}
-
-	nextInt(min: number, max: number): number {
-		return Math.floor(this.next() * (max - min + 1)) + min;
-	}
-
-	nextFloat(min: number, max: number): number {
-		return min + this.next() * (max - min);
-	}
-
-	pick<T>(arr: T[]): T {
-		return arr[this.nextInt(0, arr.length - 1)];
-	}
-
-	pickWeighted<T>(items: T[], weights: number[]): T {
-		const totalWeight = weights.reduce((a, b) => a + b, 0);
-		let random = this.next() * totalWeight;
-		for (let i = 0; i < items.length; i++) {
-			random -= weights[i];
-			if (random <= 0) return items[i];
+function clearAllStorage(): void {
+	if (typeof window === 'undefined') return;
+	const keysToRemove: string[] = [];
+	for (let i = 0; i < localStorage.length; i++) {
+		const key = localStorage.key(i);
+		if (key?.startsWith('sccdp_')) {
+			keysToRemove.push(key);
 		}
-		return items[items.length - 1];
 	}
-
-	shuffle<T>(arr: T[]): T[] {
-		const result = [...arr];
-		for (let i = result.length - 1; i > 0; i--) {
-			const j = this.nextInt(0, i);
-			[result[i], result[j]] = [result[j], result[i]];
-		}
-		return result;
-	}
-
-	boolean(probability: number = 0.5): boolean {
-		return this.next() < probability;
-	}
-
-	// Generate normally distributed random number (Box-Muller transform)
-	nextGaussian(mean: number = 0, stdDev: number = 1): number {
-		const u1 = this.next();
-		const u2 = this.next();
-		const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-		return z0 * stdDev + mean;
-	}
-
-	// Clamp gaussian to range
-	nextGaussianClamped(mean: number, stdDev: number, min: number, max: number): number {
-		const value = this.nextGaussian(mean, stdDev);
-		return Math.max(min, Math.min(max, value));
-	}
+	keysToRemove.forEach((key) => localStorage.removeItem(key));
 }
 
-// ===== MUNICIPALITY PROFILES FOR REALISTIC DATA =====
-// Based on actual South Cotabato characteristics
-
-interface MunicipalityProfile {
-	name: string;
-	type: 'urban' | 'semi-urban' | 'rural' | 'highland';
-	// Approximate center coordinates
-	centerLat: number;
-	centerLng: number;
-	// Coordinate spread for sitios
-	latSpread: number;
-	lngSpread: number;
-	// Characteristics
-	gidaProbability: number;
-	indigenousProbability: number;
-	conflictProbability: number;
-	baseIncomeMultiplier: number;
-	infrastructureLevel: number; // 0-1, higher = better
-	primaryCrops: string[];
-	primaryLivestock: string[];
-	hazardProfile: {
-		flood: number;
-		landslide: number;
-		drought: number;
-	};
+function setStorageVersion(): void {
+	if (typeof window === 'undefined') return;
+	localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
 }
 
-const MUNICIPALITY_PROFILES: MunicipalityProfile[] = [
-	{
-		name: 'KORONADAL',
-		type: 'urban',
-		centerLat: 6.5022,
-		centerLng: 124.8469,
-		latSpread: 0.08,
-		lngSpread: 0.08,
-		gidaProbability: 0.1,
-		indigenousProbability: 0.15,
-		conflictProbability: 0.05,
-		baseIncomeMultiplier: 1.4,
-		infrastructureLevel: 0.85,
-		primaryCrops: ['Palay', 'Corn', 'Vegetables', 'Banana'],
-		primaryLivestock: ['Chicken', 'Pig', 'Duck'],
-		hazardProfile: { flood: 0.4, landslide: 0.1, drought: 0.2 }
-	},
-	{
-		name: 'POLOMOLOK',
-		type: 'semi-urban',
-		centerLat: 6.2214,
-		centerLng: 125.0644,
-		latSpread: 0.12,
-		lngSpread: 0.1,
-		gidaProbability: 0.25,
-		indigenousProbability: 0.3,
-		conflictProbability: 0.1,
-		baseIncomeMultiplier: 1.2,
-		infrastructureLevel: 0.7,
-		primaryCrops: ['Banana', 'Pineapple', 'Corn', 'Coconut'],
-		primaryLivestock: ['Chicken', 'Pig', 'Cow'],
-		hazardProfile: { flood: 0.3, landslide: 0.2, drought: 0.25 }
-	},
-	{
-		name: 'LAKE SEBU',
-		type: 'highland',
-		centerLat: 6.2167,
-		centerLng: 124.7167,
-		latSpread: 0.15,
-		lngSpread: 0.12,
-		gidaProbability: 0.7,
-		indigenousProbability: 0.85,
-		conflictProbability: 0.15,
-		baseIncomeMultiplier: 0.7,
-		infrastructureLevel: 0.35,
-		primaryCrops: ['Palay', 'Coffee', 'Abaca', 'Vegetables'],
-		primaryLivestock: ['Tilapia', 'Chicken', 'Pig', 'Kalabaw'],
-		hazardProfile: { flood: 0.5, landslide: 0.6, drought: 0.15 }
-	},
-	{
-		name: "T'BOLI",
-		type: 'highland',
-		centerLat: 6.1833,
-		centerLng: 124.6833,
-		latSpread: 0.18,
-		lngSpread: 0.15,
-		gidaProbability: 0.65,
-		indigenousProbability: 0.9,
-		conflictProbability: 0.2,
-		baseIncomeMultiplier: 0.65,
-		infrastructureLevel: 0.3,
-		primaryCrops: ['Palay', 'Abaca', 'Coffee', 'Corn'],
-		primaryLivestock: ['Horse', 'Kalabaw', 'Chicken', 'Pig'],
-		hazardProfile: { flood: 0.3, landslide: 0.7, drought: 0.2 }
-	},
-	{
-		name: 'BANGA',
-		type: 'rural',
-		centerLat: 6.4233,
-		centerLng: 124.7833,
-		latSpread: 0.1,
-		lngSpread: 0.1,
-		gidaProbability: 0.3,
-		indigenousProbability: 0.25,
-		conflictProbability: 0.08,
-		baseIncomeMultiplier: 1.0,
-		infrastructureLevel: 0.6,
-		primaryCrops: ['Palay', 'Corn', 'Coconut', 'Banana'],
-		primaryLivestock: ['Pig', 'Chicken', 'Cow', 'Kalabaw'],
-		hazardProfile: { flood: 0.45, landslide: 0.15, drought: 0.3 }
-	},
-	{
-		name: 'SURALLAH',
-		type: 'semi-urban',
-		centerLat: 6.3667,
-		centerLng: 124.7333,
-		latSpread: 0.1,
-		lngSpread: 0.08,
-		gidaProbability: 0.35,
-		indigenousProbability: 0.3,
-		conflictProbability: 0.1,
-		baseIncomeMultiplier: 1.0,
-		infrastructureLevel: 0.6,
-		primaryCrops: ['Palay', 'Corn', 'Coconut', 'Vegetables'],
-		primaryLivestock: ['Pig', 'Chicken', 'Cow', 'Duck'],
-		hazardProfile: { flood: 0.5, landslide: 0.2, drought: 0.25 }
-	},
-	{
-		name: 'TAMPAKAN',
-		type: 'rural',
-		centerLat: 6.4167,
-		centerLng: 125.0333,
-		latSpread: 0.15,
-		lngSpread: 0.12,
-		gidaProbability: 0.5,
-		indigenousProbability: 0.6,
-		conflictProbability: 0.25,
-		baseIncomeMultiplier: 0.85,
-		infrastructureLevel: 0.45,
-		primaryCrops: ['Corn', 'Palay', 'Coconut', 'Cassava'],
-		primaryLivestock: ['Chicken', 'Pig', 'Goat', 'Cow'],
-		hazardProfile: { flood: 0.25, landslide: 0.5, drought: 0.35 }
-	},
-	{
-		name: 'TANTANGAN',
-		type: 'rural',
-		centerLat: 6.3833,
-		centerLng: 124.85,
-		latSpread: 0.1,
-		lngSpread: 0.08,
-		gidaProbability: 0.35,
-		indigenousProbability: 0.25,
-		conflictProbability: 0.1,
-		baseIncomeMultiplier: 0.95,
-		infrastructureLevel: 0.55,
-		primaryCrops: ['Palay', 'Corn', 'Vegetables', 'Coconut'],
-		primaryLivestock: ['Pig', 'Chicken', 'Duck', 'Cow'],
-		hazardProfile: { flood: 0.4, landslide: 0.2, drought: 0.3 }
-	},
-	{
-		name: 'NORALA',
-		type: 'rural',
-		centerLat: 6.5167,
-		centerLng: 124.65,
-		latSpread: 0.08,
-		lngSpread: 0.08,
-		gidaProbability: 0.25,
-		indigenousProbability: 0.2,
-		conflictProbability: 0.05,
-		baseIncomeMultiplier: 1.0,
-		infrastructureLevel: 0.65,
-		primaryCrops: ['Palay', 'Corn', 'Vegetables', 'Banana'],
-		primaryLivestock: ['Pig', 'Chicken', 'Cow', 'Duck'],
-		hazardProfile: { flood: 0.35, landslide: 0.1, drought: 0.35 }
-	},
-	{
-		name: 'STO. NIÑO',
-		type: 'rural',
-		centerLat: 6.3,
-		centerLng: 124.6,
-		latSpread: 0.1,
-		lngSpread: 0.1,
-		gidaProbability: 0.4,
-		indigenousProbability: 0.4,
-		conflictProbability: 0.12,
-		baseIncomeMultiplier: 0.9,
-		infrastructureLevel: 0.5,
-		primaryCrops: ['Palay', 'Corn', 'Coconut', 'Cassava'],
-		primaryLivestock: ['Pig', 'Chicken', 'Kalabaw', 'Goat'],
-		hazardProfile: { flood: 0.35, landslide: 0.3, drought: 0.3 }
-	},
-	{
-		name: 'TUPI',
-		type: 'semi-urban',
-		centerLat: 6.3333,
-		centerLng: 125.0333,
-		latSpread: 0.1,
-		lngSpread: 0.1,
-		gidaProbability: 0.3,
-		indigenousProbability: 0.35,
-		conflictProbability: 0.1,
-		baseIncomeMultiplier: 1.1,
-		infrastructureLevel: 0.65,
-		primaryCrops: ['Banana', 'Pineapple', 'Corn', 'Vegetables'],
-		primaryLivestock: ['Pig', 'Chicken', 'Cow', 'Duck'],
-		hazardProfile: { flood: 0.3, landslide: 0.25, drought: 0.25 }
-	}
-];
+// ===== INITIALIZATION CHECK =====
 
-// Default profile for municipalities not in the list
-const DEFAULT_MUNICIPALITY_PROFILE: MunicipalityProfile = {
-	name: 'DEFAULT',
-	type: 'rural',
-	centerLat: 6.35,
-	centerLng: 124.85,
-	latSpread: 0.1,
-	lngSpread: 0.1,
-	gidaProbability: 0.35,
-	indigenousProbability: 0.3,
-	conflictProbability: 0.1,
-	baseIncomeMultiplier: 1.0,
-	infrastructureLevel: 0.5,
-	primaryCrops: ['Palay', 'Corn', 'Coconut', 'Banana'],
-	primaryLivestock: ['Pig', 'Chicken', 'Cow', 'Duck'],
-	hazardProfile: { flood: 0.35, landslide: 0.25, drought: 0.3 }
-};
-
-function getMunicipalityProfile(municipalityName: string): MunicipalityProfile {
-	return (
-		MUNICIPALITY_PROFILES.find((p) => p.name === municipalityName) || DEFAULT_MUNICIPALITY_PROFILE
-	);
+export function isMockDataInitialized(): boolean {
+	if (typeof window === 'undefined') return false;
+	return localStorage.getItem(MOCK_DATA_INITIALIZED_KEY) === 'true';
 }
 
-// ===== SITIO NAME GENERATORS =====
-// More authentic Filipino sitio/purok names
-
-const SITIO_PREFIXES_RURAL = ['Sitio', 'Purok', 'Upper', 'Lower'];
-const SITIO_PREFIXES_URBAN = ['Zone', 'Purok', 'Phase'];
-const SITIO_PREFIXES_INDIGENOUS = ['Sitio', 'Upper', 'Lower'];
-
-const SITIO_NAMES_COMMON = [
-	'Maligaya',
-	'Masagana',
-	'Pagasa',
-	'Mabuhay',
-	'Kalinaw',
-	'Kalayaan',
-	'Bagong Silang',
-	'San Antonio',
-	'San Jose',
-	'San Miguel',
-	'Santa Cruz',
-	'Santo Niño',
-	'Fatima',
-	'Guadalupe',
-	'Del Pilar',
-	'Rizal',
-	'Bonifacio',
-	'Mabini',
-	'Sampaguita',
-	'Rosal',
-	'Orchid',
-	'Jasmine'
-];
-
-const SITIO_NAMES_NATURE = [
-	'Riverside',
-	'Hillside',
-	'Lakeview',
-	'Mountain View',
-	'Valley View',
-	'Spring',
-	'Watershed',
-	'Crossing',
-	'Junction',
-	'Centro'
-];
-
-const SITIO_NAMES_INDIGENOUS = [
-	'Lambayong',
-	'Lamcade',
-	'Lamfugon',
-	'Lemsnolon',
-	'Tudok',
-	'Datal',
-	'Kematu',
-	'Salacafe',
-	'Talufo',
-	'Lamhaku',
-	'Desawo',
-	'Afus'
-];
-
-// ===== CROP AND LIVESTOCK OPTIONS =====
-// More comprehensive and region-specific
-
-const CROP_OPTIONS_LOWLAND = ['Palay', 'Corn', 'Vegetables', 'Banana', 'Coconut', 'Cassava'];
-const CROP_OPTIONS_HIGHLAND = ['Coffee', 'Abaca', 'Vegetables', 'Palay', 'Sweet Potato', 'Taro'];
-const CROP_OPTIONS_COMMERCIAL = ['Banana', 'Pineapple', 'Corn', 'Coconut'];
-
-const LIVESTOCK_OPTIONS_COMMON = ['Chicken', 'Pig', 'Duck'];
-const LIVESTOCK_OPTIONS_RURAL = ['Cow', 'Kalabaw', 'Goat'];
-const LIVESTOCK_OPTIONS_HIGHLAND = ['Horse', 'Kalabaw', 'Goat'];
-const LIVESTOCK_AQUACULTURE = ['Tilapia', 'Carp'];
-
-// ===== HELPER FUNCTIONS =====
-
-/**
- * Generate facility details with realistic patterns based on context
- */
-function generateFacilityDetails(
-	rng: SeededRandom,
-	existsProbability: number,
-	populationSize: number,
-	infrastructureLevel: number,
-	isGida: boolean
-): FacilityDetails {
-	// Adjust probability based on context
-	let adjustedProbability = existsProbability * infrastructureLevel;
-	if (isGida) adjustedProbability *= 0.6;
-	if (populationSize > 500) adjustedProbability *= 1.2;
-	if (populationSize < 150) adjustedProbability *= 0.7;
-
-	adjustedProbability = Math.min(0.95, Math.max(0.05, adjustedProbability));
-
-	const exists = rng.boolean(adjustedProbability);
-
-	if (exists) {
-		// Count correlates with population
-		const baseCount = populationSize > 800 ? 2 : 1;
-		const count = rng.boolean(0.2) ? baseCount + 1 : baseCount;
-
-		// Condition tends to be better in more developed areas
-		const conditionWeights = isGida
-			? [0.15, 0.25, 0.35, 0.2, 0.05] // GIDA: worse conditions
-			: [0.05, 0.15, 0.35, 0.3, 0.15]; // Non-GIDA: better conditions
-		const condition = rng.pickWeighted([1, 2, 3, 4, 5], conditionWeights) as 1 | 2 | 3 | 4 | 5;
-
-		return { exists: 'yes', count, condition };
-	} else {
-		// Distance is further for GIDA areas
-		const baseDistance = isGida ? 8 : 3;
-		const distanceToNearest = Number((baseDistance + rng.next() * (isGida ? 15 : 8)).toFixed(1));
-		return { exists: 'no', distanceToNearest };
-	}
+export function markMockDataInitialized(): void {
+	if (typeof window === 'undefined') return;
+	localStorage.setItem(MOCK_DATA_INITIALIZED_KEY, 'true');
 }
 
-/**
- * Generate road details with realistic patterns
- */
-function generateRoadDetails(
-	rng: SeededRandom,
-	roadType: 'asphalt' | 'concrete' | 'gravel' | 'natural',
-	infrastructureLevel: number,
-	isGida: boolean,
-	populationSize: number
-): RoadDetails {
-	// Different road types have different probabilities based on development
-	const baseProbs: Record<string, number> = {
-		asphalt: 0.15 + infrastructureLevel * 0.4,
-		concrete: 0.25 + infrastructureLevel * 0.35,
-		gravel: 0.5 + infrastructureLevel * 0.2,
-		natural: 0.7 - infrastructureLevel * 0.3
-	};
-
-	let existsProbability = baseProbs[roadType];
-	if (isGida) {
-		existsProbability *= roadType === 'natural' ? 1.3 : 0.5;
+export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
+	if (typeof window === 'undefined') {
+		// Server-side: generate fresh data for SSR with 3 years (2023-2025)
+		const sitios = generateSitios(50, 42, 2023, 3);
+		return { sitios };
 	}
 
-	const exists = rng.boolean(Math.min(0.95, existsProbability));
-
-	if (exists) {
-		// Road length correlates with population and road type
-		const baseLengthKm =
-			roadType === 'natural'
-				? 0.5 + rng.next() * 2
-				: roadType === 'gravel'
-					? 0.3 + rng.next() * 1.5
-					: 0.2 + rng.next() * 1;
-
-		const length = Number((baseLengthKm * (1 + populationSize / 500)).toFixed(2));
-
-		// Better roads have better conditions generally
-		const conditionWeights: number[] =
-			roadType === 'asphalt' || roadType === 'concrete'
-				? [0.05, 0.1, 0.25, 0.35, 0.25]
-				: [0.15, 0.25, 0.35, 0.2, 0.05];
-
-		const condition = rng.pickWeighted([1, 2, 3, 4, 5], conditionWeights) as 1 | 2 | 3 | 4 | 5;
-
-		return { exists: 'yes', length, condition };
-	} else {
-		return { exists: 'no' };
+	// Check if storage is outdated - if so, clear everything
+	if (isStorageOutdated()) {
+		clearAllStorage();
 	}
+
+	// Check if already initialized
+	if (isMockDataInitialized()) {
+		// Load from localStorage using storage.ts
+		const sitios = loadSitios();
+		return { sitios };
+	}
+
+	// Generate and save mock data with 3 years (2023-2025)
+	const sitios = generateSitios(50, 42, 2023, 3);
+
+	saveSitios(sitios);
+	markMockDataInitialized();
+	setStorageVersion();
+
+	return { sitios };
 }
 
-/**
- * Generate water source status with realistic patterns
- */
-function generateWaterSourceStatus(
-	rng: SeededRandom,
-	sourceType: 'natural' | 'level1' | 'level2' | 'level3',
-	infrastructureLevel: number,
-	isGida: boolean,
-	totalHouseholds: number
-): WaterSourceStatus {
-	// Different water levels have different probability patterns
-	const baseProbs: Record<string, number> = {
-		natural: 0.65, // Springs/rivers are common
-		level1: 0.45 + infrastructureLevel * 0.25, // Point source
-		level2: 0.25 + infrastructureLevel * 0.35, // Communal faucet
-		level3: 0.1 + infrastructureLevel * 0.45 // House connection
-	};
+// ===== RESET FUNCTION =====
 
-	let existsProbability = baseProbs[sourceType];
-	if (isGida) {
-		// GIDA areas have more natural sources, less developed systems
-		existsProbability *= sourceType === 'natural' ? 1.2 : 0.5;
+export function resetMockData(): { sitios: SitioRecord[] } {
+	if (typeof window === 'undefined') {
+		return { sitios: [] };
 	}
 
-	const exists = rng.boolean(Math.min(0.9, existsProbability));
+	// Clear existing data using storage.ts
+	localStorage.removeItem(MOCK_DATA_INITIALIZED_KEY);
+	clearSitios();
 
-	if (exists) {
-		// Scale based on households and source type
-		const scaleFactor =
-			sourceType === 'level3'
-				? 0.3
-				: sourceType === 'level2'
-					? 0.5
-					: sourceType === 'level1'
-						? 0.7
-						: 1.0;
-		const maxUnits = Math.max(1, Math.ceil((totalHouseholds / 30) * scaleFactor));
-		const total = rng.nextInt(1, Math.max(1, maxUnits));
+	// Regenerate with new seed based on current time and 3 years of data (2023-2025)
+	const seed = Date.now() % 1000000;
+	const sitios = generateSitios(50, seed, 2023, 3);
 
-		// Functioning ratio depends on infrastructure level
-		const functioningRatio = 0.5 + infrastructureLevel * 0.4 + rng.next() * 0.1;
-		const functioning = Math.round(total * Math.min(1, functioningRatio));
+	saveSitios(sitios);
+	markMockDataInitialized();
 
-		return {
-			exists: 'yes',
-			functioningCount: functioning,
-			notFunctioningCount: total - functioning
-		};
-	} else {
-		return { exists: 'no' };
-	}
-}
-
-/**
- * Generate hazard frequency with location-specific patterns
- */
-function generateHazardDetails(
-	rng: SeededRandom,
-	hazardType: 'flood' | 'landslide' | 'drought' | 'earthquake',
-	municipalityProfile: MunicipalityProfile
-): HazardDetails {
-	const hazardProbability =
-		municipalityProfile.hazardProfile[
-			hazardType as keyof typeof municipalityProfile.hazardProfile
-		] ?? 0.2;
-
-	// Generate a frequency number (0-10 times in past 12 months)
-	// Weight toward less frequent occurrences
-	let weights: number[];
-
-	if (hazardProbability < 0.2) {
-		// Low probability: mostly 0-1 times
-		weights = [0.6, 0.25, 0.1, 0.03, 0.015, 0.005]; // for [0, 1, 2, 3, 4-5, 6+]
-	} else if (hazardProbability < 0.4) {
-		// Medium-low: some occurrences
-		weights = [0.35, 0.3, 0.2, 0.1, 0.04, 0.01];
-	} else if (hazardProbability < 0.6) {
-		// Medium-high: regular occurrences
-		weights = [0.15, 0.25, 0.3, 0.15, 0.1, 0.05];
-	} else {
-		// High: frequent occurrences
-		weights = [0.05, 0.15, 0.3, 0.25, 0.15, 0.1];
-	}
-
-	// Earthquake is special - uses different pattern (rare but when happens, might happen multiple times)
-	if (hazardType === 'earthquake') {
-		weights = [0.7, 0.2, 0.08, 0.015, 0.004, 0.001];
-	}
-
-	// Map weights to frequency ranges
-	const frequencyRanges = [0, 1, 2, 3, rng.nextInt(4, 5), rng.nextInt(6, 10)];
-	const selectedRange = rng.pickWeighted(frequencyRanges, weights);
-
-	return { frequency: selectedRange };
-}
-
-/**
- * Generate a realistic sitio name based on context
- */
-function generateSitioName(
-	rng: SeededRandom,
-	municipalityType: 'urban' | 'semi-urban' | 'rural' | 'highland',
-	isIndigenous: boolean,
-	usedNames: Set<string>
-): string {
-	let prefix: string;
-	let name: string;
-
-	// Select prefix based on municipality type
-	if (municipalityType === 'urban') {
-		prefix = rng.pick(SITIO_PREFIXES_URBAN);
-	} else if (isIndigenous) {
-		prefix = rng.pick(SITIO_PREFIXES_INDIGENOUS);
-	} else {
-		prefix = rng.pick(SITIO_PREFIXES_RURAL);
-	}
-
-	// Select name based on context
-	if (isIndigenous && rng.boolean(0.6)) {
-		name = rng.pick(SITIO_NAMES_INDIGENOUS);
-	} else if (rng.boolean(0.3)) {
-		name = rng.pick(SITIO_NAMES_NATURE);
-	} else {
-		name = rng.pick(SITIO_NAMES_COMMON);
-	}
-
-	// For urban zones, add numbers
-	if (municipalityType === 'urban' && prefix === 'Zone') {
-		name = String(rng.nextInt(1, 15));
-	} else if (prefix === 'Phase') {
-		name = String(rng.nextInt(1, 5));
-	}
-
-	let sitioName = `${prefix} ${name}`;
-
-	// Ensure uniqueness
-	let attempts = 0;
-	while (usedNames.has(sitioName) && attempts < 20) {
-		const suffix = rng.nextInt(1, 9);
-		sitioName = `${prefix} ${name} ${suffix}`;
-		attempts++;
-	}
-
-	usedNames.add(sitioName);
-	return sitioName;
-}
-
-/**
- * Select crops based on municipality profile and terrain
- */
-function selectCrops(rng: SeededRandom, profile: MunicipalityProfile): string[] {
-	const crops: Set<string> = new Set();
-
-	// Add primary crops from municipality profile
-	const primaryCrops = rng.shuffle([...profile.primaryCrops]);
-	const numPrimary = rng.nextInt(2, Math.min(4, primaryCrops.length));
-	primaryCrops.slice(0, numPrimary).forEach((c) => crops.add(c));
-
-	// Add supplementary crops based on terrain
-	if (profile.type === 'highland') {
-		if (rng.boolean(0.4)) crops.add(rng.pick(CROP_OPTIONS_HIGHLAND));
-	} else {
-		if (rng.boolean(0.3)) crops.add(rng.pick(CROP_OPTIONS_LOWLAND));
-	}
-
-	// Commercial farms in semi-urban areas
-	if (profile.type === 'semi-urban' && rng.boolean(0.3)) {
-		crops.add(rng.pick(CROP_OPTIONS_COMMERCIAL));
-	}
-
-	return Array.from(crops);
-}
-
-/**
- * Select livestock based on municipality profile
- */
-function selectLivestock(rng: SeededRandom, profile: MunicipalityProfile): string[] {
-	const livestock: Set<string> = new Set();
-
-	// Add primary livestock from municipality profile
-	const primaryLivestock = rng.shuffle([...profile.primaryLivestock]);
-	const numPrimary = rng.nextInt(2, Math.min(4, primaryLivestock.length));
-	primaryLivestock.slice(0, numPrimary).forEach((l) => livestock.add(l));
-
-	// Common livestock almost everywhere
-	LIVESTOCK_OPTIONS_COMMON.forEach((l) => {
-		if (rng.boolean(0.5)) livestock.add(l);
-	});
-
-	// Highland areas have specific livestock
-	if (profile.type === 'highland' && rng.boolean(0.4)) {
-		livestock.add(rng.pick(LIVESTOCK_OPTIONS_HIGHLAND));
-	}
-
-	// Rural areas have more variety
-	if (profile.type === 'rural' && rng.boolean(0.3)) {
-		livestock.add(rng.pick(LIVESTOCK_OPTIONS_RURAL));
-	}
-
-	// Aquaculture near Lake Sebu
-	if (profile.name === 'LAKE SEBU' && rng.boolean(0.5)) {
-		livestock.add(rng.pick(LIVESTOCK_AQUACULTURE));
-	}
-
-	return Array.from(livestock);
+	return { sitios };
 }
 
 // ===== MAIN SITIO PROFILE GENERATOR =====
@@ -1422,96 +859,4 @@ function generateYearProfile(
 	};
 
 	return profile;
-}
-
-// ===== STORAGE KEYS =====
-export const STORAGE_VERSION = 8; // Increment to clear outdated data (improved mock data realism)
-export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
-export const MOCK_DATA_INITIALIZED_KEY = 'sccdp_mock_data_initialized';
-
-// ===== STORAGE VERSION CHECK =====
-
-function isStorageOutdated(): boolean {
-	if (typeof window === 'undefined') return false;
-	const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
-	return storedVersion !== String(STORAGE_VERSION);
-}
-
-function clearAllStorage(): void {
-	if (typeof window === 'undefined') return;
-	const keysToRemove: string[] = [];
-	for (let i = 0; i < localStorage.length; i++) {
-		const key = localStorage.key(i);
-		if (key?.startsWith('sccdp_')) {
-			keysToRemove.push(key);
-		}
-	}
-	keysToRemove.forEach((key) => localStorage.removeItem(key));
-}
-
-function setStorageVersion(): void {
-	if (typeof window === 'undefined') return;
-	localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
-}
-
-// ===== INITIALIZATION CHECK =====
-
-export function isMockDataInitialized(): boolean {
-	if (typeof window === 'undefined') return false;
-	return localStorage.getItem(MOCK_DATA_INITIALIZED_KEY) === 'true';
-}
-
-export function markMockDataInitialized(): void {
-	if (typeof window === 'undefined') return;
-	localStorage.setItem(MOCK_DATA_INITIALIZED_KEY, 'true');
-}
-
-export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
-	if (typeof window === 'undefined') {
-		// Server-side: generate fresh data for SSR with 3 years (2023-2025)
-		const sitios = generateSitios(50, 42, 2023, 3);
-		return { sitios };
-	}
-
-	// Check if storage is outdated - if so, clear everything
-	if (isStorageOutdated()) {
-		clearAllStorage();
-	}
-
-	// Check if already initialized
-	if (isMockDataInitialized()) {
-		// Load from localStorage using storage.ts
-		const sitios = loadSitios();
-		return { sitios };
-	}
-
-	// Generate and save mock data with 3 years (2023-2025)
-	const sitios = generateSitios(50, 42, 2023, 3);
-
-	saveSitios(sitios);
-	markMockDataInitialized();
-	setStorageVersion();
-
-	return { sitios };
-}
-
-// ===== RESET FUNCTION =====
-
-export function resetMockData(): { sitios: SitioRecord[] } {
-	if (typeof window === 'undefined') {
-		return { sitios: [] };
-	}
-
-	// Clear existing data using storage.ts
-	localStorage.removeItem(MOCK_DATA_INITIALIZED_KEY);
-	clearSitios();
-
-	// Regenerate with new seed based on current time and 3 years of data (2023-2025)
-	const seed = Date.now() % 1000000;
-	const sitios = generateSitios(50, seed, 2023, 3);
-
-	saveSitios(sitios);
-	markMockDataInitialized();
-
-	return { sitios };
 }

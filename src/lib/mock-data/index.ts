@@ -1,34 +1,66 @@
-import type { Activity, ChartDataItem, SitioProfile, SitioRecord, Stats, User } from '$lib/types';
+import type {
+	Activity,
+	ChartDataItem,
+	Project,
+	SitioProfile,
+	SitioRecord,
+	Stats,
+	User
+} from '$lib/types';
+import { loadProjects } from '$lib/utils/project-storage';
 import { loadSitios } from '$lib/utils/storage';
+import {
+	generateProjects,
+	getProjectStats,
+	initializeProjectsIfNeeded,
+	isProjectsInitialized,
+	PROJECTS_INITIALIZED_KEY,
+	resetProjectMockData
+} from './project-generator';
 import {
 	generateSitios,
 	initializeMockDataIfNeeded,
 	isMockDataInitialized,
 	MOCK_DATA_INITIALIZED_KEY,
 	resetMockData
-} from './generator';
+} from './sitio-generator';
 
 // Re-export generator functions for external use
-export { generateSitios, isMockDataInitialized, MOCK_DATA_INITIALIZED_KEY, resetMockData };
+export {
+	generateProjects,
+	generateSitios,
+	getProjectStats,
+	initializeProjectsIfNeeded,
+	isMockDataInitialized,
+	isProjectsInitialized,
+	MOCK_DATA_INITIALIZED_KEY,
+	PROJECTS_INITIALIZED_KEY,
+	resetMockData,
+	resetProjectMockData
+};
 
 // ===== SITIOS DATA =====
+
+// Store the sitio records for project initialization
+let sitioRecords: SitioRecord[] = [];
 
 // Initialize LocalStorage with generated mock data if empty (runs only in browser)
 function initializeSitios(): SitioProfile[] {
 	if (typeof window === 'undefined') {
 		// Server-side: generate fresh data for SSR with 3 years
-		const records = generateSitios(50, 42, 2023, 3);
-		return convertRecordsToProfiles(records);
+		sitioRecords = generateSitios(50, 42, 2023, 3);
+		return convertRecordsToProfiles(sitioRecords);
 	}
 
 	try {
 		// Check/initialize mock data
 		const { sitios: generatedSitios } = initializeMockDataIfNeeded();
+		sitioRecords = generatedSitios;
 		return convertRecordsToProfiles(generatedSitios);
 	} catch (error) {
 		console.error('Failed to initialize sitios from storage:', error);
-		const records = generateSitios(50, 42, 2023, 3);
-		return convertRecordsToProfiles(records);
+		sitioRecords = generateSitios(50, 42, 2023, 3);
+		return convertRecordsToProfiles(sitioRecords);
 	}
 }
 
@@ -56,7 +88,37 @@ export function refreshSitios(): SitioProfile[] {
 		return convertRecordsToProfiles(records);
 	}
 	const records = loadSitios();
-	return convertRecordsToProfiles(records.length > 0 ? records : generateSitios(50, 42, 2023, 3));
+	sitioRecords = records.length > 0 ? records : generateSitios(50, 42, 2023, 3);
+	return convertRecordsToProfiles(sitioRecords);
+}
+
+// ===== PROJECTS DATA =====
+
+// Initialize projects mock data
+function initializeProjects(): Project[] {
+	if (typeof window === 'undefined') {
+		// Server-side: generate fresh data
+		return generateProjects(sitioRecords, 42);
+	}
+
+	try {
+		return initializeProjectsIfNeeded(sitioRecords);
+	} catch (error) {
+		console.error('Failed to initialize projects from storage:', error);
+		return generateProjects(sitioRecords, 42);
+	}
+}
+
+// Export projects with LocalStorage integration
+export const projects: Project[] = initializeProjects();
+
+// Export function to refresh projects from storage
+export function refreshProjects(): Project[] {
+	if (typeof window === 'undefined') {
+		return generateProjects(sitioRecords, 42);
+	}
+	const loadedProjects = loadProjects();
+	return loadedProjects.length > 0 ? loadedProjects : initializeProjectsIfNeeded(sitioRecords);
 }
 
 // ===== USERS DATA =====
