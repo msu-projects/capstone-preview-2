@@ -39,7 +39,7 @@
 
 	const breadcrumbItems = $derived([
 		{ label: 'Home', href: '/' },
-		{ label: 'Projects', href: '/projects' },
+		{ label: 'Projects' },
 		{ label: project?.title || 'Project Details' }
 	]);
 
@@ -247,7 +247,7 @@
 						<Card.Content class="p-6">
 							<div
 								bind:this={mapContainer}
-								class="h-80 w-full overflow-hidden rounded-xl border shadow-sm"
+								class="h-100 w-full overflow-hidden rounded-xl border shadow-sm"
 							></div>
 							<div
 								class="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-900"

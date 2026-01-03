@@ -92,9 +92,9 @@
 		</Card.Root>
 
 		<!-- Average Cost Card / Add Button -->
-		{#if showAdminActions}
+		<!-- {#if showAdminActions}
 			<Card.Root
-				class="overflow-hidden border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 to-transparent py-0 transition-all hover:border-primary/50 hover:shadow-md"
+				class="gap-0 overflow-hidden border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 to-transparent py-0 transition-all hover:border-primary/50 hover:shadow-md"
 			>
 				<Card.Content class="flex h-full items-center justify-center p-6">
 					<Button href="/admin/projects/new" class="h-auto flex-col gap-2 py-4" variant="ghost">
@@ -104,8 +104,8 @@
 						<span class="font-semibold">Add New Project</span>
 					</Button>
 				</Card.Content>
-			</Card.Root>
-		{:else if projects.length > 0}
+			</Card.Root> -->
+		{#if projects.length > 0}
 			<Card.Root
 				class="overflow-hidden border-l-4 border-l-blue-500 bg-linear-to-br from-blue-500/5 to-transparent py-0 transition-all hover:shadow-md"
 			>
