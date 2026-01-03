@@ -112,6 +112,20 @@ export interface YearlyMetrics {
 	totalRoadLength: number;
 	povertyCount: number;
 	sitioCount: number;
+	// Age groups
+	youth: number;
+	workingAge: number;
+	elderly: number;
+	// Cultural & demographic groups
+	totalSchoolAgeChildren: number;
+	totalMuslim: number;
+	totalIP: number;
+	totalVoters: number;
+	// Vulnerable sectors
+	totalSeniors: number;
+	totalOSY: number;
+	totalNoBirthCert: number;
+	totalNoNationalID: number;
 }
 
 /**
@@ -132,6 +146,17 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 	let totalRoadLength = 0;
 	let povertyCount = 0;
 	let sitioCount = 0;
+	// Cultural & demographic groups
+	let totalSchoolAgeChildren = 0;
+	let totalMuslim = 0;
+	let totalIP = 0;
+	let totalVoters = 0;
+	// Vulnerable sectors
+	let totalSeniors = 0;
+	let totalOSY = 0;
+	let totalNoBirthCert = 0;
+	let totalNoNationalID = 0;
+	let totalLaborForce60to64 = 0;
 
 	for (const sitio of sitios) {
 		const profile = getDataForYear(sitio, year);
@@ -147,6 +172,19 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 		householdsWithElectricity += profile.householdsWithElectricity || 0;
 		householdsWithToilet += profile.householdsWithToilet || 0;
 		householdsWithInternet += profile.householdsWithInternet || 0;
+
+		// Cultural & demographic groups
+		totalSchoolAgeChildren += profile.schoolAgeChildren || 0;
+		totalMuslim += profile.vulnerableGroups?.muslimCount || 0;
+		totalIP += profile.vulnerableGroups?.ipCount || 0;
+		totalVoters += profile.registeredVoters || 0;
+
+		// Vulnerable sectors
+		totalSeniors += profile.vulnerableGroups?.seniorsCount || 0;
+		totalOSY += profile.vulnerableGroups?.outOfSchoolYouth || 0;
+		totalNoBirthCert += profile.vulnerableGroups?.noBirthCertCount || 0;
+		totalNoNationalID += profile.vulnerableGroups?.noNationalIDCount || 0;
+		totalLaborForce60to64 += profile.vulnerableGroups?.laborForce60to64Count || 0;
 
 		// Road lengths
 		totalRoadLength +=
@@ -167,6 +205,14 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 
 	const employed = totalLaborWorkforce - totalUnemployed;
 
+	// Calculate age groups based on available data (same logic as aggregateDemographics)
+	// Working Age (15-64) = laborForceCount
+	const workingAge = totalLaborWorkforce;
+	// Elderly (65+) = seniorsCount (60+) - laborForce60to64Count (60-64 who still work)
+	const elderly = Math.max(0, totalSeniors - totalLaborForce60to64);
+	// Youth (0-14) = totalPopulation - workingAge - elderly
+	const youth = Math.max(0, totalPopulation - workingAge - elderly);
+
 	return {
 		year,
 		totalPopulation,
@@ -185,7 +231,21 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 		internetPercent: totalHouseholds > 0 ? (householdsWithInternet / totalHouseholds) * 100 : 0,
 		totalRoadLength,
 		povertyCount,
-		sitioCount
+		sitioCount,
+		// Age groups
+		youth,
+		workingAge,
+		elderly,
+		// Cultural & demographic groups
+		totalSchoolAgeChildren,
+		totalMuslim,
+		totalIP,
+		totalVoters,
+		// Vulnerable sectors
+		totalSeniors,
+		totalOSY,
+		totalNoBirthCert,
+		totalNoNationalID
 	};
 }
 
@@ -286,6 +346,7 @@ export function prepareTimeSeriesData(
 		totalFemale: 'Female',
 		totalHouseholds: 'Households',
 		totalLaborWorkforce: 'Labor Force',
+		totalUnemployed: 'Unemployed',
 		employmentRate: 'Employment Rate',
 		participationRate: 'Participation Rate',
 		averageDailyIncome: 'Avg Daily Income',
@@ -293,7 +354,21 @@ export function prepareTimeSeriesData(
 		toiletPercent: 'Sanitation',
 		internetPercent: 'Internet',
 		totalRoadLength: 'Road Length (km)',
-		povertyCount: 'Below Poverty'
+		povertyCount: 'Below Poverty',
+		// Age groups
+		youth: 'Youth (0-14)',
+		workingAge: 'Working Age (15-64)',
+		elderly: 'Elderly (65+)',
+		// Cultural & demographic groups
+		totalSchoolAgeChildren: 'School-Age Children',
+		totalMuslim: 'Muslim',
+		totalIP: 'Indigenous People',
+		totalVoters: 'Registered Voters',
+		// Vulnerable sectors
+		totalSeniors: 'Senior Citizens',
+		totalOSY: 'Out of School Youth',
+		totalNoBirthCert: 'No Birth Certificate',
+		totalNoNationalID: 'No PhilSys ID'
 	};
 
 	const metricColors: Record<string, string> = {
@@ -302,6 +377,7 @@ export function prepareTimeSeriesData(
 		totalFemale: 'hsl(330, 81%, 60%)',
 		totalHouseholds: 'hsl(142, 71%, 45%)',
 		totalLaborWorkforce: 'hsl(262, 83%, 58%)',
+		totalUnemployed: 'hsl(0, 84%, 60%)',
 		employmentRate: 'hsl(142, 71%, 45%)',
 		participationRate: 'hsl(217, 91%, 60%)',
 		averageDailyIncome: 'hsl(142, 71%, 45%)',
@@ -309,7 +385,21 @@ export function prepareTimeSeriesData(
 		toiletPercent: 'hsl(187, 85%, 43%)',
 		internetPercent: 'hsl(217, 91%, 60%)',
 		totalRoadLength: 'hsl(25, 95%, 53%)',
-		povertyCount: 'hsl(0, 84%, 60%)'
+		povertyCount: 'hsl(0, 84%, 60%)',
+		// Age groups
+		youth: 'hsl(25, 95%, 60%)',
+		workingAge: 'hsl(217, 91%, 60%)',
+		elderly: 'hsl(200, 18%, 60%)',
+		// Cultural & demographic groups
+		totalSchoolAgeChildren: 'hsl(217, 91%, 60%)',
+		totalMuslim: 'hsl(142, 71%, 45%)',
+		totalIP: 'hsl(263, 70%, 50%)',
+		totalVoters: 'hsl(280, 65%, 60%)',
+		// Vulnerable sectors
+		totalSeniors: 'hsl(25, 95%, 53%)',
+		totalOSY: 'hsl(0, 84%, 60%)',
+		totalNoBirthCert: 'hsl(45, 93%, 47%)',
+		totalNoNationalID: 'hsl(200, 18%, 46%)'
 	};
 
 	const series: MultiSeriesTimeData[] = metrics.map((metric) => ({

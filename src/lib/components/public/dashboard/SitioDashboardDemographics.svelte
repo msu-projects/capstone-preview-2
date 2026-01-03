@@ -1,7 +1,9 @@
 <script lang="ts">
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import LineChart from '$lib/components/charts/LineChart.svelte';
+	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import {
 		LABOR_EMPLOYMENT_AVERAGES,
@@ -22,6 +24,7 @@
 		Baby,
 		BarChart3,
 		Briefcase,
+		ChartLine,
 		Clock,
 		CreditCard,
 		ExternalLink,
@@ -41,6 +44,13 @@
 		Vote
 	} from '@lucide/svelte';
 	import DashboardStatCard from './DashboardStatCard.svelte';
+
+	// Modal states for trend modals
+	let showGenderTrendModal = $state(false);
+	let showAgeTrendModal = $state(false);
+	let showLaborTrendModal = $state(false);
+	let showCulturalTrendModal = $state(false);
+	let showVulnerableTrendModal = $state(false);
 
 	interface Props {
 		sitios: SitioRecord[];
@@ -70,6 +80,29 @@
 	// Time series data for labor force trend
 	const laborForceTrend = $derived(
 		prepareTimeSeriesData(sitios, ['totalLaborWorkforce', 'totalUnemployed'])
+	);
+
+	// Time series data for age groups
+	const ageGroupTrend = $derived(prepareTimeSeriesData(sitios, ['youth', 'workingAge', 'elderly']));
+
+	// Time series data for cultural groups
+	const culturalGroupsTrend = $derived(
+		prepareTimeSeriesData(sitios, [
+			'totalSchoolAgeChildren',
+			'totalMuslim',
+			'totalIP',
+			'totalVoters'
+		])
+	);
+
+	// Time series data for vulnerable sectors
+	const vulnerableSectorsTrend = $derived(
+		prepareTimeSeriesData(sitios, [
+			'totalSeniors',
+			'totalOSY',
+			'totalNoBirthCert',
+			'totalNoNationalID'
+		])
 	);
 
 	// Gender distribution for donut chart
@@ -241,33 +274,6 @@
 		/>
 	</div>
 
-	<!-- Population Trend Chart (only show if multiple years) -->
-	{#if hasMultipleYears && populationGenderTrend.categories.length > 1}
-		<Card.Root>
-			<Card.Header class="pb-2">
-				<div class="flex items-center gap-2">
-					<div class="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/20">
-						<TrendingUp class="size-5 text-blue-600 dark:text-blue-400" />
-					</div>
-					<div>
-						<Card.Title class="text-base">Population by Gender Over Time</Card.Title>
-						<Card.Description>Year-over-year population trends</Card.Description>
-					</div>
-				</div>
-			</Card.Header>
-			<Card.Content>
-				<LineChart
-					series={populationGenderTrend.series}
-					categories={populationGenderTrend.categories}
-					height={260}
-					curve="smooth"
-					showLegend={true}
-					yAxisFormatter={(val) => val.toLocaleString()}
-				/>
-			</Card.Content>
-		</Card.Root>
-	{/if}
-
 	<!-- Main Content Grid: 2/3 + 1/3 layout on large screens -->
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 		<!-- Left Column: Main Charts (2/3 width) -->
@@ -275,11 +281,26 @@
 			<!-- Gender Distribution Card -->
 			<Card.Root>
 				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-base">
-						<PersonStanding class="size-5 text-pink-500" />
-						Gender Distribution
-					</Card.Title>
-					<Card.Description>Breakdown of population by sex</Card.Description>
+					<div class="flex items-start justify-between">
+						<div>
+							<Card.Title class="flex items-center gap-2 text-base">
+								<PersonStanding class="size-5 text-pink-500" />
+								Gender Distribution
+							</Card.Title>
+							<Card.Description>Breakdown of population by sex</Card.Description>
+						</div>
+						{#if hasMultipleYears && populationGenderTrend.categories.length > 1}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-8 text-muted-foreground hover:text-foreground"
+								title="View historical trend"
+								onclick={() => (showGenderTrendModal = true)}
+							>
+								<ChartLine class="size-4" />
+							</Button>
+						{/if}
+					</div>
 				</Card.Header>
 				<Card.Content>
 					<div class="flex flex-col items-center justify-around gap-8 md:flex-row">
@@ -343,11 +364,26 @@
 			<!-- Age Distribution Card -->
 			<Card.Root>
 				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-base">
-						<PieChart class="size-5 text-teal-500" />
-						Population by Age Group
-					</Card.Title>
-					<Card.Description>Breakdown of population by age brackets</Card.Description>
+					<div class="flex items-start justify-between">
+						<div>
+							<Card.Title class="flex items-center gap-2 text-base">
+								<PieChart class="size-5 text-teal-500" />
+								Population by Age Group
+							</Card.Title>
+							<Card.Description>Breakdown of population by age brackets</Card.Description>
+						</div>
+						{#if hasMultipleYears && ageGroupTrend.categories.length > 1}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-8 text-muted-foreground hover:text-foreground"
+								title="View historical trend"
+								onclick={() => (showAgeTrendModal = true)}
+							>
+								<ChartLine class="size-4" />
+							</Button>
+						{/if}
+					</div>
 				</Card.Header>
 				<Card.Content>
 					<div class="flex flex-col items-center justify-around gap-8 md:flex-row">
@@ -440,11 +476,26 @@
 			<!-- Labor & Employment Card -->
 			<Card.Root>
 				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-base">
-						<Briefcase class="size-5 text-purple-500" />
-						Labor & Employment
-					</Card.Title>
-					<Card.Description>Workforce statistics and economic dependency</Card.Description>
+					<div class="flex items-start justify-between">
+						<div>
+							<Card.Title class="flex items-center gap-2 text-base">
+								<Briefcase class="size-5 text-purple-500" />
+								Labor & Employment
+							</Card.Title>
+							<Card.Description>Workforce statistics and economic dependency</Card.Description>
+						</div>
+						{#if hasMultipleYears && laborForceTrend.categories.length > 1}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-8 text-muted-foreground hover:text-foreground"
+								title="View historical trend"
+								onclick={() => (showLaborTrendModal = true)}
+							>
+								<ChartLine class="size-4" />
+							</Button>
+						{/if}
+					</div>
 				</Card.Header>
 				<Card.Content class="space-y-6">
 					<!-- Top Stats Row -->
@@ -913,11 +964,26 @@
 			<!-- Cultural & Demographic Groups -->
 			<Card.Root>
 				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-base">
-						<Users class="size-5 text-indigo-500" />
-						Cultural & Demographic Groups
-					</Card.Title>
-					<Card.Description>Population composition across sitios</Card.Description>
+					<div class="flex items-start justify-between">
+						<div>
+							<Card.Title class="flex items-center gap-2 text-base">
+								<Users class="size-5 text-indigo-500" />
+								Cultural & Demographic Groups
+							</Card.Title>
+							<Card.Description>Population composition across sitios</Card.Description>
+						</div>
+						{#if hasMultipleYears && culturalGroupsTrend.categories.length > 1}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-8 text-muted-foreground hover:text-foreground"
+								title="View historical trend"
+								onclick={() => (showCulturalTrendModal = true)}
+							>
+								<ChartLine class="size-4" />
+							</Button>
+						{/if}
+					</div>
 				</Card.Header>
 				<Card.Content>
 					<div class="space-y-5">
@@ -1038,11 +1104,26 @@
 			<!-- Vulnerable Sectors -->
 			<Card.Root>
 				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-base">
-						<UserRound class="size-5 text-orange-500" />
-						Vulnerable Sectors
-					</Card.Title>
-					<Card.Description>Priority populations requiring attention</Card.Description>
+					<div class="flex items-start justify-between">
+						<div>
+							<Card.Title class="flex items-center gap-2 text-base">
+								<UserRound class="size-5 text-orange-500" />
+								Vulnerable Sectors
+							</Card.Title>
+							<Card.Description>Priority populations requiring attention</Card.Description>
+						</div>
+						{#if hasMultipleYears && vulnerableSectorsTrend.categories.length > 1}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-8 text-muted-foreground hover:text-foreground"
+								title="View historical trend"
+								onclick={() => (showVulnerableTrendModal = true)}
+							>
+								<ChartLine class="size-4" />
+							</Button>
+						{/if}
+					</div>
 				</Card.Header>
 				<Card.Content>
 					<div class="space-y-5">
@@ -1239,3 +1320,141 @@
 		</div>
 	</div>
 </div>
+
+<!-- Gender Trend Modal -->
+<Dialog.Root bind:open={showGenderTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-pink-50 p-2 dark:bg-pink-900/20">
+					<PersonStanding class="size-5 text-pink-600 dark:text-pink-400" />
+				</div>
+				Gender Distribution - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year population trends by gender across {populationGenderTrend.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={populationGenderTrend.series}
+				categories={populationGenderTrend.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Age Distribution Trend Modal -->
+<Dialog.Root bind:open={showAgeTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-teal-50 p-2 dark:bg-teal-900/20">
+					<PieChart class="size-5 text-teal-600 dark:text-teal-400" />
+				</div>
+				Age Distribution - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year population trends by age group across {ageGroupTrend.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={ageGroupTrend.series}
+				categories={ageGroupTrend.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Labor & Employment Trend Modal -->
+<Dialog.Root bind:open={showLaborTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-purple-50 p-2 dark:bg-purple-900/20">
+					<Briefcase class="size-5 text-purple-600 dark:text-purple-400" />
+				</div>
+				Labor & Employment - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year labor force and unemployment trends across {laborForceTrend.categories
+					.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={laborForceTrend.series}
+				categories={laborForceTrend.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Cultural & Demographic Groups Trend Modal -->
+<Dialog.Root bind:open={showCulturalTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
+					<Users class="size-5 text-indigo-600 dark:text-indigo-400" />
+				</div>
+				Cultural & Demographic Groups - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year trends for cultural and demographic groups across {culturalGroupsTrend
+					.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={culturalGroupsTrend.series}
+				categories={culturalGroupsTrend.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Vulnerable Sectors Trend Modal -->
+<Dialog.Root bind:open={showVulnerableTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-orange-50 p-2 dark:bg-orange-900/20">
+					<UserRound class="size-5 text-orange-600 dark:text-orange-400" />
+				</div>
+				Vulnerable Sectors - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year trends for vulnerable populations across {vulnerableSectorsTrend.categories
+					.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={vulnerableSectorsTrend.series}
+				categories={vulnerableSectorsTrend.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
