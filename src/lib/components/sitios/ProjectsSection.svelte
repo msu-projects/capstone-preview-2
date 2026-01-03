@@ -201,49 +201,51 @@
 						{/if}
 					</div>
 
-					<Card.Content class="space-y-4 p-5">
-						<!-- Title & Description -->
-						<div class="space-y-2">
-							<h3
-								class="line-clamp-2 text-lg leading-tight font-bold transition-colors group-hover:text-primary"
-							>
-								{project.title}
-							</h3>
-							<p class="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-								{project.description}
-							</p>
-						</div>
-
-						<!-- Metadata Section -->
-						<div class="space-y-3">
-							<!-- Date -->
-							<div class="flex items-center gap-2 text-sm text-muted-foreground">
-								<Calendar class="size-4" />
-								<span>{formatDate(project.createdAt)}</span>
+					<Card.Content class="flex h-full flex-col justify-between gap-4 p-5">
+						<div class="space-y-4">
+							<!-- Title & Description -->
+							<div class="space-y-2">
+								<h3
+									class="line-clamp-2 text-lg leading-tight font-bold transition-colors group-hover:text-primary"
+								>
+									{project.title}
+								</h3>
+								<p class="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+									{project.description}
+								</p>
 							</div>
 
-							<!-- Multi-Sitio Indicator -->
-							{#if project.sitioNames.length > 1}
-								<div class="space-y-2">
-									<div class="flex items-center gap-2 text-sm text-muted-foreground">
-										<MapPin class="size-4" />
-										<span class="font-medium">Multi-sitio project</span>
-									</div>
-									<div class="flex flex-wrap gap-1.5">
-										{#each project.sitioNames.slice(0, 3) as name}
-											{@const sitioName = name.split(',')[0]}
-											<Badge variant="secondary" class="text-xs font-normal">
-												{sitioName}
-											</Badge>
-										{/each}
-										{#if project.sitioNames.length > 3}
-											<Badge variant="secondary" class="text-xs font-medium">
-												+{project.sitioNames.length - 3} more
-											</Badge>
-										{/if}
-									</div>
+							<!-- Metadata Section -->
+							<div class="space-y-3">
+								<!-- Date -->
+								<div class="flex items-center gap-2 text-sm text-muted-foreground">
+									<Calendar class="size-4" />
+									<span>{formatDate(project.createdAt)}</span>
 								</div>
-							{/if}
+
+								<!-- Multi-Sitio Indicator -->
+								{#if project.sitioNames.length > 1}
+									<div class="space-y-2">
+										<div class="flex items-center gap-2 text-sm text-muted-foreground">
+											<MapPin class="size-4" />
+											<span class="font-medium">Multi-sitio project</span>
+										</div>
+										<div class="flex flex-wrap gap-1.5">
+											{#each project.sitioNames.slice(0, 3) as name}
+												{@const sitioName = name.split(',')[0]}
+												<Badge variant="secondary" class="text-xs font-normal">
+													{sitioName}
+												</Badge>
+											{/each}
+											{#if project.sitioNames.length > 3}
+												<Badge variant="secondary" class="text-xs font-medium">
+													+{project.sitioNames.length - 3} more
+												</Badge>
+											{/if}
+										</div>
+									</div>
+								{/if}
+							</div>
 						</div>
 
 						<!-- Action Button -->
