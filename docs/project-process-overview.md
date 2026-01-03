@@ -27,13 +27,22 @@ The system serves as a public-facing data bank that allows citizens to view deta
    - [4.5 Sitio Data Management (Admin Only)](#45-sitio-data-management-admin-only)
    - [4.6 Report Generation (Admin Only)](#46-report-generation-admin-only)
 
+### Projects Module
+
+5. [Projects Module Purpose](#5-projects-module-purpose)
+6. [Project Data Entity](#6-project-data-entity)
+7. [Project Features](#7-project-features)
+   - [7.1 Project Management (Admin Only)](#71-project-management-admin-only)
+   - [7.2 Projects in Sitio Profile](#72-projects-in-sitio-profile)
+   - [7.3 Public Project View](#73-public-project-view)
+
 ### System-Wide Features
 
-5. [Audit Trail](#5-audit-trail)
-6. [Access Control](#6-access-control)
-7. [Validation Rules & Business Rules](#7-validation-rules--business-rules)
-8. [Glossary](#8-glossary)
-9. [Version History](#9-version-history)
+8. [Audit Trail](#8-audit-trail)
+9. [Access Control](#9-access-control)
+10. [Validation Rules & Business Rules](#10-validation-rules--business-rules)
+11. [Glossary](#11-glossary)
+12. [Version History](#12-version-history)
 
 ---
 
@@ -923,29 +932,167 @@ Each generated PDF report contains:
 
 ---
 
-## 5. Audit Trail
+## 5. Projects Module Purpose
 
-### 5.1 Overview
+The Projects Module tracks and showcases development projects that have been implemented across sitios in South Cotabato Province. It enables:
+
+- **Project Tracking** - Document completed or ongoing development projects with details about cost, location, and involved communities
+- **Community Linkage** - Associate projects with one or more sitios to show development investments in specific areas
+- **Public Transparency** - Allow citizens to view project information and understand government investments in their communities
+- **Visual Documentation** - Store images of projects for visual reference and documentation
+
+---
+
+## 6. Project Data Entity
+
+### 6.1 Data Structure Overview
+
+Each project contains identification information, location data, associated sitios, cost information, and supporting images.
+
+### 6.2 Project Fields
+
+| Field       | Type     | Description                                                         |
+| ----------- | -------- | ------------------------------------------------------------------- |
+| id          | number   | Unique system identifier (auto-generated)                           |
+| title       | string   | Project title/name                                                  |
+| description | string   | Detailed description of the project                                 |
+| location    | object   | Geographical coordinates where the project is located               |
+| sitioIds    | number[] | Array of sitio IDs that are involved in or benefit from the project |
+| cost        | number   | Total project cost in Philippine Peso                               |
+| images      | string[] | Array of base64-encoded image strings (max 5 images)                |
+| createdAt   | string   | Date when project was first added to system (ISO 8601)              |
+| updatedAt   | string   | Date of last modification (ISO 8601)                                |
+
+### 6.3 Location Object
+
+| Field | Type   | Description                               |
+| ----- | ------ | ----------------------------------------- |
+| lat   | number | Geographical latitude in decimal degrees  |
+| lng   | number | Geographical longitude in decimal degrees |
+
+### 6.4 Image Storage
+
+- Images are stored as base64-encoded strings
+- Maximum of 5 images per project
+- Images are automatically compressed on upload (max width: 800px, quality: 0.7)
+- Storage limit: 10MB for all project data combined
+
+---
+
+## 7. Project Features
+
+### 7.1 Project Management (Admin Only)
+
+#### 7.1.1 Project List View
+
+The admin project list provides:
+
+| Feature                | Description                                            |
+| ---------------------- | ------------------------------------------------------ |
+| Statistics Cards       | Display total projects, total investment, sitios count |
+| Searchable Table       | Search by project title                                |
+| Filter by Municipality | Filter projects by sitios in specific municipality     |
+| Filter by Barangay     | Filter projects by sitios in specific barangay         |
+| Pagination             | Navigate through project records                       |
+| Quick Actions          | View, Edit, Delete project buttons                     |
+
+#### 7.1.2 Create Project
+
+Admins can create new projects with:
+
+| Section           | Fields                                                           |
+| ----------------- | ---------------------------------------------------------------- |
+| Basic Information | Title (required), Description (required), Cost (required)        |
+| Location & Sitios | Map-based location picker, Multi-select sitio picker with search |
+| Images            | Upload up to 5 images with preview and remove capability         |
+
+**Sitio Selection Features:**
+
+- Searchable dropdown with sitio name search
+- Filter by Municipality
+- Filter by Barangay
+- Visual tags showing selected sitios
+- Remove individual selections
+
+#### 7.1.3 Edit Project
+
+Admins can edit existing projects:
+
+- All fields are editable
+- Existing images can be removed
+- New images can be added (respecting max 5 limit)
+- Changes are tracked via audit trail
+
+#### 7.1.4 Delete Project
+
+Admins can delete projects:
+
+- Confirmation dialog before deletion
+- Action is logged in audit trail
+- Deletion is permanent
+
+### 7.2 Projects in Sitio Profile
+
+#### 7.2.1 Projects Tab
+
+A "Projects" tab is available in both admin and public sitio profile views:
+
+| Feature          | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| Project Count    | Summary showing number of projects and total investment |
+| Project Cards    | Grid of project cards showing title, description, cost  |
+| Quick Navigation | Click on project card to view full project details      |
+| Empty State      | Helpful message when sitio has no associated projects   |
+
+#### 7.2.2 Admin vs Public View
+
+| Feature       | Admin View                  | Public View             |
+| ------------- | --------------------------- | ----------------------- |
+| View Projects | ✓                           | ✓                       |
+| Add Project   | Link to create form         | ✗                       |
+| Edit/Delete   | Quick actions available     | ✗                       |
+| Project Link  | Links to admin project page | Links to public project |
+
+### 7.3 Public Project View
+
+#### 7.3.1 Project Detail Page
+
+Public users can view individual project details at `/projects/[id]`:
+
+| Component      | Description                                    |
+| -------------- | ---------------------------------------------- |
+| Breadcrumb     | Navigation: Home > Projects > Project Title    |
+| Project Header | Title and cost display                         |
+| Image Gallery  | Photo gallery with lightbox for project images |
+| Description    | Full project description text                  |
+| Location Map   | Interactive map showing project location       |
+| Sitios List    | Cards linking to all associated sitio profiles |
+
+---
+
+## 8. Audit Trail
+
+### 8.1 Overview
 
 The system maintains a comprehensive audit trail to track all significant actions performed by users. This ensures accountability, supports compliance requirements, and enables investigation of issues.
 
-### 5.2 Audit Log Entry
+### 8.2 Audit Log Entry
 
-| Field         | Description                                                        |
-| ------------- | ------------------------------------------------------------------ |
-| ID            | Unique identifier for the audit entry (string)                     |
-| User ID       | The ID of the user who performed the action                        |
-| User Name     | The name of the user who performed the action                      |
-| Action        | The type of action performed (see 5.3)                             |
-| Resource Type | The type of resource affected: `user`, `sitio`, or `system`        |
-| Resource ID   | The ID of the affected resource (optional)                         |
-| Resource Name | The name of the affected resource for display (optional)           |
-| Details       | Additional context or notes about the action (optional)            |
-| Changes       | Array of field changes with old and new values (optional, see 5.4) |
-| IP Address    | The IP address from which the action was performed (optional)      |
-| Timestamp     | Date and time of the action (ISO 8601 format)                      |
+| Field         | Description                                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| ID            | Unique identifier for the audit entry (string)                         |
+| User ID       | The ID of the user who performed the action                            |
+| User Name     | The name of the user who performed the action                          |
+| Action        | The type of action performed (see 8.3)                                 |
+| Resource Type | The type of resource affected: `user`, `sitio`, `project`, or `system` |
+| Resource ID   | The ID of the affected resource (optional)                             |
+| Resource Name | The name of the affected resource for display (optional)               |
+| Details       | Additional context or notes about the action (optional)                |
+| Changes       | Array of field changes with old and new values (optional, see 8.4)     |
+| IP Address    | The IP address from which the action was performed (optional)          |
+| Timestamp     | Date and time of the action (ISO 8601 format)                          |
 
-### 5.3 Action Types
+### 8.3 Action Types
 
 | Action   | Description                                        |
 | -------- | -------------------------------------------------- |
@@ -958,7 +1105,7 @@ The system maintains a comprehensive audit trail to track all significant action
 | `export` | Data exported (e.g., PDF report generated)         |
 | `import` | Data imported (e.g., CSV sitio import)             |
 
-### 5.4 Change Tracking
+### 8.4 Change Tracking
 
 When a record is updated, the system captures the specific field changes:
 
@@ -979,21 +1126,23 @@ When a record is updated, the system captures the specific field changes:
 }
 ```
 
-### 5.5 Resource Types
+### 8.5 Resource Types
 
 | Resource Type | Description                                                |
 | ------------- | ---------------------------------------------------------- |
 | `user`        | User account operations                                    |
 | `sitio`       | Sitio data operations                                      |
+| `project`     | Project data operations                                    |
 | `system`      | System-level operations (authentication, exports, imports) |
 | `report`      | Report generation operations                               |
 
-### 5.6 Tracked Operations by Resource
+### 8.6 Tracked Operations by Resource
 
 | Resource Type | Actions Tracked                       |
 | ------------- | ------------------------------------- |
 | **System**    | `login`, `logout`, `export`, `import` |
 | **Sitio**     | `create`, `update`, `delete`, `view`  |
+| **Project**   | `create`, `update`, `delete`          |
 | **User**      | `create`, `update`, `delete`          |
 | **Report**    | `export`                              |
 
@@ -1004,7 +1153,13 @@ When a record is updated, the system captures the specific field changes:
 - `delete` - Used when deleting yearly data or entire sitio record
 - The audit trail should specify which year's data was affected in the `details` field
 
-### 5.7 Audit Log Retention
+**Note for Project Operations:**
+
+- `create` - Used when creating a new project
+- `update` - Used when editing project details, images, or associated sitios
+- `delete` - Used when deleting a project
+
+### 8.7 Audit Log Retention
 
 | Rule             | Description                                          |
 | ---------------- | ---------------------------------------------------- |
@@ -1014,7 +1169,7 @@ When a record is updated, the system captures the specific field changes:
 
 ---
 
-## 6. Access Control
+## 9. Access Control
 
 | Role           | Permissions            |
 | -------------- | ---------------------- |
@@ -1023,7 +1178,7 @@ When a record is updated, the system captures the specific field changes:
 | **Viewer**     | Read-only access       |
 | **Public**     | View via public portal |
 
-### 6.1 Role-Specific Permissions
+### 9.1 Role-Specific Permissions
 
 | Action                  | Superadmin | Admin | Viewer | Public |
 | ----------------------- | ---------- | ----- | ------ | ------ |
@@ -1031,6 +1186,10 @@ When a record is updated, the system captures the specific field changes:
 | Edit Sitio              | ✓          | ✓     | ✗      | ✗      |
 | Delete Sitio            | ✓          | ✓     | ✗      | ✗      |
 | View Sitio Profiles     | ✓          | ✓     | ✓      | ✓      |
+| Create Project          | ✓          | ✓     | ✗      | ✗      |
+| Edit Project            | ✓          | ✓     | ✗      | ✗      |
+| Delete Project          | ✓          | ✓     | ✗      | ✗      |
+| View Projects           | ✓          | ✓     | ✓      | ✓      |
 | View Dashboard          | ✓          | ✓     | ✓      | ✓      |
 | Export Reports          | ✓          | ✓     | ✓      | ✗      |
 | Import Sitio Data (CSV) | ✓          | ✓     | ✗      | ✗      |
@@ -1039,9 +1198,9 @@ When a record is updated, the system captures the specific field changes:
 
 ---
 
-## 7. Validation Rules & Business Rules
+## 10. Validation Rules & Business Rules
 
-### 7.1 Sitio Data Rules
+### 10.1 Sitio Data Rules
 
 #### Core Identification Validation
 
@@ -1131,7 +1290,7 @@ When a record is updated, the system captures the specific field changes:
 | priorities.\*            | Required, must be 0, 1, 2, or 3 |
 | priorities.othersSpecify | Optional, max 200 characters    |
 
-### 7.2 Business Rules
+### 10.2 Business Rules
 
 #### Population Consistency
 
@@ -1170,9 +1329,29 @@ When a record is updated, the system captures the specific field changes:
 - If waterSources.natural has high functioning count and higher-level sources have low counts, consider water quality concerns
 - Priority for waterSystem should be high (2-3) if no Level 2/3 water sources exist
 
+### 10.3 Project Data Rules
+
+#### Project Validation
+
+| Field       | Rule                                                            |
+| ----------- | --------------------------------------------------------------- |
+| title       | Required, 2-200 characters                                      |
+| description | Required, 10-5000 characters                                    |
+| cost        | Required, must be non-negative number                           |
+| location    | Required, must have valid lat (-90 to 90) and lng (-180 to 180) |
+| sitioIds    | Required, must contain at least one valid sitio ID              |
+| images      | Optional, maximum 5 images, each max 1MB after compression      |
+
+#### Project Business Rules
+
+- A project must be associated with at least one sitio
+- Projects can be associated with sitios from different municipalities/barangays
+- Image files are automatically compressed to reduce storage usage
+- Total project storage is limited to prevent excessive localStorage usage
+
 ---
 
-## 8. Glossary
+## 11. Glossary
 
 | Term                    | Definition                                                                                                                                                              |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1189,6 +1368,16 @@ When a record is updated, the system captures the specific field changes:
 | **OSY**                 | Out of School Youth - school-age individuals not currently enrolled in education                                                                                        |
 | **PhilHealth**          | Philippine Health Insurance Corporation - the national health insurance program                                                                                         |
 | **PhilSys**             | Philippine Identification System - the national ID program                                                                                                              |
+| **Project**             | A development initiative implemented in one or more sitios, tracked with details about cost, location, and outcomes                                                     |
 | **Sitio**               | The smallest administrative division in the Philippines, a subdivision of a barangay. In this system, refers to vulnerable communities targeted for development support |
 | **Sitio Profile**       | Comprehensive data about a sitio including demographics, infrastructure, facilities, livelihood, health, and risks                                                      |
 | **Water-Sealed Toilet** | Sanitary toilet facility with water seal to prevent odor and contamination                                                                                              |
+
+---
+
+## 12. Version History
+
+| Version | Date       | Changes                                                                           |
+| ------- | ---------- | --------------------------------------------------------------------------------- |
+| 1.0     | 2024-01-01 | Initial document creation with Sitio Data Module                                  |
+| 2.0     | 2025-01-15 | Added Projects Module for tracking implemented development projects across sitios |

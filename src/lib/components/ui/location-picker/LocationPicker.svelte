@@ -538,7 +538,7 @@
 		<!-- Map Container - Always Visible -->
 		<div
 			bind:this={mapContainer}
-			class="relative z-0 h-[500px] w-full overflow-hidden rounded-md border border-border"
+			class="relative z-0 h-125 w-full overflow-hidden rounded-md border border-border"
 		></div>
 
 		<!-- Manual Input Fields - Always Visible -->

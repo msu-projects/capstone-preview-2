@@ -10,6 +10,7 @@
 		ExternalLink,
 		FileBarChart,
 		FileText,
+		FolderKanban,
 		LayoutDashboard,
 		List,
 		LogOut,
@@ -42,6 +43,7 @@
 			items: [
 				{ title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
 				{ title: 'Sitios List', url: '/admin/sitios', icon: List },
+				{ title: 'Projects', url: '/admin/projects', icon: FolderKanban },
 				{ title: 'Reports', url: '/admin/reports', icon: FileBarChart }
 			]
 		},

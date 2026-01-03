@@ -32,5 +32,5 @@
 		</div>
 	</div>
 {:else}
-	<SitioProfileView {sitio} isAdminView={true} />
+	<SitioProfileView {sitio} {sitioId} isAdminView={true} />
 {/if}

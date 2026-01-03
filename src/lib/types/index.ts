@@ -69,3 +69,6 @@ export { getPriorityLevel } from '$lib/recommendation';
 
 // Dashboard & Statistics
 export type { SitioDashboardData, SitioFilterContext } from './dashboard';
+
+// Project Types
+export type { Project, ProjectFormData, ProjectWithSitios } from './project';
