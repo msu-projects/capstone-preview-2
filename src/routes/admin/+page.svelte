@@ -14,6 +14,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Select from '$lib/components/ui/select';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import type { SitioRecord } from '$lib/types';
 	import { loadAuditLogs } from '$lib/utils/audit';
 	import toTitleCase from '$lib/utils/common';
@@ -26,6 +27,7 @@
 		FileText,
 		Map,
 		MapPin,
+		Plus,
 		TrendingUp,
 		Users,
 		X
@@ -144,7 +146,16 @@
 
 <div class="flex min-h-screen flex-col bg-muted/30">
 	<!-- Header -->
-	<AdminHeader title="Dashboard" description="Overview of sitios, community data, and activities" />
+	<AdminHeader title="Dashboard" description="Overview of sitios, community data, and activities">
+		{#snippet actions()}
+			{#if authStore.canPerform('sitios', 'write')}
+				<Button size="sm" href="/admin/sitios/new">
+					<Plus class="size-4 sm:mr-2" />
+					<span class="hidden sm:inline">New Sitio</span>
+				</Button>
+			{/if}
+		{/snippet}
+	</AdminHeader>
 
 	<!-- Content -->
 	<div class="flex-1 space-y-6 p-4 md:p-6">
