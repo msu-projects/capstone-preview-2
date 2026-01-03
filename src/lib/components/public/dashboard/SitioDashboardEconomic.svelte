@@ -3,7 +3,8 @@
 	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import TreemapChart from '$lib/components/charts/TreemapChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
-	import * as Card from '$lib/components/ui/card';
+	import { Button } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import * as Popover from '$lib/components/ui/popover';
@@ -11,6 +12,7 @@
 	import {
 		aggregateLivelihood,
 		getAllAvailableYears,
+		getMultiYearMetrics,
 		getYearComparison,
 		prepareTimeSeriesData,
 		type LivelihoodAggregation,
@@ -21,6 +23,7 @@
 		Bird,
 		Briefcase,
 		Building2,
+		ChartLine,
 		CheckCircle2,
 		Globe,
 		HandCoins,
@@ -44,6 +47,11 @@
 
 	let { sitios, selectedYear }: Props = $props();
 
+	// Modal states for trend modals
+	let showIncomeTrendModal = $state(false);
+	let showPovertyTrendModal = $state(false);
+	let showAgricultureTrendModal = $state(false);
+
 	// Get available years for comparison
 	const availableYears = $derived(getAllAvailableYears(sitios));
 	const currentYear = $derived(selectedYear || availableYears[0] || new Date().getFullYear());
@@ -58,8 +66,82 @@
 	// Time series data for income trend
 	const incomeTrendData = $derived(prepareTimeSeriesData(sitios, ['averageDailyIncome']));
 
-	// Time series data for poverty trend
-	const povertyTrendData = $derived(prepareTimeSeriesData(sitios, ['povertyCount']));
+	// Time series data for poverty trend (both below and above poverty)
+	const povertyTrendData = $derived.by(() => {
+		const yearlyMetrics = getMultiYearMetrics(sitios);
+		const categories = yearlyMetrics.map((m) => m.year.toString());
+
+		// Calculate both below and above poverty counts for each year
+		const belowPovertyData: number[] = [];
+		const abovePovertyData: number[] = [];
+
+		yearlyMetrics.forEach((yearMetric) => {
+			const yearNum = yearMetric.year;
+			const yearLivelihood = aggregateLivelihood(sitios, yearNum);
+			const belowCount = yearLivelihood.povertyCount;
+			const aboveCount = Math.max(0, yearLivelihood.sitiosWithIncome - yearLivelihood.povertyCount);
+
+			belowPovertyData.push(belowCount);
+			abovePovertyData.push(aboveCount);
+		});
+
+		return {
+			categories,
+			series: [
+				{
+					name: 'Below Poverty Line',
+					data: belowPovertyData,
+					color: 'hsl(0, 84%, 60%)'
+				},
+				{
+					name: 'Above Poverty Line',
+					data: abovePovertyData,
+					color: 'hsl(142, 71%, 45%)'
+				}
+			]
+		};
+	});
+
+	// Time series data for agriculture trend
+	const agricultureTrendData = $derived.by(() => {
+		const yearlyMetrics = getMultiYearMetrics(sitios);
+		const categories = yearlyMetrics.map((m) => m.year.toString());
+
+		// Calculate agriculture metrics for each year
+		const farmersData: number[] = [];
+		const orgsData: number[] = [];
+		const areaData: number[] = [];
+
+		yearlyMetrics.forEach((yearMetric) => {
+			const yearNum = yearMetric.year;
+			const yearLivelihood = aggregateLivelihood(sitios, yearNum);
+
+			farmersData.push(yearLivelihood.totalFarmers);
+			orgsData.push(yearLivelihood.totalFarmerOrgs);
+			areaData.push(Math.round(yearLivelihood.totalFarmArea * 10) / 10);
+		});
+
+		return {
+			categories,
+			series: [
+				{
+					name: 'Farmers',
+					data: farmersData,
+					color: 'hsl(38, 92%, 50%)'
+				},
+				{
+					name: 'Organizations',
+					data: orgsData,
+					color: 'hsl(142, 71%, 45%)'
+				},
+				{
+					name: 'Farm Area (ha)',
+					data: areaData,
+					color: 'hsl(120, 60%, 50%)'
+				}
+			]
+		};
+	});
 
 	// Total workers
 	const totalWorkers = $derived(
@@ -249,6 +331,19 @@
 			iconBgColor="bg-emerald-50 dark:bg-emerald-900/20"
 			iconTextColor="text-emerald-500"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && incomeTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical income trend"
+						onclick={() => (showIncomeTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				{@const level = incomeLevel()}
 				<div class="flex flex-col gap-6">
@@ -468,88 +563,6 @@
 			{/snippet}
 		</InfoCard>
 
-		<!-- Income Trend Chart (only show if multiple years) -->
-		{#if hasMultipleYears && incomeTrendData.categories.length > 1}
-			<Card.Root>
-				<Card.Header class="pb-2">
-					<div class="flex items-center gap-2">
-						<div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-900/20">
-							<TrendingUp class="size-5 text-emerald-600 dark:text-emerald-400" />
-						</div>
-						<div>
-							<Card.Title class="text-base">Average Daily Income Trend</Card.Title>
-							<Card.Description>Year-over-year income changes across all sitios</Card.Description>
-						</div>
-						{#if yearComparison.trends.averageIncome}
-							<Badge
-								variant={yearComparison.trends.averageIncome.isPositive ? 'default' : 'destructive'}
-								class="ml-auto flex items-center gap-1"
-							>
-								{#if yearComparison.trends.averageIncome.value >= 0}
-									<TrendingUp class="size-3" />
-								{:else}
-									<TrendingDown class="size-3" />
-								{/if}
-								{Math.abs(yearComparison.trends.averageIncome.value)}% vs last year
-							</Badge>
-						{/if}
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<LineChart
-						series={incomeTrendData.series}
-						categories={incomeTrendData.categories}
-						height={260}
-						curve="smooth"
-						showLegend={false}
-						yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
-					/>
-				</Card.Content>
-			</Card.Root>
-		{/if}
-
-		<!-- Poverty Trend Chart (only show if multiple years) -->
-		{#if hasMultipleYears && povertyTrendData.categories.length > 1}
-			<Card.Root>
-				<Card.Header class="pb-2">
-					<div class="flex items-center gap-2">
-						<div class="rounded-lg bg-rose-50 p-2 dark:bg-rose-900/20">
-							<TrendingDown class="size-5 text-rose-600 dark:text-rose-400" />
-						</div>
-						<div>
-							<Card.Title class="text-base">Poverty & Vulnerability Trends</Card.Title>
-							<Card.Description
-								>Sitios below poverty line and in vulnerable income brackets</Card.Description
-							>
-						</div>
-						{#if yearComparison.trends.povertyCount}
-							<Badge
-								variant={yearComparison.trends.povertyCount.isPositive ? 'default' : 'destructive'}
-								class="ml-auto flex items-center gap-1"
-							>
-								{#if yearComparison.trends.povertyCount.value >= 0}
-									<TrendingUp class="size-3" />
-								{:else}
-									<TrendingDown class="size-3" />
-								{/if}
-								{Math.abs(yearComparison.trends.povertyCount.value)}% poverty
-							</Badge>
-						{/if}
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<LineChart
-						series={povertyTrendData.series}
-						categories={povertyTrendData.categories}
-						height={260}
-						curve="smooth"
-						showLegend={true}
-						yAxisFormatter={(val) => val.toLocaleString()}
-					/>
-				</Card.Content>
-			</Card.Root>
-		{/if}
-
 		<!-- Agriculture Card -->
 		<InfoCard
 			title="Agriculture"
@@ -558,6 +571,19 @@
 			iconBgColor="bg-amber-50 dark:bg-amber-900/20"
 			iconTextColor="text-amber-500"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && agricultureTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical agriculture trend"
+						onclick={() => (showAgricultureTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<div class="flex flex-col gap-6">
 					<!-- Stats Row -->
@@ -655,6 +681,19 @@
 			iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
 			iconTextColor="text-indigo-500"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && povertyTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical poverty trend"
+						onclick={() => (showPovertyTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<div class="flex flex-col gap-4">
 					<!-- Donut Chart -->
@@ -821,7 +860,7 @@
 
 		<!-- Quick Stats Card -->
 		<div
-			class="rounded-2xl border border-slate-100 bg-linear-to-br from-slate-50 to-slate-100/50 p-4 dark:border-slate-700/50 dark:from-slate-800/50 dark:to-slate-900/30"
+			class="hidden rounded-2xl border border-slate-100 bg-linear-to-br from-slate-50 to-slate-100/50 p-4 dark:border-slate-700/50 dark:from-slate-800/50 dark:to-slate-900/30"
 		>
 			<div class="mb-3 flex items-center gap-2">
 				<CheckCircle2 class="size-4 text-slate-500" />
@@ -850,3 +889,85 @@
 		</div>
 	</div>
 </div>
+
+<!-- Income Trend Modal -->
+<Dialog.Root bind:open={showIncomeTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-900/20">
+					<Banknote class="size-5 text-emerald-600 dark:text-emerald-400" />
+				</div>
+				Average Daily Income - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year income trends across {incomeTrendData.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={incomeTrendData.series}
+				categories={incomeTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Poverty Distribution Trend Modal -->
+<Dialog.Root bind:open={showPovertyTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
+					<TrendingDown class="size-5 text-indigo-600 dark:text-indigo-400" />
+				</div>
+				Income Distribution - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year distribution of sitios by poverty threshold across {povertyTrendData
+					.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={povertyTrendData.series}
+				categories={povertyTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Agriculture Trend Modal -->
+<Dialog.Root bind:open={showAgricultureTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
+					<Wheat class="size-5 text-amber-600 dark:text-amber-400" />
+				</div>
+				Agriculture - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year agriculture metrics across {agricultureTrendData.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={agricultureTrendData.series}
+				categories={agricultureTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => val.toLocaleString()}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>

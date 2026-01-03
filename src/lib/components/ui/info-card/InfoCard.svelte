@@ -36,6 +36,8 @@
 		headerClass?: string;
 		/** Children content */
 		children?: Snippet;
+		/** Optional header action slot (e.g., for trend buttons) */
+		headerAction?: Snippet;
 	}
 
 	const {
@@ -53,7 +55,8 @@
 		noPadding = false,
 		showHeaderBorder = true,
 		headerClass = '',
-		children
+		children,
+		headerAction
 	}: Props = $props();
 
 	const headerBorderClass = $derived(showHeaderBorder ? 'border-b' : '');
@@ -69,7 +72,7 @@
 			headerClass
 		)}
 	>
-		<div class="flex items-center justify-between">
+		<div class="flex items-start justify-between">
 			<div class="flex items-center gap-2">
 				{#if Icon}
 					<div
@@ -78,17 +81,24 @@
 						<Icon class="size-4 {iconTextColor} dark:opacity-90" />
 					</div>
 				{/if}
-				<Card.Title class="text-lg dark:text-slate-100">{title}</Card.Title>
+				<div>
+					<Card.Title class="text-lg dark:text-slate-100">{title}</Card.Title>
+					{#if description}
+						<Card.Description class="dark:text-slate-400">{description}</Card.Description>
+					{/if}
+				</div>
 			</div>
-			{#if badgeText}
-				<Badge variant={badgeVariant} class={badgeClass}>
-					{badgeText}
-				</Badge>
-			{/if}
+			<div class="flex items-center gap-2">
+				{#if headerAction}
+					{@render headerAction()}
+				{/if}
+				{#if badgeText}
+					<Badge variant={badgeVariant} class={badgeClass}>
+						{badgeText}
+					</Badge>
+				{/if}
+			</div>
 		</div>
-		{#if description}
-			<Card.Description class="dark:text-slate-400">{description}</Card.Description>
-		{/if}
 	</Card.Header>
 	<Card.Content class={finalContentPadding}>
 		{#if children}

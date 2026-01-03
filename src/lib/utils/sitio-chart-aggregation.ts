@@ -110,6 +110,10 @@ export interface YearlyMetrics {
 	toiletPercent: number;
 	internetPercent: number;
 	totalRoadLength: number;
+	roadConcrete: number;
+	roadAsphalt: number;
+	roadGravel: number;
+	roadNatural: number;
 	povertyCount: number;
 	sitioCount: number;
 	// Age groups
@@ -144,6 +148,10 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 	let totalDailyIncome = 0;
 	let sitiosWithIncome = 0;
 	let totalRoadLength = 0;
+	let roadConcrete = 0;
+	let roadAsphalt = 0;
+	let roadGravel = 0;
+	let roadNatural = 0;
 	let povertyCount = 0;
 	let sitioCount = 0;
 	// Cultural & demographic groups
@@ -187,11 +195,16 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 		totalLaborForce60to64 += profile.vulnerableGroups?.laborForce60to64Count || 0;
 
 		// Road lengths
-		totalRoadLength +=
-			(profile.infrastructure?.concrete?.length || 0) +
-			(profile.infrastructure?.asphalt?.length || 0) +
-			(profile.infrastructure?.gravel?.length || 0) +
-			(profile.infrastructure?.natural?.length || 0);
+		const concreteLength = profile.infrastructure?.concrete?.length || 0;
+		const asphaltLength = profile.infrastructure?.asphalt?.length || 0;
+		const gravelLength = profile.infrastructure?.gravel?.length || 0;
+		const naturalLength = profile.infrastructure?.natural?.length || 0;
+
+		roadConcrete += concreteLength;
+		roadAsphalt += asphaltLength;
+		roadGravel += gravelLength;
+		roadNatural += naturalLength;
+		totalRoadLength += concreteLength + asphaltLength + gravelLength + naturalLength;
 
 		// Income data
 		if (profile.averageDailyIncome && profile.averageDailyIncome > 0) {
@@ -230,6 +243,10 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
 		toiletPercent: totalHouseholds > 0 ? (householdsWithToilet / totalHouseholds) * 100 : 0,
 		internetPercent: totalHouseholds > 0 ? (householdsWithInternet / totalHouseholds) * 100 : 0,
 		totalRoadLength,
+		roadConcrete,
+		roadAsphalt,
+		roadGravel,
+		roadNatural,
 		povertyCount,
 		sitioCount,
 		// Age groups
@@ -354,6 +371,10 @@ export function prepareTimeSeriesData(
 		toiletPercent: 'Sanitation',
 		internetPercent: 'Internet',
 		totalRoadLength: 'Road Length (km)',
+		roadConcrete: 'Concrete Roads',
+		roadAsphalt: 'Asphalt Roads',
+		roadGravel: 'Gravel Roads',
+		roadNatural: 'Natural Roads',
 		povertyCount: 'Below Poverty',
 		// Age groups
 		youth: 'Youth (0-14)',
@@ -385,6 +406,10 @@ export function prepareTimeSeriesData(
 		toiletPercent: 'hsl(187, 85%, 43%)',
 		internetPercent: 'hsl(217, 91%, 60%)',
 		totalRoadLength: 'hsl(25, 95%, 53%)',
+		roadConcrete: 'hsl(217, 91%, 60%)',
+		roadAsphalt: 'hsl(215, 20%, 55%)',
+		roadGravel: 'hsl(27, 87%, 67%)',
+		roadNatural: 'hsl(25, 5%, 45%)',
 		povertyCount: 'hsl(0, 84%, 60%)',
 		// Age groups
 		youth: 'hsl(25, 95%, 60%)',

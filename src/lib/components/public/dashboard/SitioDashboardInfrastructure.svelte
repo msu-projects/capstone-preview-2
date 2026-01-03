@@ -2,7 +2,8 @@
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import LineChart from '$lib/components/charts/LineChart.svelte';
 	import { Badge } from '$lib/components/ui/badge';
-	import * as Card from '$lib/components/ui/card';
+	import { Button } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
 	import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
 	import { NATIONAL_AVERAGES } from '$lib/config/national-averages';
@@ -24,6 +25,7 @@
 	import {
 		Building2,
 		Car,
+		ChartLine,
 		Check,
 		Droplets,
 		Footprints,
@@ -35,6 +37,14 @@
 		TrendingUp,
 		Zap
 	} from '@lucide/svelte';
+
+	// Modal states for trend modals
+	let showUtilityTrendModal = $state(false);
+	let showRoadTrendModal = $state(false);
+	let showWaterTrendModal = $state(false);
+	let showSanitationTrendModal = $state(false);
+	let showSignalTrendModal = $state(false);
+	let showClassroomTrendModal = $state(false);
 
 	interface Props {
 		sitios: SitioRecord[];
@@ -58,6 +68,107 @@
 	const utilityTrendData = $derived(
 		prepareTimeSeriesData(sitios, ['electricityPercent', 'toiletPercent', 'internetPercent'])
 	);
+
+	// Time series data for road infrastructure trends
+	const roadTrendData = $derived(
+		prepareTimeSeriesData(sitios, ['roadConcrete', 'roadAsphalt', 'roadGravel', 'roadNatural'])
+	);
+
+	// Time series data for water sources trends
+	const waterTrendData = $derived.by(() => {
+		const years = getAllAvailableYears(sitios);
+		const categories = years.map((y) => y.toString());
+
+		const series = [
+			{ name: 'Natural Source (Functional)', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+			{ name: 'Level 1 (Functional)', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+			{ name: 'Level 2 (Functional)', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+			{ name: 'Level 3 (Functional)', data: [] as number[], color: 'hsl(263, 70%, 50%)' }
+		];
+
+		years.forEach((year) => {
+			const infra = aggregateInfrastructure(sitios, year);
+			series[0].data.push(infra.waterNatural.functioning);
+			series[1].data.push(infra.waterLevel1.functioning);
+			series[2].data.push(infra.waterLevel2.functioning);
+			series[3].data.push(infra.waterLevel3.functioning);
+		});
+
+		return { categories, series };
+	});
+
+	// Time series data for sanitation types trends
+	const sanitationTrendData = $derived.by(() => {
+		const years = getAllAvailableYears(sitios);
+		const categories = years.map((y) => y.toString());
+
+		const series = [
+			{ name: 'Water Sealed', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+			{ name: 'Pit Latrine', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+			{ name: 'Community CR', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+			{ name: 'Open Defecation', data: [] as number[], color: 'hsl(0, 84%, 60%)' }
+		];
+
+		years.forEach((year) => {
+			const infra = aggregateInfrastructure(sitios, year);
+			series[0].data.push(infra.sanitationWaterSealed);
+			series[1].data.push(infra.sanitationPitLatrine);
+			series[2].data.push(infra.sanitationCommunityCR);
+			series[3].data.push(infra.sanitationOpenDefecation);
+		});
+
+		return { categories, series };
+	});
+
+	// Time series data for mobile signal trends
+	const signalTrendData = $derived.by(() => {
+		const years = getAllAvailableYears(sitios);
+		const categories = years.map((y) => y.toString());
+
+		const series = [
+			{ name: '5G', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+			{ name: '4G', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+			{ name: '3G', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+			{ name: '2G', data: [] as number[], color: 'hsl(27, 87%, 67%)' },
+			{ name: 'None', data: [] as number[], color: 'hsl(0, 84%, 60%)' }
+		];
+
+		years.forEach((year) => {
+			const util = aggregateUtilities(sitios, year);
+			series[0].data.push(util.signal5G);
+			series[1].data.push(util.signal4G);
+			series[2].data.push(util.signal3G);
+			series[3].data.push(util.signal2G);
+			series[4].data.push(util.signalNone);
+		});
+
+		return { categories, series };
+	});
+
+	// Time series data for classroom density trends
+	const classroomTrendData = $derived.by(() => {
+		const years = getAllAvailableYears(sitios);
+		const categories = years.map((y) => y.toString());
+
+		const series = [
+			{ name: '<46 (Blue)', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+			{ name: '46-50 (Yellow)', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+			{ name: '51-55 (Gold)', data: [] as number[], color: 'hsl(25, 95%, 53%)' },
+			{ name: '>56 (Red)', data: [] as number[], color: 'hsl(0, 84%, 60%)' },
+			{ name: 'No Classroom', data: [] as number[], color: 'hsl(0, 0%, 30%)' }
+		];
+
+		years.forEach((year) => {
+			const infra = aggregateInfrastructure(sitios, year);
+			series[0].data.push(infra.studentsPerRoomLessThan46);
+			series[1].data.push(infra.studentsPerRoom46_50);
+			series[2].data.push(infra.studentsPerRoom51_55);
+			series[3].data.push(infra.studentsPerRoomMoreThan56);
+			series[4].data.push(infra.studentsPerRoomNoClassroom);
+		});
+
+		return { categories, series };
+	});
 
 	// Aggregated data (using selected year)
 	const infrastructure = $derived<InfrastructureAggregation>(
@@ -451,6 +562,19 @@
 			iconBgColor="bg-yellow-50 dark:bg-yellow-900/20"
 			iconTextColor="text-yellow-500"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && utilityTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical trend"
+						onclick={() => (showUtilityTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<!-- Analytics Summary -->
 				<div
@@ -653,70 +777,6 @@
 			{/snippet}
 		</InfoCard>
 
-		<!-- Utility Access Trend Chart (only show if multiple years) -->
-		{#if hasMultipleYears && utilityTrendData.categories.length > 1}
-			<Card.Root>
-				<Card.Header class="pb-2">
-					<div class="flex items-center gap-2">
-						<div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
-							<TrendingUp class="size-5 text-indigo-600 dark:text-indigo-400" />
-						</div>
-						<div>
-							<Card.Title class="text-base">Utility Access Trends</Card.Title>
-							<Card.Description>Year-over-year utility coverage improvements (%)</Card.Description>
-						</div>
-					</div>
-					<!-- Trend badges -->
-					<div class="mt-2 flex flex-wrap gap-2">
-						{#if yearComparison.trends.electricityAccess}
-							<Badge
-								variant={yearComparison.trends.electricityAccess.isPositive
-									? 'default'
-									: 'destructive'}
-								class="gap-1"
-							>
-								<Zap class="size-3" />
-								Electricity {yearComparison.trends.electricityAccess.value >= 0 ? '+' : ''}
-								{yearComparison.trends.electricityAccess.value.toFixed(1)}% vs last year
-							</Badge>
-						{/if}
-						{#if yearComparison.trends.toiletAccess}
-							<Badge
-								variant={yearComparison.trends.toiletAccess.isPositive ? 'default' : 'destructive'}
-								class="gap-1"
-							>
-								<Droplets class="size-3" />
-								Sanitation {yearComparison.trends.toiletAccess.value >= 0 ? '+' : ''}
-								{yearComparison.trends.toiletAccess.value.toFixed(1)}% vs last year
-							</Badge>
-						{/if}
-						{#if yearComparison.trends.internetAccess}
-							<Badge
-								variant={yearComparison.trends.internetAccess.isPositive
-									? 'default'
-									: 'destructive'}
-								class="gap-1"
-							>
-								<Router class="size-3" />
-								Internet {yearComparison.trends.internetAccess.value >= 0 ? '+' : ''}
-								{yearComparison.trends.internetAccess.value.toFixed(1)}% vs last year
-							</Badge>
-						{/if}
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<LineChart
-						series={utilityTrendData.series}
-						categories={utilityTrendData.categories}
-						height={280}
-						curve="smooth"
-						showLegend={true}
-						yAxisFormatter={(val) => `${val.toFixed(1)}%`}
-					/>
-				</Card.Content>
-			</Card.Root>
-		{/if}
-
 		<!-- Internal Infrastructure (Roads) Card -->
 		<InfoCard
 			title="Road Infrastructure"
@@ -725,6 +785,19 @@
 			iconBgColor="bg-slate-50 dark:bg-slate-900/20"
 			iconTextColor="text-slate-400"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && roadTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical trend"
+						onclick={() => (showRoadTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<!-- Road Network Analytics: Paved vs Unpaved Comparison -->
 				{#if roadNetworkAnalytics().hasData}
@@ -973,6 +1046,19 @@
 			iconBgColor="bg-blue-50 dark:bg-blue-900/20"
 			iconTextColor="text-blue-500"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && waterTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical trend"
+						onclick={() => (showWaterTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
 					<table class="w-full border-collapse text-left">
@@ -1042,6 +1128,19 @@
 				iconTextColor="text-teal-500"
 				class="col-span-2"
 			>
+				{#snippet headerAction()}
+					{#if hasMultipleYears && sanitationTrendData.categories.length > 1}
+						<Button
+							variant="ghost"
+							size="icon"
+							class="size-8 text-muted-foreground hover:text-foreground"
+							title="View historical trend"
+							onclick={() => (showSanitationTrendModal = true)}
+						>
+							<ChartLine class="size-4" />
+						</Button>
+					{/if}
+				{/snippet}
 				{#snippet children()}
 					<DonutChart data={sanitationData} centerLabel="Sitios" height={220} />
 
@@ -1158,6 +1257,19 @@
 			iconTextColor="text-slate-400"
 			contentPadding="px-4 py-2"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && signalTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical trend"
+						onclick={() => (showSignalTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<div class="space-y-3">
 					<!-- Signal bars visualization -->
@@ -1216,6 +1328,19 @@
 			iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
 			iconTextColor="text-indigo-600 dark:text-indigo-400"
 		>
+			{#snippet headerAction()}
+				{#if hasMultipleYears && classroomTrendData.categories.length > 1}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground hover:text-foreground"
+						title="View historical trend"
+						onclick={() => (showClassroomTrendModal = true)}
+					>
+						<ChartLine class="size-4" />
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet children()}
 				<!-- Summary Analytics -->
 				<div
@@ -1400,3 +1525,202 @@
 		</InfoCard>
 	</div>
 </div>
+
+<!-- Road Infrastructure Trend Modal -->
+<Dialog.Root bind:open={showRoadTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-slate-100 p-2 dark:bg-slate-800">
+					<Car class="size-5 text-slate-600 dark:text-slate-400" />
+				</div>
+				Road Infrastructure - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year road network development across {roadTrendData.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={roadTrendData.series}
+				categories={roadTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `${val.toFixed(1)} km`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Water Sources Trend Modal -->
+<Dialog.Root bind:open={showWaterTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20">
+					<Droplets class="size-5 text-blue-600 dark:text-blue-400" />
+				</div>
+				Water Sources - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year functional water sources across {waterTrendData.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={waterTrendData.series}
+				categories={waterTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `${val.toFixed(0)} units`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Sanitation Types Trend Modal -->
+<Dialog.Root bind:open={showSanitationTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-teal-100 p-2 dark:bg-teal-900/20">
+					<Droplets class="size-5 text-teal-600 dark:text-teal-400" />
+				</div>
+				Sanitation Types - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year sanitation facility distribution across {sanitationTrendData.categories
+					.length}
+				years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={sanitationTrendData.series}
+				categories={sanitationTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Mobile Signal Coverage Trend Modal -->
+<Dialog.Root bind:open={showSignalTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-slate-100 p-2 dark:bg-slate-900/20">
+					<Router class="size-5 text-slate-600 dark:text-slate-400" />
+				</div>
+				Mobile Signal Coverage - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year network coverage improvements across {signalTrendData.categories.length}
+				years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={signalTrendData.series}
+				categories={signalTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Classroom Density Trend Modal -->
+<Dialog.Root bind:open={showClassroomTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-indigo-100 p-2 dark:bg-indigo-900/20">
+					<GraduationCap class="size-5 text-indigo-600 dark:text-indigo-400" />
+				</div>
+				Classroom Density - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year pupil:room ratio distribution across {classroomTrendData.categories.length}
+				years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<LineChart
+				series={classroomTrendData.series}
+				categories={classroomTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Utility Access Trend Modal -->
+<Dialog.Root bind:open={showUtilityTrendModal}>
+	<Dialog.Content class="max-w-3xl!">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<div class="rounded-lg bg-yellow-50 p-2 dark:bg-yellow-900/20">
+					<Zap class="size-5 text-yellow-600 dark:text-yellow-400" />
+				</div>
+				Utility Access - Historical Trend
+			</Dialog.Title>
+			<Dialog.Description>
+				Year-over-year utility coverage improvements across {utilityTrendData.categories.length} years
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<!-- Trend badges -->
+			<div class="mb-4 flex flex-wrap gap-2">
+				{#if yearComparison.trends.electricityAccess}
+					<Badge
+						variant={yearComparison.trends.electricityAccess.isPositive ? 'default' : 'destructive'}
+						class="gap-1"
+					>
+						<Zap class="size-3" />
+						Electricity {yearComparison.trends.electricityAccess.value >= 0 ? '+' : ''}
+						{yearComparison.trends.electricityAccess.value.toFixed(1)}% vs last year
+					</Badge>
+				{/if}
+				{#if yearComparison.trends.toiletAccess}
+					<Badge
+						variant={yearComparison.trends.toiletAccess.isPositive ? 'default' : 'destructive'}
+						class="gap-1"
+					>
+						<Droplets class="size-3" />
+						Sanitation {yearComparison.trends.toiletAccess.value >= 0 ? '+' : ''}
+						{yearComparison.trends.toiletAccess.value.toFixed(1)}% vs last year
+					</Badge>
+				{/if}
+				{#if yearComparison.trends.internetAccess}
+					<Badge
+						variant={yearComparison.trends.internetAccess.isPositive ? 'default' : 'destructive'}
+						class="gap-1"
+					>
+						<Router class="size-3" />
+						Internet {yearComparison.trends.internetAccess.value >= 0 ? '+' : ''}
+						{yearComparison.trends.internetAccess.value.toFixed(1)}% vs last year
+					</Badge>
+				{/if}
+			</div>
+			<LineChart
+				series={utilityTrendData.series}
+				categories={utilityTrendData.categories}
+				height={300}
+				curve="smooth"
+				showLegend={true}
+				yAxisFormatter={(val) => `${val.toFixed(1)}%`}
+			/>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>

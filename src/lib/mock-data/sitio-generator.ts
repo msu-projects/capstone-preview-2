@@ -70,7 +70,7 @@ export function markMockDataInitialized(): void {
 export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
 	if (typeof window === 'undefined') {
 		// Server-side: generate fresh data for SSR with 9 years (2018-2026)
-		const sitios = generateSitios(50, 42, 2018, 9);
+		const sitios = generateSitios(10, 42, 2018, 9);
 		return { sitios };
 	}
 
@@ -87,7 +87,7 @@ export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
 	}
 
 	// Generate and save mock data with 9 years (2018-2026)
-	const sitios = generateSitios(50, 42, 2018, 9);
+	const sitios = generateSitios(10, 42, 2018, 9);
 
 	saveSitios(sitios);
 	markMockDataInitialized();
@@ -107,9 +107,9 @@ export function resetMockData(): { sitios: SitioRecord[] } {
 	localStorage.removeItem(MOCK_DATA_INITIALIZED_KEY);
 	clearSitios();
 
-	// Regenerate with new seed based on current time and 9 years of data (2020-2026)
+	// Regenerate with new seed based on current time and 9 years of data (2018-2026)
 	const seed = Date.now() % 1000000;
-	const sitios = generateSitios(20, seed, 2020, 7);
+	const sitios = generateSitios(50, seed, 2018, 9);
 
 	saveSitios(sitios);
 	markMockDataInitialized();
@@ -224,7 +224,7 @@ function initializeProgressionState(
 	const nationalIdRate2018 = isGida ? rng.nextFloat(0.2, 0.4) : rng.nextFloat(0.35, 0.55);
 
 	// Economic indicators
-	const baseIncome2018 = 280 * profile.baseIncomeMultiplier * rng.nextFloat(0.85, 1.15);
+	const baseIncome2018 = 500 * profile.baseIncomeMultiplier * rng.nextFloat(0.85, 1.15);
 	const unemploymentRate2018 = isGida
 		? rng.nextFloat(0.12, 0.25)
 		: profile.type === 'urban'
