@@ -29,6 +29,7 @@
 		ShieldAlert,
 		Signal,
 		Sparkles,
+		TrendingDown,
 		TrendingUp,
 		Users,
 		Wifi,
@@ -269,7 +270,11 @@
 													? 'text-emerald-600 dark:text-emerald-400'
 													: 'text-rose-600 dark:text-rose-400'}"
 											>
-												{stat.trend.value >= 0 ? '↑' : '↓'}
+												{#if stat.trend.value >= 0}
+													<TrendingUp class="size-3" />
+												{:else}
+													<TrendingDown class="size-3" />
+												{/if}
 												{Math.abs(stat.trend.value)}% vs last year
 											</span>
 										{/if}
@@ -368,7 +373,11 @@
 											? 'text-emerald-600 dark:text-emerald-400'
 											: 'text-rose-600 dark:text-rose-400'}"
 									>
-										{util.trend.value >= 0 ? '↑' : '↓'}
+										{#if util.trend.value >= 0}
+											<TrendingUp class="size-3" />
+										{:else}
+											<TrendingDown class="size-3" />
+										{/if}
 										{Math.abs(util.trend.value)}% vs last year
 									</span>
 								{/if}

@@ -41,6 +41,19 @@ export type {
 	Stats
 } from './audit';
 
+// Report Generation Types
+export { DEFAULT_REPORT_CONFIG, SECTION_DESCRIPTIONS, SECTION_LABELS } from './report';
+export type {
+	ReportChartImage,
+	ReportChartType,
+	ReportConfig,
+	ReportFilters,
+	ReportGenerationState,
+	ReportMetadata,
+	ReportSection,
+	ReportType
+} from './report';
+
 // Project Recommendation System
 export type {
 	CriterionResult,

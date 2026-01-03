@@ -12,7 +12,7 @@ export type AuditAction =
 	| 'export'
 	| 'import';
 
-export type AuditResourceType = 'user' | 'sitio' | 'system';
+export type AuditResourceType = 'user' | 'sitio' | 'system' | 'report';
 
 export interface AuditFieldChange {
 	field: string;

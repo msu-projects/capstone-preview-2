@@ -25,6 +25,7 @@ The system serves as a public-facing data bank that allows citizens to view deta
    - [4.3 Sitio Profile View](#43-sitio-profile-view)
    - [4.4 Data Visualization](#44-data-visualization)
    - [4.5 Sitio Data Management (Admin Only)](#45-sitio-data-management-admin-only)
+   - [4.6 Report Generation (Admin Only)](#46-report-generation-admin-only)
 
 ### System-Wide Features
 
@@ -811,6 +812,115 @@ Choose Delete Action
 - The entire sitio (core identification + all yearly data) cannot be deleted if it has associated projects
 - Deleting yearly data is tracked in the audit trail
 
+### 4.6 Report Generation (Admin Only)
+
+Administrators can generate comprehensive PDF reports containing aggregated sitio data with visualizations. This feature enables data-driven decision making by providing downloadable, shareable reports.
+
+#### 4.6.1 Report Types
+
+| Report Type      | Description                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| Aggregate Report | Summary of all sitios with aggregated statistics and charts |
+
+#### 4.6.2 Report Sections
+
+Reports can include any combination of the following sections:
+
+| Section        | Description                                                        |
+| -------------- | ------------------------------------------------------------------ |
+| Overview       | Executive summary with total sitios, population, and households    |
+| Demographics   | Population breakdown, gender distribution, vulnerable groups       |
+| Utilities      | Electricity access, sanitation coverage, internet connectivity     |
+| Facilities     | Health centers, schools, markets - availability and condition      |
+| Infrastructure | Road types, coverage, and condition assessments                    |
+| Livelihood     | Worker classifications, income levels, agricultural statistics     |
+| Safety         | Natural hazards, food security status, risk assessments            |
+| Priorities     | Community priority needs rankings and intervention recommendations |
+
+#### 4.6.3 Report Filters
+
+| Filter         | Description                                                       |
+| -------------- | ----------------------------------------------------------------- |
+| Year           | Select specific year for data snapshot                            |
+| Municipality   | Filter by specific municipality or all municipalities             |
+| Barangay       | Filter by specific barangay (cascading from municipality)         |
+| Include Trends | Toggle to include year-over-year trend comparisons when available |
+
+#### 4.6.4 Report Generation Flow
+
+```
+Start
+  │
+  ▼
+Navigate to Reports Page
+  │
+  ▼
+Configure Report
+  │
+  ├──▶ Select Report Sections (checkboxes)
+  │     - Overview, Demographics, Utilities, etc.
+  │
+  ├──▶ Set Filters
+  │     - Year selection
+  │     - Municipality filter
+  │     - Barangay filter
+  │     - Include trends toggle
+  │
+  ▼
+Review Configuration
+  │
+  ├──▶ View selected section count
+  ├──▶ View filter summary
+  └──▶ Verify include charts/trends options
+  │
+  ▼
+Generate Report
+  │
+  ▼
+System Processing
+  │
+  ├──▶ Aggregate sitio data based on filters
+  ├──▶ Calculate statistics for each section
+  ├──▶ Generate visualizations (if enabled)
+  └──▶ Build PDF document
+  │
+  ▼
+Download PDF
+  │
+  ▼
+Create Audit Log Entry
+  │
+  ├──▶ Action: 'export'
+  ├──▶ Resource Type: 'report'
+  └──▶ Details: Report configuration summary
+  │
+  ▼
+End
+```
+
+#### 4.6.5 Report Content Structure
+
+Each generated PDF report contains:
+
+| Component         | Description                                                           |
+| ----------------- | --------------------------------------------------------------------- |
+| Header            | Report title, generation date, filter context                         |
+| Table of Contents | List of included sections with page references (if multiple sections) |
+| Section Headers   | Clear section titles with icons                                       |
+| Data Tables       | Formatted tables with aggregated statistics                           |
+| Charts            | Visual representations of key metrics (optional)                      |
+| Trend Indicators  | Year-over-year comparisons when trends enabled                        |
+| Footer            | Page numbers, generation timestamp                                    |
+
+#### 4.6.6 Report Access Control
+
+| Role       | Can Generate Reports | Can View Report History |
+| ---------- | -------------------- | ----------------------- |
+| Superadmin | ✓                    | ✓                       |
+| Admin      | ✓                    | ✓                       |
+| Viewer     | ✓                    | ✗                       |
+| Public     | ✗                    | ✗                       |
+
 ---
 
 ## 5. Audit Trail
@@ -876,6 +986,7 @@ When a record is updated, the system captures the specific field changes:
 | `user`        | User account operations                                    |
 | `sitio`       | Sitio data operations                                      |
 | `system`      | System-level operations (authentication, exports, imports) |
+| `report`      | Report generation operations                               |
 
 ### 5.6 Tracked Operations by Resource
 
@@ -884,6 +995,7 @@ When a record is updated, the system captures the specific field changes:
 | **System**    | `login`, `logout`, `export`, `import` |
 | **Sitio**     | `create`, `update`, `delete`, `view`  |
 | **User**      | `create`, `update`, `delete`          |
+| **Report**    | `export`                              |
 
 **Note for Sitio Operations:**
 

@@ -483,9 +483,13 @@
 						{#if yearComparison.trends.averageIncome}
 							<Badge
 								variant={yearComparison.trends.averageIncome.isPositive ? 'default' : 'destructive'}
-								class="ml-auto"
+								class="ml-auto flex items-center gap-1"
 							>
-								{yearComparison.trends.averageIncome.value >= 0 ? '↑' : '↓'}
+								{#if yearComparison.trends.averageIncome.value >= 0}
+									<TrendingUp class="size-3" />
+								{:else}
+									<TrendingDown class="size-3" />
+								{/if}
 								{Math.abs(yearComparison.trends.averageIncome.value)}% vs last year
 							</Badge>
 						{/if}
@@ -521,9 +525,13 @@
 						{#if yearComparison.trends.povertyCount}
 							<Badge
 								variant={yearComparison.trends.povertyCount.isPositive ? 'default' : 'destructive'}
-								class="ml-auto"
+								class="ml-auto flex items-center gap-1"
 							>
-								{yearComparison.trends.povertyCount.value >= 0 ? '↑' : '↓'}
+								{#if yearComparison.trends.povertyCount.value >= 0}
+									<TrendingUp class="size-3" />
+								{:else}
+									<TrendingDown class="size-3" />
+								{/if}
 								{Math.abs(yearComparison.trends.povertyCount.value)}% poverty
 							</Badge>
 						{/if}

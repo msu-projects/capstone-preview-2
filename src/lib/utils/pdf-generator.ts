@@ -1,785 +1,1171 @@
-// import type { Sitio } from '$lib/types';
-// import { getNeedLevelFromScore } from '$lib/types';
-// import pdfMake from 'pdfmake/build/pdfmake';
-// import pdfFonts from 'pdfmake/build/vfs_fonts';
-// import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
-// import { logAuditAction } from './audit';
-// import { LOGO_BASE64 } from './logo-base64';
+import type { SitioRecord } from '$lib/types';
+import type {
+	ReportChartImage,
+	ReportConfig,
+	ReportSection,
+	SECTION_LABELS
+} from '$lib/types/report';
+import {
+	aggregateDemographics,
+	aggregateFacilities,
+	aggregateInfrastructure,
+	aggregateLivelihood,
+	aggregatePriorities,
+	aggregateSafety,
+	aggregateUtilities,
+	getYearComparison,
+	type DemographicsAggregation,
+	type FacilitiesAggregation,
+	type InfrastructureAggregation,
+	type LivelihoodAggregation,
+	type PrioritiesAggregation,
+	type SafetyAggregation,
+	type UtilitiesAggregation,
+	type YearComparison
+} from '$lib/utils/sitio-chart-aggregation';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { logAuditAction } from './audit';
+import { formatCurrency, formatNumber, formatPercentage } from './formatters';
+import { LOGO_BASE64 } from './logo-base64';
 
-// // Initialize pdfMake with fonts
-// if (pdfFonts && pdfFonts.vfs) {
-// 	pdfMake.vfs = pdfFonts.vfs;
-// }
+// Initialize pdfMake with fonts
+if (pdfFonts && pdfFonts.vfs) {
+	pdfMake.vfs = pdfFonts.vfs;
+}
 
-// // ===== SITIO PROFILE PDF GENERATION =====
+// ===== HELPER FUNCTIONS =====
 
-// /**
-//  * Helper function to format currency values
-//  */
-// function formatCurrency(value: number): string {
-// 	return value.toLocaleString('en-PH', {
-// 		style: 'currency',
-// 		currency: 'PHP',
-// 		minimumFractionDigits: 2
-// 	});
-// }
+/**
+ * Helper function to create a section header
+ */
+function createSectionHeader(title: string): Content {
+	return {
+		text: title,
+		style: 'sectionHeader',
+		margin: [0, 15, 0, 8] as [number, number, number, number]
+	};
+}
 
-// /**
-//  * Helper function to create a section header
-//  */
-// function createSectionHeader(title: string): Content {
-// 	return {
-// 		text: title,
-// 		style: 'sectionHeader',
-// 		margin: [0, 15, 0, 8] as [number, number, number, number]
-// 	};
-// }
+/**
+ * Helper function to create a subsection header
+ */
+function createSubsectionHeader(title: string): Content {
+	return {
+		text: title,
+		style: 'subsectionHeader',
+		margin: [0, 10, 0, 5] as [number, number, number, number]
+	};
+}
 
-// /**
-//  * Helper function to create a subsection header
-//  */
-// function createSubsectionHeader(title: string): Content {
-// 	return {
-// 		text: title,
-// 		style: 'subsectionHeader',
-// 		margin: [0, 10, 0, 5] as [number, number, number, number]
-// 	};
-// }
+/**
+ * Helper function to create a key-value row
+ */
+function createKeyValue(key: string, value: string | number | undefined | null): Content {
+	return {
+		columns: [
+			{ text: key, width: 200, style: 'label' },
+			{ text: value?.toString() || 'N/A', style: 'value' }
+		],
+		margin: [0, 2, 0, 2] as [number, number, number, number]
+	};
+}
 
-// /**
-//  * Helper function to create a key-value row
-//  */
-// function createKeyValue(key: string, value: string | number | undefined | null): Content {
-// 	return {
-// 		columns: [
-// 			{ text: key, width: 180, style: 'label' },
-// 			{ text: value?.toString() || 'N/A', style: 'value' }
-// 		],
-// 		margin: [0, 2, 0, 2] as [number, number, number, number]
-// 	};
-// }
+/**
+ * Create a trend indicator string
+ */
+function formatTrend(
+	value: number | null,
+	isPositive: boolean | null,
+	suffix: string = ''
+): string {
+	if (value === null) return '';
+	const arrow = isPositive ? '↑' : '↓';
+	const sign = value >= 0 ? '+' : '';
+	return ` ${arrow} ${sign}${value.toFixed(1)}%${suffix}`;
+}
 
-// /**
-//  * Get need level display info
-//  */
-// function getNeedLevelInfo(score: number): { text: string; color: string } {
-// 	const level = getNeedLevelFromScore(score);
-// 	const colors: Record<string, string> = {
-// 		critical: '#DC2626',
-// 		high: '#EA580C',
-// 		medium: '#CA8A04',
-// 		low: '#16A34A'
-// 	};
-// 	return {
-// 		text: level.charAt(0).toUpperCase() + level.slice(1),
-// 		color: colors[level] || '#6B7280'
-// 	};
-// }
+/**
+ * Create a stat card for quick stats section
+ */
+function createStatCard(label: string, value: string, trend?: string): Content {
+	const stack: Content[] = [
+		{ text: label, style: 'statLabel', alignment: 'center' },
+		{ text: value, style: 'statValue', alignment: 'center' }
+	];
 
-// /**
-//  * Generates a comprehensive PDF profile for a sitio
-//  */
-// export function generateSitioProfilePDF(sitio: Sitio) {
-// 	const currentDate = new Date().toLocaleDateString('en-US', {
-// 		year: 'numeric',
-// 		month: 'long',
-// 		day: 'numeric'
-// 	});
+	if (trend) {
+		stack.push({
+			text: trend,
+			style: 'trendText',
+			color: trend.includes('↑') ? '#16A34A' : '#DC2626',
+			alignment: 'center'
+		});
+	}
 
-// 	const needLevelInfo = getNeedLevelInfo(sitio.need_score ?? 5);
+	return {
+		stack
+	};
+}
 
-// 	// Build content sections
-// 	const content: Content[] = [];
+/**
+ * Create a data table
+ */
+function createTable(
+	headers: string[],
+	rows: (string | number)[][],
+	widths?: (string | number)[]
+): Content {
+	const tableWidths = widths || headers.map(() => '*');
 
-// 	// ===== HEADER WITH LOGO =====
-// 	content.push({
-// 		columns: [
-// 			{
-// 				image: LOGO_BASE64,
-// 				width: 60,
-// 				alignment: 'left'
-// 			},
-// 			{
-// 				stack: [
-// 					{
-// 						text: 'SITIO PROFILE REPORT',
-// 						style: 'documentTitle',
-// 						alignment: 'center'
-// 					},
-// 					{
-// 						text: 'South Cotabato Convergence Data Bank',
-// 						style: 'documentSubtitle',
-// 						alignment: 'center'
-// 					},
-// 					{
-// 						text: `Generated: ${currentDate}`,
-// 						fontSize: 9,
-// 						italics: true,
-// 						alignment: 'center',
-// 						margin: [0, 5, 0, 0] as [number, number, number, number]
-// 					}
-// 				],
-// 				width: '*'
-// 			},
-// 			{
-// 				width: 60,
-// 				text: ''
-// 			}
-// 		],
-// 		margin: [0, 0, 0, 20] as [number, number, number, number]
-// 	});
+	return {
+		table: {
+			widths: tableWidths,
+			body: [
+				headers.map((h) => ({ text: h, style: 'tableHeader' })),
+				...rows.map((row) => row.map((cell) => ({ text: cell.toString(), style: 'tableCell' })))
+			]
+		},
+		layout: 'lightHorizontalLines',
+		margin: [0, 5, 0, 10] as [number, number, number, number]
+	};
+}
 
-// 	// ===== SITIO IDENTIFICATION =====
-// 	content.push({
-// 		table: {
-// 			widths: ['*'],
-// 			body: [
-// 				[
-// 					{
-// 						stack: [
-// 							{
-// 								text: sitio.name,
-// 								style: 'sitioName',
-// 								margin: [0, 0, 0, 5] as [number, number, number, number]
-// 							},
-// 							{
-// 								text: `${sitio.barangay}, ${sitio.municipality}${sitio.province ? `, ${sitio.province}` : ''}`,
-// 								style: 'sitioLocation'
-// 							}
-// 						],
-// 						fillColor: '#F1F5F9',
-// 						margin: [15, 12, 15, 12] as [number, number, number, number]
-// 					}
-// 				]
-// 			]
-// 		},
-// 		layout: {
-// 			hLineWidth: () => 1,
-// 			vLineWidth: () => 1,
-// 			hLineColor: () => '#CBD5E1',
-// 			vLineColor: () => '#CBD5E1'
-// 		},
-// 		margin: [0, 0, 0, 15] as [number, number, number, number]
-// 	});
+// ===== SECTION BUILDERS =====
 
-// 	// ===== QUICK STATS =====
-// 	content.push({
-// 		columns: [
-// 			{
-// 				stack: [
-// 					{ text: 'Population', style: 'statLabel' },
-// 					{ text: (sitio.population || 0).toLocaleString(), style: 'statValue' }
-// 				],
-// 				width: '*',
-// 				alignment: 'center'
-// 			},
-// 			{
-// 				stack: [
-// 					{ text: 'Households', style: 'statLabel' },
-// 					{ text: (sitio.households || 0).toLocaleString(), style: 'statValue' }
-// 				],
-// 				width: '*',
-// 				alignment: 'center'
-// 			},
-// 			{
-// 				stack: [
-// 					{ text: 'Need Score', style: 'statLabel' },
-// 					{
-// 						text: `${sitio.need_score ?? 'N/A'}/10`,
-// 						style: 'statValue',
-// 						color: needLevelInfo.color
-// 					}
-// 				],
-// 				width: '*',
-// 				alignment: 'center'
-// 			},
-// 			{
-// 				stack: [
-// 					{ text: 'Need Level', style: 'statLabel' },
-// 					{ text: needLevelInfo.text, style: 'statValue', color: needLevelInfo.color }
-// 				],
-// 				width: '*',
-// 				alignment: 'center'
-// 			}
-// 		],
-// 		margin: [0, 0, 0, 20] as [number, number, number, number]
-// 	});
+interface AggregatedData {
+	demographics: DemographicsAggregation;
+	utilities: UtilitiesAggregation;
+	facilities: FacilitiesAggregation;
+	infrastructure: InfrastructureAggregation;
+	livelihood: LivelihoodAggregation;
+	safety: SafetyAggregation;
+	priorities: PrioritiesAggregation;
+	yearComparison: YearComparison | null;
+	sitioCount: number;
+}
 
-// 	// ===== OVERVIEW SECTION =====
-// 	content.push(createSectionHeader('Overview'));
-// 	content.push(createKeyValue('Sitio Code', sitio.coding));
-// 	content.push(
-// 		createKeyValue(
-// 			'Coordinates',
-// 			sitio.coordinates
-// 				? `${sitio.coordinates.lat.toFixed(6)}, ${sitio.coordinates.lng.toFixed(6)}`
-// 				: undefined
-// 		)
-// 	);
+/**
+ * Build overview section content
+ */
+function buildOverviewSection(
+	data: AggregatedData,
+	config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { demographics, utilities, yearComparison } = data;
 
-// 	// ===== DEMOGRAPHICS SECTION =====
-// 	content.push(createSectionHeader('Demographics'));
+	// Use chartImages to avoid unused parameter warning
+	void chartImages;
 
-// 	if (sitio.demographics) {
-// 		const demo = sitio.demographics;
-// 		const dependencyRatio =
-// 			demo.age_15_64 > 0
-// 				? (((demo.age_0_14 || 0) + (demo.age_65_above || 0)) / demo.age_15_64) * 100
-// 				: 0;
+	content.push(createSectionHeader('Overview & Summary'));
 
-// 		content.push({
-// 			table: {
-// 				widths: ['*', '*'],
-// 				body: [
-// 					[{ text: 'Gender Distribution', style: 'tableSubHeader', colSpan: 2 }, {}],
-// 					[
-// 						{ text: 'Male', style: 'tableCell' },
-// 						{
-// 							text: `${(demo.male || 0).toLocaleString()} (${demo.total ? ((demo.male / demo.total) * 100).toFixed(1) : 0}%)`,
-// 							style: 'tableCell'
-// 						}
-// 					],
-// 					[
-// 						{ text: 'Female', style: 'tableCell' },
-// 						{
-// 							text: `${(demo.female || 0).toLocaleString()} (${demo.total ? ((demo.female / demo.total) * 100).toFixed(1) : 0}%)`,
-// 							style: 'tableCell'
-// 						}
-// 					],
-// 					[
-// 						{ text: 'Total', style: 'tableCellBold' },
-// 						{ text: (demo.total || 0).toLocaleString(), style: 'tableCellBold' }
-// 					]
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
+	// Quick stats cards
+	const populationTrend =
+		config.includeTrends && yearComparison?.trends.population
+			? formatTrend(
+					yearComparison.trends.population.value,
+					yearComparison.trends.population.isPositive
+				)
+			: undefined;
 
-// 		content.push({
-// 			table: {
-// 				widths: ['*', '*'],
-// 				body: [
-// 					[{ text: 'Age Distribution', style: 'tableSubHeader', colSpan: 2 }, {}],
-// 					[
-// 						{ text: 'Children (0-14 years)', style: 'tableCell' },
-// 						{ text: (demo.age_0_14 || 0).toLocaleString(), style: 'tableCell' }
-// 					],
-// 					[
-// 						{ text: 'Working Age (15-64 years)', style: 'tableCell' },
-// 						{ text: (demo.age_15_64 || 0).toLocaleString(), style: 'tableCell' }
-// 					],
-// 					[
-// 						{ text: 'Elderly (65+ years)', style: 'tableCell' },
-// 						{ text: (demo.age_65_above || 0).toLocaleString(), style: 'tableCell' }
-// 					],
-// 					[
-// 						{ text: 'Dependency Ratio', style: 'tableCellBold' },
-// 						{ text: `${dependencyRatio.toFixed(1)}%`, style: 'tableCellBold' }
-// 					]
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	} else {
-// 		content.push({ text: 'No demographic data available.', style: 'noData' });
-// 	}
+	const householdTrend =
+		config.includeTrends && yearComparison?.trends.households
+			? formatTrend(
+					yearComparison.trends.households.value,
+					yearComparison.trends.households.isPositive
+				)
+			: undefined;
 
-// 	// ===== ECONOMIC & LIVELIHOODS SECTION =====
-// 	content.push(createSectionHeader('Economic & Livelihoods'));
+	content.push({
+		columns: [
+			createStatCard('Total Sitios', formatNumber(data.sitioCount)),
+			createStatCard(
+				'Total Population',
+				formatNumber(demographics.totalPopulation),
+				populationTrend
+			),
+			createStatCard(
+				'Total Households',
+				formatNumber(demographics.totalHouseholds),
+				householdTrend
+			),
+			createStatCard('Electrification Rate', formatPercentage(utilities.electricityPercent, 1))
+		],
+		margin: [0, 10, 0, 15] as [number, number, number, number]
+	});
 
-// 	// Employment Types
-// 	if (sitio.economic_condition?.employments && sitio.economic_condition.employments.length > 0) {
-// 		content.push(createSubsectionHeader('Employment Types'));
-// 		content.push({
-// 			text: sitio.economic_condition.employments.join(', '),
-// 			style: 'paragraph'
-// 		});
-// 	}
+	// Geographic summary
+	content.push(createSubsectionHeader('Geographic Coverage'));
+	content.push(createKeyValue('Total Sitios Covered', data.sitioCount));
+	if (config.filters.municipality) {
+		content.push(createKeyValue('Municipality', config.filters.municipality));
+	}
+	if (config.filters.barangay) {
+		content.push(createKeyValue('Barangay', config.filters.barangay));
+	}
+	content.push(createKeyValue('Data Year', config.filters.year.toString()));
+	if (config.filters.compareYear) {
+		content.push(createKeyValue('Comparison Year', config.filters.compareYear.toString()));
+	}
 
-// 	// Income Brackets
-// 	if (
-// 		sitio.economic_condition?.income_brackets &&
-// 		sitio.economic_condition.income_brackets.length > 0
-// 	) {
-// 		content.push(createSubsectionHeader('Income Brackets (Daily)'));
-// 		const formattedBrackets = sitio.economic_condition.income_brackets.map((bracket) => {
-// 			switch (bracket) {
-// 				case '<=100':
-// 					return 'Below ₱100/day';
-// 				case '100-300':
-// 					return '₱100-300/day';
-// 				case '300-500':
-// 					return '₱300-500/day';
-// 				case '>=500':
-// 					return '₱500+/day';
-// 				default:
-// 					return bracket;
-// 			}
-// 		});
-// 		content.push({
-// 			text: formattedBrackets.join(', '),
-// 			style: 'paragraph'
-// 		});
-// 	}
+	// Classification breakdown
+	content.push(createSubsectionHeader('Sitio Classifications'));
+	content.push(
+		createTable(
+			['Classification', 'Count', 'Percentage'],
+			[
+				[
+					'GIDA (Isolated)',
+					demographics.gidaCount,
+					formatPercentage((demographics.gidaCount / data.sitioCount) * 100, 1)
+				],
+				[
+					'Indigenous',
+					demographics.indigenousCount,
+					formatPercentage((demographics.indigenousCount / data.sitioCount) * 100, 1)
+				],
+				[
+					'Conflict-Affected',
+					demographics.conflictCount,
+					formatPercentage((demographics.conflictCount / data.sitioCount) * 100, 1)
+				]
+			]
+		)
+	);
 
-// 	// Agriculture
-// 	if (sitio.agriculture) {
-// 		content.push(createSubsectionHeader('Agriculture'));
-// 		content.push(createKeyValue('Number of Farmers', sitio.agriculture.farmers_count));
-// 		content.push(createKeyValue('Farmer Associations', sitio.agriculture.farmer_associations));
-// 		content.push(
-// 			createKeyValue('Farm Area', `${sitio.agriculture.farm_area_hectares || 0} hectares`)
-// 		);
-// 		if (sitio.agriculture.top_crops && sitio.agriculture.top_crops.length > 0) {
-// 			content.push(createKeyValue('Top Crops', sitio.agriculture.top_crops.join(', ')));
-// 		}
-// 	}
+	return content;
+}
 
-// 	// Livestock & Poultry
-// 	if (sitio.livestock_poultry && sitio.livestock_poultry.length > 0) {
-// 		content.push(createSubsectionHeader('Livestock & Poultry'));
-// 		content.push({
-// 			text: sitio.livestock_poultry.join(', '),
-// 			style: 'value',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	}
+/**
+ * Build demographics section content
+ */
+function buildDemographicsSection(
+	data: AggregatedData,
+	config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { demographics, yearComparison } = data;
 
-// 	// ===== INFRASTRUCTURE & HOUSING SECTION =====
-// 	content.push(createSectionHeader('Infrastructure & Housing'));
+	content.push(createSectionHeader('Demographics & Population'));
 
-// 	// Housing Quality
-// 	if (sitio.housing?.quality_types && sitio.housing.quality_types.length > 0) {
-// 		content.push(createSubsectionHeader('Housing Quality'));
-// 		const housingQualityRows = sitio.housing.quality_types.map((h) => [
-// 			{ text: h.type, style: 'tableCell' },
-// 			{ text: h.count.toLocaleString(), style: 'tableCell' }
-// 		]);
-// 		content.push({
-// 			table: {
-// 				widths: ['*', 100],
-// 				body: [
-// 					[
-// 						{ text: 'Type', style: 'tableHeader' },
-// 						{ text: 'Count', style: 'tableHeader' }
-// 					],
-// 					...housingQualityRows
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	}
+	// Population breakdown
+	content.push(createSubsectionHeader('Population Overview'));
+	content.push(
+		createTable(
+			['Metric', 'Count', 'Percentage'],
+			[
+				['Total Population', formatNumber(demographics.totalPopulation), '100%'],
+				[
+					'Male',
+					formatNumber(demographics.totalMale),
+					formatPercentage(demographics.malePercent, 1)
+				],
+				[
+					'Female',
+					formatNumber(demographics.totalFemale),
+					formatPercentage(demographics.femalePercent, 1)
+				],
+				['Total Households', formatNumber(demographics.totalHouseholds), '-'],
+				['Avg Household Size', demographics.averageHouseholdSize.toFixed(1), '-']
+			]
+		)
+	);
 
-// 	// Housing Ownership
-// 	if (sitio.housing?.ownership_types && sitio.housing.ownership_types.length > 0) {
-// 		content.push(createSubsectionHeader('Housing Ownership'));
-// 		const ownershipRows = sitio.housing.ownership_types.map((h) => [
-// 			{ text: h.type, style: 'tableCell' },
-// 			{ text: h.count.toLocaleString(), style: 'tableCell' }
-// 		]);
-// 		content.push({
-// 			table: {
-// 				widths: ['*', 100],
-// 				body: [
-// 					[
-// 						{ text: 'Type', style: 'tableHeader' },
-// 						{ text: 'Count', style: 'tableHeader' }
-// 					],
-// 					...ownershipRows
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	}
+	// Age distribution
+	content.push(createSubsectionHeader('Age Distribution'));
+	content.push(
+		createTable(
+			['Age Group', 'Count', 'Percentage'],
+			[
+				[
+					'Youth (0-14)',
+					formatNumber(demographics.youth),
+					formatPercentage(demographics.youthPercent, 1)
+				],
+				[
+					'Working Age (15-64)',
+					formatNumber(demographics.workingAge),
+					formatPercentage(demographics.workingAgePercent, 1)
+				],
+				[
+					'Elderly (65+)',
+					formatNumber(demographics.elderly),
+					formatPercentage(demographics.elderlyPercent, 1)
+				]
+			]
+		)
+	);
 
-// 	// Water & Sanitation
-// 	if (sitio.water_sanitation) {
-// 		content.push(createSubsectionHeader('Water & Sanitation'));
-// 		content.push(createKeyValue('Water Systems Count', sitio.water_sanitation.water_systems_count));
+	// Vulnerable groups
+	content.push(createSubsectionHeader('Vulnerable Groups'));
+	content.push(
+		createTable(
+			['Group', 'Count'],
+			[
+				['Seniors (60+)', formatNumber(demographics.totalSeniors)],
+				['Muslim Population', formatNumber(demographics.totalMuslim)],
+				['Indigenous Peoples (IP)', formatNumber(demographics.totalIP)],
+				['Out-of-School Youth', formatNumber(demographics.totalOSY)],
+				['Without Birth Certificate', formatNumber(demographics.totalNoBirthCert)],
+				['Without National ID', formatNumber(demographics.totalNoNationalID)]
+			]
+		)
+	);
 
-// 		if (sitio.water_sanitation.water_sources && sitio.water_sanitation.water_sources.length > 0) {
-// 			const waterSourcesText = sitio.water_sanitation.water_sources
-// 				.map((ws) => `${ws.source} (${ws.status})`)
-// 				.join(', ');
-// 			content.push(createKeyValue('Water Sources', waterSourcesText));
-// 		}
+	// Labor force
+	content.push(createSubsectionHeader('Labor Force'));
+	const unemploymentTrend =
+		config.includeTrends && yearComparison?.trends.employmentRate
+			? formatTrend(
+					yearComparison.trends.employmentRate.value,
+					yearComparison.trends.employmentRate.isPositive
+				)
+			: '';
 
-// 		content.push(
-// 			createKeyValue('Households without Toilet', sitio.water_sanitation.households_without_toilet)
-// 		);
+	content.push(createKeyValue('Total Labor Force', formatNumber(demographics.totalLaborWorkforce)));
+	content.push(createKeyValue('Unemployed', formatNumber(demographics.totalUnemployed)));
+	content.push(
+		createKeyValue(
+			'Unemployment Rate',
+			formatPercentage(demographics.unemploymentRate, 1) + unemploymentTrend
+		)
+	);
+	content.push(createKeyValue('Registered Voters', formatNumber(demographics.totalVoters)));
 
-// 		if (
-// 			sitio.water_sanitation.toilet_facility_types &&
-// 			sitio.water_sanitation.toilet_facility_types.length > 0
-// 		) {
-// 			content.push(
-// 				createKeyValue(
-// 					'Toilet Facility Types',
-// 					sitio.water_sanitation.toilet_facility_types.join(', ')
-// 				)
-// 			);
-// 		}
+	// Add chart if available
+	if (config.includeCharts && chartImages.has('demographics-gender')) {
+		content.push({
+			image: chartImages.get('demographics-gender')!,
+			width: 400,
+			alignment: 'center' as const,
+			margin: [0, 10, 0, 10] as [number, number, number, number]
+		});
+	}
 
-// 		content.push(
-// 			createKeyValue(
-// 				'Waste Segregation Practice',
-// 				sitio.water_sanitation.waste_segregation_practice === true
-// 					? 'Yes'
-// 					: sitio.water_sanitation.waste_segregation_practice === false
-// 						? 'No'
-// 						: 'Unknown'
-// 			)
-// 		);
-// 	}
+	return content;
+}
 
-// 	// Utilities
-// 	if (sitio.utilities) {
-// 		content.push(createSubsectionHeader('Utilities'));
-// 		content.push(
-// 			createKeyValue('Households with Electricity', sitio.utilities.households_with_electricity)
-// 		);
-// 		if (
-// 			sitio.utilities.alternative_electricity_sources &&
-// 			sitio.utilities.alternative_electricity_sources.length > 0
-// 		) {
-// 			content.push(
-// 				createKeyValue(
-// 					'Alternative Power Sources',
-// 					sitio.utilities.alternative_electricity_sources.join(', ')
-// 				)
-// 			);
-// 		}
-// 	}
+/**
+ * Build utilities section content
+ */
+function buildUtilitiesSection(
+	data: AggregatedData,
+	config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { utilities, yearComparison } = data;
 
-// 	// ===== SOCIAL SERVICES SECTION =====
-// 	content.push(createSectionHeader('Social Services'));
+	content.push(createSectionHeader('Utilities & Connectivity'));
 
-// 	if (sitio.social_services) {
-// 		content.push(createKeyValue('Registered Voters', sitio.social_services.registered_voters));
-// 		content.push(
-// 			createKeyValue('PhilHealth Beneficiaries', sitio.social_services.philhealth_beneficiaries)
-// 		);
-// 		content.push(createKeyValue('4Ps Beneficiaries', sitio.social_services.fourps_beneficiaries));
-// 	}
+	// Coverage rates
+	content.push(createSubsectionHeader('Access Rates'));
 
-// 	// Food Security
-// 	if (sitio.food_security) {
-// 		content.push(createSubsectionHeader('Food Security'));
-// 		content.push(
-// 			createKeyValue(
-// 				'Households with Backyard Garden',
-// 				sitio.food_security.households_with_backyard_garden
-// 			)
-// 		);
-// 		if (
-// 			sitio.food_security.common_garden_commodities &&
-// 			sitio.food_security.common_garden_commodities.length > 0
-// 		) {
-// 			content.push(
-// 				createKeyValue(
-// 					'Common Garden Commodities',
-// 					sitio.food_security.common_garden_commodities.join(', ')
-// 				)
-// 			);
-// 		}
-// 	}
+	const electricityTrend =
+		config.includeTrends && yearComparison?.trends.electricityAccess
+			? formatTrend(
+					yearComparison.trends.electricityAccess.value,
+					yearComparison.trends.electricityAccess.isPositive
+				)
+			: '';
 
-// 	// Domestic Animals
-// 	if (sitio.domestic_animals) {
-// 		content.push(createSubsectionHeader('Domestic Animals'));
-// 		content.push(
-// 			createKeyValue(
-// 				'Dogs',
-// 				`${sitio.domestic_animals.dogs || 0} (${sitio.domestic_animals.dogs_vaccinated || 0} vaccinated)`
-// 			)
-// 		);
-// 		content.push(
-// 			createKeyValue(
-// 				'Cats',
-// 				`${sitio.domestic_animals.cats || 0} (${sitio.domestic_animals.cats_vaccinated || 0} vaccinated)`
-// 			)
-// 		);
-// 	}
+	const toiletTrend =
+		config.includeTrends && yearComparison?.trends.toiletAccess
+			? formatTrend(
+					yearComparison.trends.toiletAccess.value,
+					yearComparison.trends.toiletAccess.isPositive
+				)
+			: '';
 
-// 	// Community Empowerment
-// 	if (sitio.community_empowerment) {
-// 		content.push(createSubsectionHeader('Community Empowerment'));
-// 		content.push(
-// 			createKeyValue('Sectoral Organizations', sitio.community_empowerment.sectoral_organizations)
-// 		);
-// 		if (
-// 			sitio.community_empowerment.info_dissemination_methods &&
-// 			sitio.community_empowerment.info_dissemination_methods.length > 0
-// 		) {
-// 			content.push(
-// 				createKeyValue(
-// 					'Info Dissemination Methods',
-// 					sitio.community_empowerment.info_dissemination_methods.join(', ')
-// 				)
-// 			);
-// 		}
-// 		if (
-// 			sitio.community_empowerment.transportation_methods &&
-// 			sitio.community_empowerment.transportation_methods.length > 0
-// 		) {
-// 			content.push(
-// 				createKeyValue(
-// 					'Transportation Methods',
-// 					sitio.community_empowerment.transportation_methods.join(', ')
-// 				)
-// 			);
-// 		}
-// 	}
+	const internetTrend =
+		config.includeTrends && yearComparison?.trends.internetAccess
+			? formatTrend(
+					yearComparison.trends.internetAccess.value,
+					yearComparison.trends.internetAccess.isPositive
+				)
+			: '';
 
-// 	// Ethnicity and Religion
-// 	if (sitio.ethnicities && sitio.ethnicities.length > 0) {
-// 		content.push(createKeyValue('Ethnicities', sitio.ethnicities.join(', ')));
-// 	}
-// 	if (sitio.religions && sitio.religions.length > 0) {
-// 		content.push(createKeyValue('Religions', sitio.religions.join(', ')));
-// 	}
+	content.push(
+		createTable(
+			['Utility', 'Households', 'Coverage Rate', 'Trend'],
+			[
+				[
+					'Electricity',
+					formatNumber(utilities.householdsWithElectricity),
+					formatPercentage(utilities.electricityPercent, 1),
+					electricityTrend
+				],
+				[
+					'Toilet Facilities',
+					formatNumber(utilities.householdsWithToilet),
+					formatPercentage(utilities.toiletPercent, 1),
+					toiletTrend
+				],
+				[
+					'Internet Access',
+					formatNumber(utilities.householdsWithInternet),
+					formatPercentage(utilities.internetPercent, 1),
+					internetTrend
+				]
+			]
+		)
+	);
 
-// 	// ===== ISSUES & PPAs SECTION =====
-// 	content.push(createSectionHeader('Issues & Proposed Programs/Projects'));
+	// Electricity sources
+	content.push(createSubsectionHeader('Electricity Sources'));
+	content.push(
+		createTable(
+			['Source', 'Households'],
+			[
+				['Grid Connection', formatNumber(utilities.electricityGrid)],
+				['Solar Power', formatNumber(utilities.electricitySolar)],
+				['Battery', formatNumber(utilities.electricityBattery)],
+				['Generator', formatNumber(utilities.electricityGenerator)]
+			]
+		)
+	);
 
-// 	// Issues & Concerns
-// 	if (sitio.issues_concerns && sitio.issues_concerns.length > 0) {
-// 		content.push(createSubsectionHeader('Issues & Concerns'));
-// 		const issueRows = sitio.issues_concerns.map((issue) => [
-// 			{ text: issue.name, style: 'tableCell' },
-// 			{ text: issue.category, style: 'tableCell' }
-// 		]);
-// 		content.push({
-// 			table: {
-// 				widths: ['*', 150],
-// 				body: [
-// 					[
-// 						{ text: 'Issue', style: 'tableHeader' },
-// 						{ text: 'Category', style: 'tableHeader' }
-// 					],
-// 					...issueRows
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	} else {
-// 		content.push({ text: 'No issues/concerns recorded.', style: 'noData' });
-// 	}
+	// Mobile signal coverage
+	content.push(createSubsectionHeader('Mobile Signal Coverage'));
+	const totalSignal =
+		utilities.signal5G +
+		utilities.signal4G +
+		utilities.signal3G +
+		utilities.signal2G +
+		utilities.signalNone;
+	content.push(
+		createTable(
+			['Signal Type', 'Sitios', 'Percentage'],
+			[
+				[
+					'5G Coverage',
+					utilities.signal5G,
+					formatPercentage((utilities.signal5G / totalSignal) * 100, 1)
+				],
+				[
+					'4G Coverage',
+					utilities.signal4G,
+					formatPercentage((utilities.signal4G / totalSignal) * 100, 1)
+				],
+				[
+					'3G Coverage',
+					utilities.signal3G,
+					formatPercentage((utilities.signal3G / totalSignal) * 100, 1)
+				],
+				[
+					'2G Coverage',
+					utilities.signal2G,
+					formatPercentage((utilities.signal2G / totalSignal) * 100, 1)
+				],
+				[
+					'No Signal',
+					utilities.signalNone,
+					formatPercentage((utilities.signalNone / totalSignal) * 100, 1)
+				]
+			]
+		)
+	);
 
-// 	// Proposed PPAs
-// 	if (sitio.proposed_ppas && sitio.proposed_ppas.length > 0) {
-// 		content.push(createSubsectionHeader('Proposed Programs, Projects & Activities'));
-// 		const ppaRows = sitio.proposed_ppas.map((ppa) => [
-// 			{ text: ppa.name, style: 'tableCell' },
-// 			{ text: ppa.category, style: 'tableCell' }
-// 		]);
-// 		content.push({
-// 			table: {
-// 				widths: ['*', 150],
-// 				body: [
-// 					[
-// 						{ text: 'PPA', style: 'tableHeader' },
-// 						{ text: 'Category', style: 'tableHeader' }
-// 					],
-// 					...ppaRows
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	} else {
-// 		content.push({ text: 'No proposed PPAs recorded.', style: 'noData' });
-// 	}
+	// Add chart if available
+	if (config.includeCharts && chartImages.has('utilities-coverage')) {
+		content.push({
+			image: chartImages.get('utilities-coverage')!,
+			width: 400,
+			alignment: 'center' as const,
+			margin: [0, 10, 0, 10] as [number, number, number, number]
+		});
+	}
 
-// 	// ===== LOCAL OFFICIALS SECTION =====
-// 	if (sitio.local_officials && sitio.local_officials.length > 0) {
-// 		content.push(createSectionHeader('Local Officials'));
-// 		const officialRows = sitio.local_officials.map((official) => [
-// 			{ text: official.name, style: 'tableCell' },
-// 			{ text: official.position, style: 'tableCell' }
-// 		]);
-// 		content.push({
-// 			table: {
-// 				widths: ['*', '*'],
-// 				body: [
-// 					[
-// 						{ text: 'Name', style: 'tableHeader' },
-// 						{ text: 'Position', style: 'tableHeader' }
-// 					],
-// 					...officialRows
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	}
+	return content;
+}
 
-// 	// ===== RST OFFICIALS SECTION =====
-// 	if (sitio.rst_officials && sitio.rst_officials.length > 0) {
-// 		content.push(createSectionHeader('RST Officials'));
-// 		const rstRows = sitio.rst_officials.map((official) => [
-// 			{ text: official.name, style: 'tableCell' },
-// 			{ text: official.position, style: 'tableCell' }
-// 		]);
-// 		content.push({
-// 			table: {
-// 				widths: ['*', '*'],
-// 				body: [
-// 					[
-// 						{ text: 'Name', style: 'tableHeader' },
-// 						{ text: 'Position', style: 'tableHeader' }
-// 					],
-// 					...rstRows
-// 				]
-// 			},
-// 			layout: 'lightHorizontalLines',
-// 			margin: [0, 5, 0, 10] as [number, number, number, number]
-// 		});
-// 	}
+/**
+ * Build facilities section content
+ */
+function buildFacilitiesSection(
+	data: AggregatedData,
+	_config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { facilities } = data;
 
-// 	// Document definition
-// 	const docDefinition: TDocumentDefinitions = {
-// 		pageOrientation: 'portrait',
-// 		pageSize: 'LEGAL',
-// 		pageMargins: [40, 40, 40, 60],
-// 		footer: (currentPage: number, pageCount: number) => {
-// 			return {
-// 				columns: [
-// 					{
-// 						text: 'South Cotabato Convergence Data Bank - Sitio Profile',
-// 						fontSize: 8,
-// 						color: '#6B7280',
-// 						margin: [40, 0, 0, 0]
-// 					},
-// 					{
-// 						text: `Page ${currentPage} of ${pageCount}`,
-// 						alignment: 'right',
-// 						fontSize: 8,
-// 						color: '#6B7280',
-// 						margin: [0, 0, 40, 0]
-// 					}
-// 				]
-// 			};
-// 		},
-// 		content,
-// 		styles: {
-// 			documentTitle: {
-// 				fontSize: 16,
-// 				bold: true,
-// 				color: '#1E293B'
-// 			},
-// 			documentSubtitle: {
-// 				fontSize: 11,
-// 				color: '#475569'
-// 			},
-// 			sitioName: {
-// 				fontSize: 20,
-// 				bold: true,
-// 				color: '#0F172A'
-// 			},
-// 			sitioLocation: {
-// 				fontSize: 12,
-// 				color: '#64748B'
-// 			},
-// 			statLabel: {
-// 				fontSize: 9,
-// 				color: '#64748B'
-// 			},
-// 			statValue: {
-// 				fontSize: 14,
-// 				bold: true,
-// 				color: '#1E293B'
-// 			},
-// 			sectionHeader: {
-// 				fontSize: 14,
-// 				bold: true,
-// 				color: '#1E40AF',
-// 				decoration: 'underline'
-// 			},
-// 			subsectionHeader: {
-// 				fontSize: 11,
-// 				bold: true,
-// 				color: '#334155'
-// 			},
-// 			label: {
-// 				fontSize: 10,
-// 				color: '#64748B'
-// 			},
-// 			value: {
-// 				fontSize: 10,
-// 				color: '#1E293B'
-// 			},
-// 			tableHeader: {
-// 				fontSize: 9,
-// 				bold: true,
-// 				fillColor: '#E2E8F0',
-// 				color: '#1E293B'
-// 			},
-// 			tableSubHeader: {
-// 				fontSize: 10,
-// 				bold: true,
-// 				fillColor: '#F1F5F9',
-// 				color: '#334155'
-// 			},
-// 			tableCell: {
-// 				fontSize: 9,
-// 				color: '#374151'
-// 			},
-// 			tableCellBold: {
-// 				fontSize: 9,
-// 				bold: true,
-// 				color: '#1E293B'
-// 			},
-// 			noData: {
-// 				fontSize: 9,
-// 				italics: true,
-// 				color: '#9CA3AF',
-// 				margin: [0, 5, 0, 10] as [number, number, number, number]
-// 			}
-// 		}
-// 	};
+	content.push(createSectionHeader('Community Facilities'));
 
-// 	return pdfMake.createPdf(docDefinition);
-// }
+	// Facility labels mapping
+	const facilityLabels: Record<string, string> = {
+		healthCenter: 'Health Center',
+		pharmacy: 'Pharmacy',
+		communityToilet: 'Community Toilet',
+		kindergarten: 'Kindergarten',
+		elementarySchool: 'Elementary School',
+		highSchool: 'High School',
+		madrasah: 'Madrasah',
+		market: 'Market'
+	};
 
-// /**
-//  * Downloads a sitio profile PDF
-//  */
-// export function downloadSitioProfilePDF(sitio: Sitio, fileName?: string) {
-// 	const pdf = generateSitioProfilePDF(sitio);
-// 	const sanitizedName = sitio.name.replace(/[^a-z0-9]/gi, '_');
-// 	const defaultFileName = `${sanitizedName}_Profile.pdf`;
-// 	const finalFileName = fileName || defaultFileName;
-// 	pdf.download(finalFileName);
+	// Facility existence
+	content.push(createSubsectionHeader('Facility Availability'));
 
-// 	// Log the export action
-// 	logAuditAction(
-// 		'export',
-// 		'sitio',
-// 		sitio.id,
-// 		finalFileName,
-// 		`Exported sitio profile to PDF: ${sitio.name}`
-// 	);
-// }
+	const facilityRows: (string | number)[][] = [];
+	for (const [key, label] of Object.entries(facilityLabels)) {
+		const facility = facilities[key as keyof FacilitiesAggregation];
+		if (facility && typeof facility === 'object' && 'exists' in facility) {
+			facilityRows.push([
+				label,
+				facility.exists,
+				facility.notExist,
+				facility.averageDistance > 0 ? `${facility.averageDistance.toFixed(1)} km` : '-'
+			]);
+		}
+	}
 
-// /**
-//  * Opens a sitio profile PDF in a new window
-//  */
-// export function openSitioProfilePDF(sitio: Sitio) {
-// 	const pdf = generateSitioProfilePDF(sitio);
-// 	pdf.open();
+	content.push(createTable(['Facility', 'Exists', 'Not Available', 'Avg Distance'], facilityRows));
 
-// 	// Log the export action
-// 	logAuditAction(
-// 		'export',
-// 		'sitio',
-// 		sitio.id,
-// 		'PDF Preview',
-// 		`Previewed sitio profile PDF: ${sitio.name}`
-// 	);
-// }
+	// Facility conditions
+	content.push(createSubsectionHeader('Facility Conditions'));
+
+	const conditionRows: (string | number)[][] = [];
+	for (const [key, label] of Object.entries(facilityLabels)) {
+		const facility = facilities[key as keyof FacilitiesAggregation];
+		if (facility && typeof facility === 'object' && 'excellent' in facility) {
+			conditionRows.push([
+				label,
+				facility.excellent,
+				facility.good,
+				facility.fair,
+				facility.poor,
+				facility.critical
+			]);
+		}
+	}
+
+	content.push(
+		createTable(['Facility', 'Excellent', 'Good', 'Fair', 'Poor', 'Critical'], conditionRows, [
+			'*',
+			60,
+			60,
+			60,
+			60,
+			60
+		])
+	);
+
+	// Add chart if available
+	if (chartImages.has('facilities-existence')) {
+		content.push({
+			image: chartImages.get('facilities-existence')!,
+			width: 400,
+			alignment: 'center' as const,
+			margin: [0, 10, 0, 10] as [number, number, number, number]
+		});
+	}
+
+	return content;
+}
+
+/**
+ * Build infrastructure section content
+ */
+function buildInfrastructureSection(
+	data: AggregatedData,
+	config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { infrastructure, yearComparison } = data;
+
+	content.push(createSectionHeader('Roads & Infrastructure'));
+
+	// Road coverage
+	content.push(createSubsectionHeader('Road Coverage'));
+
+	const roadTrend =
+		config.includeTrends && yearComparison?.trends.roadLength
+			? formatTrend(
+					yearComparison.trends.roadLength.value,
+					yearComparison.trends.roadLength.isPositive
+				)
+			: '';
+
+	const totalRoadLength =
+		infrastructure.roadAsphalt.totalLength +
+		infrastructure.roadConcrete.totalLength +
+		infrastructure.roadGravel.totalLength +
+		infrastructure.roadNatural.totalLength;
+
+	content.push(createKeyValue('Total Road Length', `${totalRoadLength.toFixed(1)} km${roadTrend}`));
+
+	content.push(
+		createTable(
+			['Road Type', 'Sitios', 'Total Length (km)', 'Excellent', 'Good', 'Fair', 'Poor', 'Bad'],
+			[
+				[
+					'Asphalt',
+					infrastructure.roadAsphalt.exists,
+					infrastructure.roadAsphalt.totalLength.toFixed(1),
+					infrastructure.roadAsphalt.excellent,
+					infrastructure.roadAsphalt.good,
+					infrastructure.roadAsphalt.fair,
+					infrastructure.roadAsphalt.poor,
+					infrastructure.roadAsphalt.bad
+				],
+				[
+					'Concrete',
+					infrastructure.roadConcrete.exists,
+					infrastructure.roadConcrete.totalLength.toFixed(1),
+					infrastructure.roadConcrete.excellent,
+					infrastructure.roadConcrete.good,
+					infrastructure.roadConcrete.fair,
+					infrastructure.roadConcrete.poor,
+					infrastructure.roadConcrete.bad
+				],
+				[
+					'Gravel',
+					infrastructure.roadGravel.exists,
+					infrastructure.roadGravel.totalLength.toFixed(1),
+					infrastructure.roadGravel.excellent,
+					infrastructure.roadGravel.good,
+					infrastructure.roadGravel.fair,
+					infrastructure.roadGravel.poor,
+					infrastructure.roadGravel.bad
+				],
+				[
+					'Natural/Earth',
+					infrastructure.roadNatural.exists,
+					infrastructure.roadNatural.totalLength.toFixed(1),
+					infrastructure.roadNatural.excellent,
+					infrastructure.roadNatural.good,
+					infrastructure.roadNatural.fair,
+					infrastructure.roadNatural.poor,
+					infrastructure.roadNatural.bad
+				]
+			],
+			['*', 50, 80, 60, 50, 50, 50, 50]
+		)
+	);
+
+	// Water sources
+	content.push(createSubsectionHeader('Water Sources'));
+	content.push(
+		createTable(
+			['Water Source', 'Sitios', 'Functioning', 'Not Functioning'],
+			[
+				[
+					'Natural (Spring/River)',
+					infrastructure.waterNatural.exists,
+					infrastructure.waterNatural.functioning,
+					infrastructure.waterNatural.notFunctioning
+				],
+				[
+					'Level 1 (Point Source)',
+					infrastructure.waterLevel1.exists,
+					infrastructure.waterLevel1.functioning,
+					infrastructure.waterLevel1.notFunctioning
+				],
+				[
+					'Level 2 (Communal)',
+					infrastructure.waterLevel2.exists,
+					infrastructure.waterLevel2.functioning,
+					infrastructure.waterLevel2.notFunctioning
+				],
+				[
+					'Level 3 (House Connection)',
+					infrastructure.waterLevel3.exists,
+					infrastructure.waterLevel3.functioning,
+					infrastructure.waterLevel3.notFunctioning
+				]
+			]
+		)
+	);
+
+	// Sanitation
+	content.push(createSubsectionHeader('Sanitation Types'));
+	content.push(
+		createTable(
+			['Sanitation Type', 'Sitios Using'],
+			[
+				['Water-Sealed Toilet', infrastructure.sanitationWaterSealed],
+				['Pit Latrine', infrastructure.sanitationPitLatrine],
+				['Community CR', infrastructure.sanitationCommunityCR],
+				['Open Defecation', infrastructure.sanitationOpenDefecation]
+			]
+		)
+	);
+
+	// Education infrastructure
+	content.push(createSubsectionHeader('Classroom Capacity'));
+	content.push(
+		createTable(
+			['Students per Room', 'Sitios'],
+			[
+				['Less than 46', infrastructure.studentsPerRoomLessThan46],
+				['46-50', infrastructure.studentsPerRoom46_50],
+				['51-55', infrastructure.studentsPerRoom51_55],
+				['More than 56', infrastructure.studentsPerRoomMoreThan56],
+				['No Classroom', infrastructure.studentsPerRoomNoClassroom]
+			]
+		)
+	);
+
+	// Add chart if available
+	if (chartImages.has('infrastructure-roads')) {
+		content.push({
+			image: chartImages.get('infrastructure-roads')!,
+			width: 400,
+			alignment: 'center' as const,
+			margin: [0, 10, 0, 10] as [number, number, number, number]
+		});
+	}
+
+	return content;
+}
+
+/**
+ * Build livelihood section content
+ */
+function buildLivelihoodSection(
+	data: AggregatedData,
+	config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { livelihood, yearComparison } = data;
+
+	content.push(createSectionHeader('Livelihood & Agriculture'));
+
+	// Income overview
+	content.push(createSubsectionHeader('Income Overview'));
+
+	const incomeTrend =
+		config.includeTrends && yearComparison?.trends.averageIncome
+			? formatTrend(
+					yearComparison.trends.averageIncome.value,
+					yearComparison.trends.averageIncome.isPositive
+				)
+			: '';
+
+	const povertyTrend =
+		config.includeTrends && yearComparison?.trends.povertyCount
+			? formatTrend(
+					yearComparison.trends.povertyCount.value,
+					yearComparison.trends.povertyCount.isPositive
+				)
+			: '';
+
+	content.push(
+		createKeyValue(
+			'Average Daily Income',
+			formatCurrency(livelihood.averageDailyIncomeOverall) + '/day' + incomeTrend
+		)
+	);
+	content.push(
+		createKeyValue(
+			'Below Poverty Line (₱668/day)',
+			`${livelihood.povertyCount} sitios${povertyTrend}`
+		)
+	);
+
+	// Worker distribution
+	content.push(createSubsectionHeader('Worker Class Distribution'));
+	content.push(
+		createTable(
+			['Worker Class', 'Count'],
+			[
+				['Private Household', formatNumber(livelihood.workerPrivateHousehold)],
+				['Private Establishment', formatNumber(livelihood.workerPrivateEstablishment)],
+				['Government', formatNumber(livelihood.workerGovernment)],
+				['Self-Employed', formatNumber(livelihood.workerSelfEmployed)],
+				['Employer', formatNumber(livelihood.workerEmployer)],
+				['OFW', formatNumber(livelihood.workerOFW)]
+			]
+		)
+	);
+
+	// Agriculture
+	content.push(createSubsectionHeader('Agriculture'));
+	content.push(createKeyValue('Total Farmers', formatNumber(livelihood.totalFarmers)));
+	content.push(
+		createKeyValue('Total Farm Area', `${formatNumber(livelihood.totalFarmArea)} hectares`)
+	);
+	content.push(createKeyValue('Farmer Organizations', formatNumber(livelihood.totalFarmerOrgs)));
+
+	// Top crops
+	if (livelihood.cropCounts.size > 0) {
+		content.push(createSubsectionHeader('Top Crops'));
+		const sortedCrops = Array.from(livelihood.cropCounts.entries())
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 10);
+		content.push(
+			createTable(
+				['Crop', 'Sitios Growing'],
+				sortedCrops.map(([crop, count]) => [crop, count])
+			)
+		);
+	}
+
+	// Top livestock
+	if (livelihood.livestockCounts.size > 0) {
+		content.push(createSubsectionHeader('Top Livestock'));
+		const sortedLivestock = Array.from(livelihood.livestockCounts.entries())
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 10);
+		content.push(
+			createTable(
+				['Livestock', 'Sitios Raising'],
+				sortedLivestock.map(([animal, count]) => [animal, count])
+			)
+		);
+	}
+
+	// Add chart if available
+	if (chartImages.has('livelihood-workers')) {
+		content.push({
+			image: chartImages.get('livelihood-workers')!,
+			width: 400,
+			alignment: 'center' as const,
+			margin: [0, 10, 0, 10] as [number, number, number, number]
+		});
+	}
+
+	return content;
+}
+
+/**
+ * Build safety section content
+ */
+function buildSafetySection(
+	data: AggregatedData,
+	_config: ReportConfig,
+	chartImages: Map<string, string>
+): Content[] {
+	const content: Content[] = [];
+	const { safety } = data;
+
+	content.push(createSectionHeader('Safety & Risk Context'));
+
+	// Food security
+	content.push(createSubsectionHeader('Food Security Status'));
+	const totalFoodSecurity =
+		safety.foodSecure + safety.foodSeasonalScarcity + safety.foodCriticalShortage;
+	content.push(
+		createTable(
+			['Status', 'Sitios', 'Percentage'],
+			[
+				[
+					'Food Secure',
+					safety.foodSecure,
+					formatPercentage((safety.foodSecure / totalFoodSecurity) * 100, 1)
+				],
+				[
+					'Seasonal Scarcity',
+					safety.foodSeasonalScarcity,
+					formatPercentage((safety.foodSeasonalScarcity / totalFoodSecurity) * 100, 1)
+				],
+				[
+					'Critical Shortage',
+					safety.foodCriticalShortage,
+					formatPercentage((safety.foodCriticalShortage / totalFoodSecurity) * 100, 1)
+				]
+			]
+		)
+	);
+
+	// Hazards summary
+	content.push(createSubsectionHeader('Natural Hazards (Past 12 Months)'));
+
+	const hazardSummary = (counts: Map<number, number>): string => {
+		const affected = Array.from(counts.entries())
+			.filter(([freq]) => freq > 0)
+			.reduce((sum, [, count]) => sum + count, 0);
+		return `${affected} sitios affected`;
+	};
+
+	content.push(
+		createTable(
+			['Hazard Type', 'Affected Sitios'],
+			[
+				['Flooding', hazardSummary(safety.floodFrequencyCounts)],
+				['Landslide', hazardSummary(safety.landslideFrequencyCounts)],
+				['Drought', hazardSummary(safety.droughtFrequencyCounts)],
+				['Earthquake', hazardSummary(safety.earthquakeFrequencyCounts)]
+			]
+		)
+	);
+
+	// Add chart if available
+	if (chartImages.has('safety-food-security')) {
+		content.push({
+			image: chartImages.get('safety-food-security')!,
+			width: 400,
+			alignment: 'center' as const,
+			margin: [0, 10, 0, 10] as [number, number, number, number]
+		});
+	}
+
+	return content;
+}
+
+/**
+ * Build priorities section content
+ * NOTE: Currently hidden from PDF reports as per requirements
+ */
+function buildPrioritiesSection(): Content[] {
+// _data: AggregatedData,
+// _config: ReportConfig,
+// _chartImages: Map<string, string>
+	// Priority Interventions and Most Urgent Needs sections are hidden from PDF reports
+	return [];
+}
+
+// ===== MAIN REPORT GENERATION FUNCTIONS =====
+
+/**
+ * Generate aggregate report PDF
+ */
+export function generateAggregateReport(
+	sitios: SitioRecord[],
+	config: ReportConfig,
+	chartImages?: ReportChartImage[]
+): ReturnType<typeof pdfMake.createPdf> {
+	const currentDate = new Date().toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
+
+	// Filter sitios based on config
+	const filteredSitios = sitios.filter((sitio) => {
+		if (config.filters.municipality && sitio.municipality !== config.filters.municipality) {
+			return false;
+		}
+		if (config.filters.barangay && sitio.barangay !== config.filters.barangay) {
+			return false;
+		}
+		return true;
+	});
+
+	// Aggregate data
+	const year = config.filters.year;
+	const aggregatedData: AggregatedData = {
+		demographics: aggregateDemographics(filteredSitios, year),
+		utilities: aggregateUtilities(filteredSitios, year),
+		facilities: aggregateFacilities(filteredSitios, year),
+		infrastructure: aggregateInfrastructure(filteredSitios, year),
+		livelihood: aggregateLivelihood(filteredSitios, year),
+		safety: aggregateSafety(filteredSitios, year),
+		priorities: aggregatePriorities(filteredSitios, year),
+		yearComparison: config.includeTrends ? getYearComparison(filteredSitios, year) : null,
+		sitioCount: filteredSitios.length
+	};
+
+	// Convert chart images to map for easy lookup
+	const chartImageMap = new Map<string, string>();
+	if (chartImages) {
+		for (const img of chartImages) {
+			chartImageMap.set(img.type, img.imageBase64);
+		}
+	}
+
+	// Build content
+	const content: Content[] = [];
+
+	// Header
+	content.push({
+		columns: [
+			{
+				image: LOGO_BASE64,
+				width: 60,
+				alignment: 'left' as const
+			},
+			{
+				stack: [
+					{
+						text: config.title || 'AGGREGATE DATA REPORT',
+						style: 'documentTitle',
+						alignment: 'center' as const
+					},
+					{
+						text: 'South Cotabato Convergence Data Bank',
+						style: 'documentSubtitle',
+						alignment: 'center' as const
+					},
+					{
+						text: `Generated: ${currentDate}`,
+						fontSize: 9,
+						italics: true,
+						alignment: 'center' as const,
+						margin: [0, 5, 0, 0] as [number, number, number, number]
+					}
+				],
+				width: '*'
+			},
+			{
+				width: 60,
+				text: ''
+			}
+		],
+		margin: [0, 0, 0, 20] as [number, number, number, number]
+	});
+
+	// Build sections based on config
+	const sectionBuilders: Record<
+		ReportSection,
+		(data: AggregatedData, config: ReportConfig, chartImages: Map<string, string>) => Content[]
+	> = {
+		overview: buildOverviewSection,
+		demographics: buildDemographicsSection,
+		utilities: buildUtilitiesSection,
+		facilities: buildFacilitiesSection,
+		infrastructure: buildInfrastructureSection,
+		livelihood: buildLivelihoodSection,
+		safety: buildSafetySection,
+		priorities: buildPrioritiesSection
+	};
+
+	for (const section of config.sections) {
+		const builder = sectionBuilders[section];
+		if (builder) {
+			content.push(...builder(aggregatedData, config, chartImageMap));
+		}
+	}
+
+	// Document definition
+	const docDefinition: TDocumentDefinitions = {
+		pageOrientation: 'portrait',
+		pageSize: 'LEGAL',
+		pageMargins: [40, 40, 40, 60],
+		footer: (currentPage: number, pageCount: number) => ({
+			columns: [
+				{
+					text: 'South Cotabato Convergence Data Bank - Aggregate Report',
+					fontSize: 8,
+					color: '#6B7280',
+					margin: [40, 0, 0, 0]
+				},
+				{
+					text: `Page ${currentPage} of ${pageCount}`,
+					alignment: 'right' as const,
+					fontSize: 8,
+					color: '#6B7280',
+					margin: [0, 0, 40, 0]
+				}
+			]
+		}),
+		content,
+		styles: {
+			documentTitle: {
+				fontSize: 16,
+				bold: true,
+				color: '#1E293B'
+			},
+			documentSubtitle: {
+				fontSize: 11,
+				color: '#475569'
+			},
+			sectionHeader: {
+				fontSize: 14,
+				bold: true,
+				color: '#1E40AF',
+				decoration: 'underline' as const
+			},
+			subsectionHeader: {
+				fontSize: 11,
+				bold: true,
+				color: '#334155'
+			},
+			label: {
+				fontSize: 10,
+				color: '#64748B'
+			},
+			value: {
+				fontSize: 10,
+				color: '#1E293B'
+			},
+			statLabel: {
+				fontSize: 9,
+				color: '#64748B'
+			},
+			statValue: {
+				fontSize: 14,
+				bold: true,
+				color: '#1E293B'
+			},
+			trendText: {
+				fontSize: 8,
+				italics: true
+			},
+			tableHeader: {
+				fontSize: 9,
+				bold: true,
+				fillColor: '#E2E8F0',
+				color: '#1E293B'
+			},
+			tableCell: {
+				fontSize: 9,
+				color: '#374151'
+			},
+			noData: {
+				fontSize: 9,
+				italics: true,
+				color: '#9CA3AF',
+				margin: [0, 5, 0, 10] as [number, number, number, number]
+			}
+		}
+	};
+
+	return pdfMake.createPdf(docDefinition);
+}
+
+/**
+ * Download an aggregate report as PDF
+ */
+export function downloadAggregateReport(
+	sitios: SitioRecord[],
+	config: ReportConfig,
+	chartImages?: ReportChartImage[],
+	fileName?: string
+): void {
+	const pdf = generateAggregateReport(sitios, config, chartImages);
+
+	// Generate filename
+	const dateStr = new Date().toISOString().split('T')[0];
+	const locationStr = config.filters.municipality
+		? `_${config.filters.municipality.replace(/\s+/g, '_')}`
+		: '';
+	const defaultFileName = `Aggregate_Report${locationStr}_${config.filters.year}_${dateStr}.pdf`;
+	const finalFileName = fileName || defaultFileName;
+
+	pdf.download(finalFileName);
+
+	// Log the export action
+	const sectionNames = config.sections.join(', ');
+	logAuditAction(
+		'export',
+		'report',
+		`aggregate-${config.filters.year}`,
+		finalFileName,
+		`Generated aggregate report: ${sitios.length} sitios, sections: ${sectionNames}, year: ${config.filters.year}${config.filters.compareYear ? `, compared with ${config.filters.compareYear}` : ''}`
+	);
+}
+
+/**
+ * Get section label for display
+ */
+export function getSectionLabel(section: ReportSection): string {
+	const labels: typeof SECTION_LABELS = {
+		overview: 'Overview & Summary',
+		demographics: 'Demographics & Population',
+		utilities: 'Utilities & Connectivity',
+		facilities: 'Community Facilities',
+		infrastructure: 'Roads & Infrastructure',
+		livelihood: 'Livelihood & Agriculture',
+		safety: 'Safety & Risk Context',
+		priorities: 'Priority Interventions'
+	};
+	return labels[section] || section;
+}

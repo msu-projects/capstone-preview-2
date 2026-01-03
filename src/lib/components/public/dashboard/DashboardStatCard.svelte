@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { cn } from '$lib/utils';
+	import { TrendingDown, TrendingUp } from '@lucide/svelte';
 	import type { Component } from 'svelte';
 
 	interface Props {
@@ -73,11 +74,15 @@
 				{/if}
 				{#if trend}
 					<p
-						class="mt-2 text-sm font-medium {trendIsPositive
+						class="mt-2 flex items-center gap-1 text-sm font-medium {trendIsPositive
 							? 'text-emerald-600 dark:text-emerald-400'
 							: 'text-rose-600 dark:text-rose-400'}"
 					>
-						{trend.value >= 0 ? '↑' : '↓'}
+						{#if trend.value >= 0}
+							<TrendingUp class="size-4" />
+						{:else}
+							<TrendingDown class="size-4" />
+						{/if}
 						{Math.abs(trend.value)}% {trend.label}
 					</p>
 				{/if}

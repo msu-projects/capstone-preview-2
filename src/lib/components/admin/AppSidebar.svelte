@@ -8,6 +8,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import {
 		ExternalLink,
+		FileBarChart,
 		FileText,
 		LayoutDashboard,
 		List,
@@ -40,7 +41,8 @@
 			title: 'Main',
 			items: [
 				{ title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
-				{ title: 'Sitios List', url: '/admin/sitios', icon: List }
+				{ title: 'Sitios List', url: '/admin/sitios', icon: List },
+				{ title: 'Reports', url: '/admin/reports', icon: FileBarChart }
 			]
 		},
 		{

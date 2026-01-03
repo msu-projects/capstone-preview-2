@@ -10,8 +10,10 @@
 	import type { SitioProfile, SitioRecord } from '$lib/types';
 	import { loadSitios } from '$lib/utils/storage';
 	import {
+		ArrowDown,
 		ArrowLeft,
 		ArrowRight,
+		ArrowUp,
 		Grid3x3,
 		Home,
 		Lightbulb,
@@ -258,17 +260,29 @@
 								{#if sortBy === 'name'}
 									Sort: Name (A-Z)
 								{:else if sortBy === 'population-high'}
-									Sort: Population ↓
+									<span class="flex items-center gap-1"
+										>Sort: Population <ArrowDown class="size-3" /></span
+									>
 								{:else if sortBy === 'population-low'}
-									Sort: Population ↑
+									<span class="flex items-center gap-1"
+										>Sort: Population <ArrowUp class="size-3" /></span
+									>
 								{:else if sortBy === 'households-high'}
-									Sort: Households ↓
+									<span class="flex items-center gap-1"
+										>Sort: Households <ArrowDown class="size-3" /></span
+									>
 								{:else if sortBy === 'households-low'}
-									Sort: Households ↑
+									<span class="flex items-center gap-1"
+										>Sort: Households <ArrowUp class="size-3" /></span
+									>
 								{:else if sortBy === 'need-high'}
-									Sort: Need Score ↓
+									<span class="flex items-center gap-1"
+										>Sort: Need Score <ArrowDown class="size-3" /></span
+									>
 								{:else if sortBy === 'need-low'}
-									Sort: Need Score ↑
+									<span class="flex items-center gap-1"
+										>Sort: Need Score <ArrowUp class="size-3" /></span
+									>
 								{/if}
 							</Select.Trigger>
 							<Select.Content>
