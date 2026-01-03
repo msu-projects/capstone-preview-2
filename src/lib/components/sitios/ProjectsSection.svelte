@@ -5,7 +5,15 @@
 	import type { ProjectWithSitios } from '$lib/types';
 	import { formatCurrency } from '$lib/utils/formatters';
 	import { getProjectsWithSitiosBySitioId } from '$lib/utils/project-storage';
-	import { ExternalLink, FolderKanban, ImageIcon, Plus } from '@lucide/svelte';
+	import {
+		Calendar,
+		ExternalLink,
+		FolderKanban,
+		ImageIcon,
+		MapPin,
+		Plus,
+		TrendingUp
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	interface Props {
@@ -38,123 +46,221 @@
 			day: 'numeric'
 		});
 	}
+
+	function getAverageCost(): number {
+		return projects.length > 0 ? projects.reduce((sum, p) => sum + p.cost, 0) / projects.length : 0;
+	}
 </script>
 
 <div class="space-y-6">
+	<!-- Enhanced Summary Section -->
+	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+		<!-- Total Projects Card -->
+		<Card.Root
+			class="overflow-hidden border-l-4 border-l-primary bg-linear-to-br from-primary/5 to-transparent py-0 transition-all hover:shadow-md"
+		>
+			<Card.Content class="p-6">
+				<div class="flex items-start justify-between">
+					<div class="space-y-1">
+						<p class="text-sm font-medium text-muted-foreground">Total Projects</p>
+						<p class="text-3xl font-bold tracking-tight">{projects.length}</p>
+					</div>
+					<div class="rounded-full bg-primary/10 p-3">
+						<FolderKanban class="size-5 text-primary" />
+					</div>
+				</div>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Total Investment Card -->
+		<Card.Root
+			class="overflow-hidden border-l-4 border-l-green-500 bg-linear-to-br from-green-500/5 to-transparent py-0 transition-all hover:shadow-md"
+		>
+			<Card.Content class="p-6">
+				<div class="flex items-start justify-between">
+					<div class="space-y-1">
+						<p class="text-sm font-medium text-muted-foreground">Total Investment</p>
+						<p class="text-3xl font-bold tracking-tight">
+							{formatCurrency(projects.reduce((sum, p) => sum + p.cost, 0))}
+						</p>
+					</div>
+					<div class="rounded-full bg-green-500/10 p-3">
+						<TrendingUp class="size-5 text-green-600 dark:text-green-500" />
+					</div>
+				</div>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Average Cost Card / Add Button -->
+		{#if showAdminActions}
+			<Card.Root
+				class="overflow-hidden border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 to-transparent py-0 transition-all hover:border-primary/50 hover:shadow-md"
+			>
+				<Card.Content class="flex h-full items-center justify-center p-6">
+					<Button href="/admin/projects/new" class="h-auto flex-col gap-2 py-4" variant="ghost">
+						<div class="rounded-full bg-primary/10 p-3">
+							<Plus class="size-6 text-primary" />
+						</div>
+						<span class="font-semibold">Add New Project</span>
+					</Button>
+				</Card.Content>
+			</Card.Root>
+		{:else if projects.length > 0}
+			<Card.Root
+				class="overflow-hidden border-l-4 border-l-blue-500 bg-linear-to-br from-blue-500/5 to-transparent py-0 transition-all hover:shadow-md"
+			>
+				<Card.Content class="p-6">
+					<div class="flex items-start justify-between">
+						<div class="space-y-1">
+							<p class="text-sm font-medium text-muted-foreground">Average Cost</p>
+							<p class="text-3xl font-bold tracking-tight">
+								{formatCurrency(getAverageCost())}
+							</p>
+						</div>
+						<div class="rounded-full bg-blue-500/10 p-3">
+							<TrendingUp class="size-5 text-blue-600 dark:text-blue-500" />
+						</div>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+	</div>
+	<!-- Loading State -->
 	{#if isLoading}
-		<div class="flex h-32 items-center justify-center">
-			<div
-				class="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent"
-			></div>
+		<div class="flex h-48 items-center justify-center">
+			<div class="text-center">
+				<div
+					class="mx-auto mb-4 size-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+				></div>
+				<p class="text-sm text-muted-foreground">Loading projects...</p>
+			</div>
 		</div>
 	{:else if projects.length === 0}
-		<Card.Root>
-			<Card.Content class="flex flex-col items-center justify-center py-12 text-center">
-				<FolderKanban class="mb-4 size-12 text-muted-foreground/50" />
-				<h3 class="text-lg font-medium">No Projects Yet</h3>
-				<p class="mb-4 text-sm text-muted-foreground">
-					No implemented projects have been linked to this sitio.
+		<!-- Enhanced Empty State -->
+		<Card.Root class="border-2 border-dashed">
+			<Card.Content class="flex flex-col items-center justify-center py-16 text-center">
+				<div class="mb-4 rounded-full bg-muted p-6">
+					<FolderKanban class="size-12 text-muted-foreground" />
+				</div>
+				<h3 class="mb-2 text-xl font-semibold">No Projects Yet</h3>
+				<p class="mb-6 max-w-sm text-sm text-muted-foreground">
+					No implemented projects have been linked to this sitio. Start by adding your first project
+					to track development initiatives.
 				</p>
 				{#if showAdminActions}
-					<Button href="/admin/projects/new" size="sm">
+					<Button href="/admin/projects/new">
 						<Plus class="mr-2 size-4" />
-						Add Project
+						Add First Project
 					</Button>
 				{/if}
 			</Card.Content>
 		</Card.Root>
 	{:else}
-		<!-- Projects Grid -->
-		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+		<!-- Enhanced Projects Grid -->
+		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 			{#each projects as project (project.id)}
-				<Card.Root class="group overflow-hidden transition-shadow hover:shadow-md">
-					<!-- Project Image -->
-					{#if project.images.length > 0}
-						<div class="relative aspect-video overflow-hidden bg-muted">
-							<img
-								src={project.images[0]}
-								alt={project.title}
-								class="size-full object-cover transition-transform group-hover:scale-105"
-							/>
-							{#if project.images.length > 1}
-								<Badge class="absolute right-2 bottom-2 bg-black/60 text-white">
-									+{project.images.length - 1} more
-								</Badge>
-							{/if}
-						</div>
-					{:else}
-						<div class="flex aspect-video items-center justify-center bg-muted">
-							<ImageIcon class="size-12 text-muted-foreground/50" />
-						</div>
-					{/if}
-
-					<Card.Content class="p-4">
-						<!-- Title & Description -->
-						<h3 class="mb-1 line-clamp-1 font-semibold">{project.title}</h3>
-						<p class="mb-3 line-clamp-2 text-sm text-muted-foreground">
-							{project.description}
-						</p>
-
-						<!-- Cost Badge -->
-						<div class="mb-3">
-							<Badge variant="secondary" class="font-semibold">
-								{formatCurrency(project.cost)}
-							</Badge>
-						</div>
-
-						<!-- Sitios Involved -->
-						{#if project.sitioNames.length > 1}
-							<div class="mb-3 flex flex-wrap gap-1">
-								<span class="text-xs text-muted-foreground">Also in:</span>
-								{#each project.sitioNames.slice(0, 2) as name}
-									{@const sitioName = name.split(',')[0]}
-									<Badge variant="outline" class="text-xs">{sitioName}</Badge>
-								{/each}
-								{#if project.sitioNames.length > 2}
-									<Badge variant="outline" class="text-xs">
-										+{project.sitioNames.length - 2}
+				<Card.Root
+					class="group gap-0 overflow-hidden border py-0 transition-all hover:border-primary/50 hover:shadow-lg"
+				>
+					<!-- Project Image with Overlay -->
+					<div class="relative">
+						{#if project.images.length > 0}
+							<div class="relative aspect-video overflow-hidden bg-muted">
+								<img
+									src={project.images[0]}
+									alt={project.title}
+									class="size-full object-cover transition-all duration-300 group-hover:scale-110"
+								/>
+								<!-- Gradient Overlay -->
+								<div
+									class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+								></div>
+								{#if project.images.length > 1}
+									<Badge class="absolute top-3 right-3 bg-black/70 text-white backdrop-blur-sm">
+										<ImageIcon class="mr-1 size-3" />
+										{project.images.length}
 									</Badge>
 								{/if}
+
+								<!-- Cost Badge on Image -->
+								<div class="absolute bottom-3 left-3">
+									<Badge class="bg-primary font-bold text-primary-foreground shadow-lg">
+										{formatCurrency(project.cost)}
+									</Badge>
+								</div>
+							</div>
+						{:else}
+							<div
+								class="flex aspect-video items-center justify-center bg-linear-to-br from-muted to-muted/50"
+							>
+								<div class="text-center">
+									<ImageIcon class="mx-auto mb-2 size-12 text-muted-foreground/40" />
+									<p class="text-xs text-muted-foreground">No image</p>
+								</div>
 							</div>
 						{/if}
+					</div>
 
-						<!-- Date & Actions -->
-						<div class="flex items-center justify-between">
-							<span class="text-xs text-muted-foreground">
-								{formatDate(project.createdAt)}
-							</span>
-							<Button variant="ghost" size="sm" href="{baseUrl}/{project.id}">
-								<ExternalLink class="mr-1 size-3" />
-								View
-							</Button>
+					<Card.Content class="space-y-4 p-5">
+						<!-- Title & Description -->
+						<div class="space-y-2">
+							<h3
+								class="line-clamp-2 text-lg leading-tight font-bold transition-colors group-hover:text-primary"
+							>
+								{project.title}
+							</h3>
+							<p class="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+								{project.description}
+							</p>
 						</div>
+
+						<!-- Metadata Section -->
+						<div class="space-y-3">
+							<!-- Date -->
+							<div class="flex items-center gap-2 text-sm text-muted-foreground">
+								<Calendar class="size-4" />
+								<span>{formatDate(project.createdAt)}</span>
+							</div>
+
+							<!-- Multi-Sitio Indicator -->
+							{#if project.sitioNames.length > 1}
+								<div class="space-y-2">
+									<div class="flex items-center gap-2 text-sm text-muted-foreground">
+										<MapPin class="size-4" />
+										<span class="font-medium">Multi-sitio project</span>
+									</div>
+									<div class="flex flex-wrap gap-1.5">
+										{#each project.sitioNames.slice(0, 3) as name}
+											{@const sitioName = name.split(',')[0]}
+											<Badge variant="secondary" class="text-xs font-normal">
+												{sitioName}
+											</Badge>
+										{/each}
+										{#if project.sitioNames.length > 3}
+											<Badge variant="secondary" class="text-xs font-medium">
+												+{project.sitioNames.length - 3} more
+											</Badge>
+										{/if}
+									</div>
+								</div>
+							{/if}
+						</div>
+
+						<!-- Action Button -->
+						<Button href="{baseUrl}/{project.id}" class="w-full" variant="outline">
+							View Details
+							<ExternalLink class="ml-2 size-4" />
+						</Button>
 					</Card.Content>
 				</Card.Root>
 			{/each}
 		</div>
-
-		<!-- Summary -->
-		<Card.Root class="bg-muted/30">
-			<Card.Content class="flex flex-wrap items-center justify-between gap-4 p-4">
-				<div class="flex items-center gap-6">
-					<div>
-						<p class="text-sm text-muted-foreground">Total Projects</p>
-						<p class="text-2xl font-bold">{projects.length}</p>
-					</div>
-					<div>
-						<p class="text-sm text-muted-foreground">Total Investment</p>
-						<p class="text-2xl font-bold">
-							{formatCurrency(projects.reduce((sum, p) => sum + p.cost, 0))}
-						</p>
-					</div>
-				</div>
-				{#if showAdminActions}
-					<Button variant="outline" href="/admin/projects/new">
-						<Plus class="mr-2 size-4" />
-						Add Project
-					</Button>
-				{/if}
-			</Card.Content>
-		</Card.Root>
 	{/if}
 </div>
+
+<style>
+	/* Smooth transitions for hover effects */
+	:global(.group) {
+		transition: all 0.2s ease-in-out;
+	}
+</style>

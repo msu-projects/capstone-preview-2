@@ -200,7 +200,7 @@
 						</Card.Title>
 					</Card.Header>
 					<Card.Content>
-						<div bind:this={mapContainer} class="h-64 w-full rounded-lg border"></div>
+						<div bind:this={mapContainer} class="h-100 w-full rounded-lg border"></div>
 						<p class="mt-2 text-sm text-muted-foreground">
 							Coordinates: {project.location.latitude.toFixed(6)}, {project.location.longitude.toFixed(
 								6
