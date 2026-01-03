@@ -7,7 +7,8 @@
 		SitioDashboardEconomic,
 		SitioDashboardInfrastructure,
 		SitioDashboardMaps,
-		SitioDashboardOverview
+		SitioDashboardOverview,
+		SitioDashboardSupplementary
 	} from '$lib/components/public/dashboard';
 	import { DashboardSkeleton } from '$lib/components/sitios/dashboard';
 	import { Badge } from '$lib/components/ui/badge';
@@ -18,6 +19,7 @@
 	import type { SitioRecord } from '$lib/types';
 	import { loadAuditLogs } from '$lib/utils/audit';
 	import toTitleCase from '$lib/utils/common';
+	import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
 	import { getAllAvailableYears } from '$lib/utils/sitio-chart-aggregation';
 	import { loadSitios } from '$lib/utils/storage';
 	import {
@@ -25,6 +27,7 @@
 		Building2,
 		Calendar,
 		FileText,
+		Layers,
 		Map,
 		MapPin,
 		Plus,
@@ -36,6 +39,7 @@
 
 	let sitios = $state<SitioRecord[]>([]);
 	let isLoading = $state(true);
+	let hasActiveCustomFields = $state(false);
 
 	// Filter state
 	let selectedMunicipality = $state('all');
@@ -48,6 +52,7 @@
 
 	onMount(() => {
 		sitios = loadSitios();
+		hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
 		isLoading = false;
 	});
 
@@ -121,15 +126,22 @@
 		window.location.href = `/admin/sitios/${sitioId}`;
 	}
 
-	// Tab configuration
-	const tabs = [
+	// Tab configuration - conditionally include supplementary tab
+	const baseTabs = [
 		{ id: 'overview', label: 'Overview', icon: FileText },
 		{ id: 'demographics', label: 'Demographics', icon: Users },
 		{ id: 'infrastructure', label: 'Infrastructure', icon: Building2 },
 		{ id: 'economic', label: 'Economic', icon: TrendingUp },
-		{ id: 'maps', label: 'Maps', icon: Map },
-		{ id: 'activity', label: 'Activity', icon: Activity }
+		{ id: 'maps', label: 'Maps', icon: Map }
 	];
+
+	const tabs = $derived([
+		...baseTabs,
+		...(hasActiveCustomFields
+			? [{ id: 'supplementary', label: 'Supplementary', icon: Layers }]
+			: []),
+		{ id: 'activity', label: 'Activity', icon: Activity }
+	]);
 
 	// Selected year as number for components
 	const selectedYearNumber = $derived.by(() => {
@@ -284,6 +296,15 @@
 							onSitioClick={handleSitioClick}
 						/>
 					</Tabs.Content>
+
+					{#if hasActiveCustomFields}
+						<Tabs.Content value="supplementary">
+							<SitioDashboardSupplementary
+								sitios={filteredSitios}
+								selectedYear={selectedYearNumber}
+							/>
+						</Tabs.Content>
+					{/if}
 
 					<Tabs.Content value="activity">
 						<div class="grid gap-6 lg:grid-cols-1">

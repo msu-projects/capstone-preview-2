@@ -26,6 +26,7 @@ The system serves as a public-facing data bank that allows citizens to view deta
    - [4.4 Data Visualization](#44-data-visualization)
    - [4.5 Sitio Data Management (Admin Only)](#45-sitio-data-management-admin-only)
    - [4.6 Report Generation (Admin Only)](#46-report-generation-admin-only)
+   - [4.7 Dynamic Form Builder (Admin Only)](#47-dynamic-form-builder-admin-only)
 
 ### Projects Module
 
@@ -106,6 +107,7 @@ The `data` object contains all fields from Section 3:
 - Livelihood & Agriculture
 - Safety & Risk Context
 - Sitio Priority Needs
+- Custom Fields (dynamically configured)
 
 ---
 
@@ -390,6 +392,42 @@ Common priority intervention names:
 - **2** - Medium priority
 - **3** - Very urgent
 
+### 3.11 Custom Fields (Dynamic)
+
+Custom fields are dynamically configured by administrators to capture additional monitoring data specific to current program needs. These fields are optional and may change over time as requirements evolve.
+
+**Custom Field Properties:**
+
+| Property     | Type                    | Description                                              |
+| ------------ | ----------------------- | -------------------------------------------------------- |
+| customFields | Record<string, unknown> | Key-value pairs where key is field ID, value is the data |
+
+**Supported Data Types:**
+
+| Data Type | Description                                   | Example Values                            |
+| --------- | --------------------------------------------- | ----------------------------------------- |
+| text      | Free-form text input                          | "Community hall built"                    |
+| number    | Numeric values                                | 15, 250.5                                 |
+| boolean   | Yes/No or true/false                          | true, false                               |
+| date      | Date values                                   | "2025-12-31"                              |
+| array     | List of text values                           | ["Item 1", "Item 2", "Item 3"]            |
+| checkbox  | Multiple selection from admin-defined choices | ["Option A", "Option C"] (selected items) |
+| radio     | Single selection from admin-defined choices   | "Option B" (selected item)                |
+
+**Aggregation Types (for number fields):**
+
+When displaying custom number fields in dashboards, the system supports different aggregation methods:
+
+| Type    | Description                          |
+| ------- | ------------------------------------ |
+| sum     | Total sum across all sitios          |
+| average | Average value across all sitios      |
+| count   | Count of sitios with recorded values |
+| min     | Minimum value across all sitios      |
+| max     | Maximum value across all sitios      |
+
+> **Note:** Custom fields are managed through the Dynamic Form Builder (see Section 4.7). Field definitions include validation rules, display labels, and descriptions to guide data entry.
+
 ---
 
 ## 4. Public Portal Features
@@ -568,6 +606,19 @@ The public can view comprehensive sitio profiles organized into sections.
 - Top 3 priority needs (ranked)
 - Catch-up interventions identified
 
+#### Supplementary Section
+
+- Displays custom field data when available
+- Summary statistics showing total configured fields and fields recorded
+- Visualizations for custom data:
+  - Bar charts for numeric fields
+  - Donut charts for boolean (yes/no) fields
+  - Formatted display for text and date fields
+- Field details grid showing all custom field values
+- Only visible when custom fields are configured and active
+
+> **Note:** The Supplementary section is dynamically generated based on custom fields defined by administrators. The section only appears when at least one custom field is active.
+
 ### 4.4 Data Visualization
 
 #### Aggregate Dashboard Visualizations
@@ -578,6 +629,9 @@ The public can view comprehensive sitio profiles organized into sections.
 | Utilities Coverage     | Horizontal Bar | Electricity, toilet, street lights across filtered sitios |
 | Infrastructure Summary | Bar Chart      | Facility existence rates, road coverage aggregates        |
 | Mini Map Preview       | Leaflet Map    | Interactive map showing filtered sitio markers            |
+| Supplementary Data     | Mixed          | Custom field aggregations with configurable visualization |
+
+> **Note:** The Supplementary Data tab only appears in the dashboard when custom fields are configured and active.
 
 #### Sitio Profile Visualizations
 
@@ -588,6 +642,7 @@ The public can view comprehensive sitio profiles organized into sections.
 | Infrastructure Status | Visual indicators for utilities and facility access |
 | Income Distribution   | Chart showing household income bracket distribution |
 | Water Sources Map     | Visualization of water source types and status      |
+| Custom Fields Charts  | Dynamic visualizations for supplementary data       |
 
 ### 4.5 Sitio Data Management (Admin Only)
 
@@ -929,6 +984,213 @@ Each generated PDF report contains:
 | Admin      | ✓                    | ✓                       |
 | Viewer     | ✓                    | ✗                       |
 | Public     | ✗                    | ✗                       |
+
+### 4.7 Dynamic Form Builder (Admin Only)
+
+The Dynamic Form Builder module allows superadmin users to inject custom data fields into the standard Sitio Profile schema. Through a GUI-based configuration, admins can define additional fields to capture granular data specific to current monitoring needs.
+
+#### 4.7.1 Purpose
+
+The Dynamic Form Builder enables:
+
+- **Flexible Data Collection** - Add custom fields without code changes
+- **Program-Specific Monitoring** - Track data unique to specific programs or interventions
+- **Evolving Requirements** - Adapt to changing monitoring needs over time
+- **Granular Analysis** - Capture and visualize supplementary metrics
+
+#### 4.7.2 Custom Field Configuration
+
+Administrators configure custom fields through `/admin/config/custom-fields`:
+
+| Feature          | Description                                                            |
+| ---------------- | ---------------------------------------------------------------------- |
+| Field Name       | Internal identifier (auto-generated from display label)                |
+| Display Label    | Human-readable label shown in forms and reports                        |
+| Data Type        | Text, Number, Boolean (Yes/No), Date, Text List, Checkbox, or Radio    |
+| Validation Rules | Required/Optional, min/max values for numbers, length for text/array   |
+| Choices          | For Checkbox and Radio types: admin-defined list of selectable options |
+| Aggregation Type | For numbers: sum, average, count, min, or max (dashboard view)         |
+| Description      | Optional help text to guide data entry                                 |
+| Display Order    | Reorderable to control field sequence in forms                         |
+| Active/Archived  | Archive fields to preserve historical data without current use         |
+
+#### 4.7.3 Field Management Features
+
+| Action         | Description                                                      |
+| -------------- | ---------------------------------------------------------------- |
+| Create Field   | Define a new custom field with all configuration options         |
+| Edit Field     | Update field properties (label, description, validation rules)   |
+| Archive Field  | Soft-delete to hide from forms while preserving existing data    |
+| Restore Field  | Reactivate an archived field                                     |
+| Reorder Fields | Drag-and-drop or use arrow buttons to change display order       |
+| View Stats     | Dashboard showing total fields, active count, and archived count |
+| Toggle View    | Show/hide archived fields in the management table                |
+
+#### 4.7.4 Data Entry (Custom Fields Tab)
+
+When editing sitio yearly data, a "Custom Fields" tab appears if active custom fields exist:
+
+| Feature             | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| Dynamic Form Inputs | Appropriate input controls based on data type                |
+| Field Type Icons    | Visual indicators for text, number, boolean, and date fields |
+| Required Indicators | Asterisk (\*) marks required fields                          |
+| Validation Feedback | Real-time validation with error messages                     |
+| Help Tooltips       | Display field descriptions when hovering over help icons     |
+| Completion Tracking | Tab shows completion status based on filled required fields  |
+
+**Input Types by Data Type:**
+
+| Data Type | Input Control      | Description                                         |
+| --------- | ------------------ | --------------------------------------------------- |
+| Text      | Text input         | Single-line text field                              |
+| Number    | Number input       | Numeric input with optional min/max                 |
+| Boolean   | Switch toggle      | Yes/No toggle switch                                |
+| Date      | Date input         | Calendar date picker                                |
+| Array     | Tag input          | Multi-value text list with add/remove functionality |
+| Checkbox  | Checkbox group     | Multiple selection from admin-defined choices       |
+| Radio     | Radio button group | Single selection from admin-defined choices         |
+
+#### 4.7.5 Data Visualization
+
+**Sitio Profile View (Supplementary Tab):**
+
+When viewing a sitio profile with custom field data:
+
+| Component     | Description                                                   |
+| ------------- | ------------------------------------------------------------- |
+| Summary Cards | Total fields, fields recorded, numeric fields, boolean fields |
+| Numeric Chart | Bar chart displaying all number field values                  |
+| Boolean Chart | Donut chart showing yes/no response distribution              |
+| Field Details | Grid showing all custom field values with formatted display   |
+| Empty State   | Message when no custom fields are configured                  |
+
+**Dashboard View (Supplementary Tab):**
+
+The admin dashboard includes a Supplementary tab when custom fields exist:
+
+| View Mode  | Description                                              |
+| ---------- | -------------------------------------------------------- |
+| Summary    | Aggregated statistics using configured aggregation types |
+| Comparison | Per-sitio comparison charts for numeric fields (top 10)  |
+
+**Summary View Components:**
+
+| Component           | Description                                                       |
+| ------------------- | ----------------------------------------------------------------- |
+| Numeric Stat Cards  | Display aggregated values (sum/avg/min/max as configured)         |
+| Boolean Donut Chart | Show yes/no percentages across all sitios for each field          |
+| Text Field Summary  | Top 5 most common responses for each text field                   |
+| Date Field Info     | List configured date fields with note to view individual profiles |
+
+**Comparison View Components:**
+
+| Component              | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| Per-Sitio Bar Charts   | Horizontal bar charts showing top 10 sitios by value |
+| Field-by-Field Display | Separate chart for each numeric custom field         |
+
+#### 4.7.6 Custom Field Flow
+
+```
+Start
+  │
+  ▼
+Navigate to Custom Fields Configuration
+  │
+  ▼
+View Existing Fields
+  │
+  ├──▶ Create New Field
+  │     │
+  │     ├──▶ Enter Display Label
+  │     ├──▶ Select Data Type (text/number/boolean/date)
+  │     ├──▶ Set Validation Rules
+  │     │     - Mark as Required/Optional
+  │     │     - For numbers: min/max values
+  │     │     - For text: max length
+  │     ├──▶ Select Aggregation Type (for numbers)
+  │     ├──▶ Add Description (optional)
+  │     └──▶ Save Field
+  │           │
+  │           ▼
+  │        Field Available in Forms
+  │
+  ├──▶ Edit Existing Field
+  │     │
+  │     ├──▶ Modify Label, Description, Validation
+  │     └──▶ Save Changes
+  │           │
+  │           ▼
+  │        Updated in All Views
+  │
+  ├──▶ Archive Field
+  │     │
+  │     ├──▶ Confirm Archive Action
+  │     └──▶ Field Hidden from Forms
+  │           │
+  │           ├──▶ Historical Data Preserved
+  │           └──▶ Can be Restored Later
+  │
+  └──▶ Reorder Fields
+        │
+        └──▶ Change Display Sequence
+              │
+              ▼
+           Updated Order in Forms
+  │
+  ▼
+Fields Available in Sitio Editing
+  │
+  ▼
+Data Entry in Custom Fields Tab
+  │
+  ├──▶ Enter Values for Each Field
+  ├──▶ Validation Applied
+  └──▶ Save with Yearly Data
+  │
+  ▼
+Data Visible in Sitio Profile
+  │
+  ├──▶ Supplementary Tab Shows Custom Data
+  └──▶ Visualizations Generated
+  │
+  ▼
+Aggregated in Dashboard
+  │
+  └──▶ Supplementary Tab Shows Aggregated Metrics
+  │
+  ▼
+End
+```
+
+#### 4.7.7 Access Control
+
+| Role       | Can Configure Fields | Can Enter Data | Can View Data |
+| ---------- | -------------------- | -------------- | ------------- |
+| Superadmin | ✓                    | ✓              | ✓             |
+| Admin      | ✗                    | ✓              | ✓             |
+| Viewer     | ✗                    | ✗              | ✓             |
+| Public     | ✗                    | ✗              | ✓             |
+
+**Notes:**
+
+- Only superadmins can create, edit, archive, restore, and reorder custom fields
+- Admins can enter custom field data when editing sitio records
+- All authenticated users and the public can view custom field data in sitio profiles and dashboards
+- Custom field definitions are stored in localStorage with audit trail integration
+- Archived fields remain visible in historical sitio data but are hidden from data entry forms
+
+#### 4.7.8 Data Persistence
+
+| Aspect            | Implementation                                           |
+| ----------------- | -------------------------------------------------------- |
+| Storage Location  | Browser localStorage (key: `sccdp_config_custom_fields`) |
+| Field Definitions | Stored separately from sitio data                        |
+| Field Values      | Stored in `customFields` object within yearly sitio data |
+| Soft Delete       | Archived fields marked as `isActive: false`              |
+| Historical Data   | Preserved even when fields are archived                  |
+| Audit Trail       | All field configuration changes logged                   |
 
 ---
 
@@ -1353,31 +1615,34 @@ When a record is updated, the system captures the specific field changes:
 
 ## 11. Glossary
 
-| Term                    | Definition                                                                                                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **4Ps**                 | Pantawid Pamilyang Pilipino Program - a conditional cash transfer program for poor households                                                                           |
-| **Barangay**            | The smallest administrative division in the Philippines, a village or district                                                                                          |
-| **CATCH-UP**            | A program for identifying vulnerable communities and providing appropriate interventions                                                                                |
-| **Coding**              | Unique identifier or code assigned to a sitio for administrative tracking                                                                                               |
-| **Demographics**        | Statistical data about the population characteristics including age, sex, and distribution                                                                              |
-| **GIDA**                | Geographically Isolated and Disadvantaged Area - remote communities with limited access to services                                                                     |
-| **IP**                  | Indigenous People/Peoples - members of indigenous cultural communities                                                                                                  |
-| **Labor Workforce**     | Population aged 15-64 years old, representing the working-age demographic                                                                                               |
-| **Level 1/2/3 Water**   | Classification of water infrastructure: Level 1 (point source/pump), Level 2 (communal faucet), Level 3 (house connection)                                              |
-| **Municipality**        | A local government unit in the Philippines, below the province level                                                                                                    |
-| **OSY**                 | Out of School Youth - school-age individuals not currently enrolled in education                                                                                        |
-| **PhilHealth**          | Philippine Health Insurance Corporation - the national health insurance program                                                                                         |
-| **PhilSys**             | Philippine Identification System - the national ID program                                                                                                              |
-| **Project**             | A development initiative implemented in one or more sitios, tracked with details about cost, location, and outcomes                                                     |
-| **Sitio**               | The smallest administrative division in the Philippines, a subdivision of a barangay. In this system, refers to vulnerable communities targeted for development support |
-| **Sitio Profile**       | Comprehensive data about a sitio including demographics, infrastructure, facilities, livelihood, health, and risks                                                      |
-| **Water-Sealed Toilet** | Sanitary toilet facility with water seal to prevent odor and contamination                                                                                              |
+| Term                     | Definition                                                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **4Ps**                  | Pantawid Pamilyang Pilipino Program - a conditional cash transfer program for poor households                                                                           |
+| **Barangay**             | The smallest administrative division in the Philippines, a village or district                                                                                          |
+| **CATCH-UP**             | A program for identifying vulnerable communities and providing appropriate interventions                                                                                |
+| **Coding**               | Unique identifier or code assigned to a sitio for administrative tracking                                                                                               |
+| **Custom Fields**        | Dynamically configured data fields that administrators can add to capture program-specific monitoring data beyond the standard sitio schema                             |
+| **Demographics**         | Statistical data about the population characteristics including age, sex, and distribution                                                                              |
+| **Dynamic Form Builder** | Admin feature that allows creating custom data fields through a GUI without code changes, enabling flexible data collection for evolving program needs                  |
+| **GIDA**                 | Geographically Isolated and Disadvantaged Area - remote communities with limited access to services                                                                     |
+| **IP**                   | Indigenous People/Peoples - members of indigenous cultural communities                                                                                                  |
+| **Labor Workforce**      | Population aged 15-64 years old, representing the working-age demographic                                                                                               |
+| **Level 1/2/3 Water**    | Classification of water infrastructure: Level 1 (point source/pump), Level 2 (communal faucet), Level 3 (house connection)                                              |
+| **Municipality**         | A local government unit in the Philippines, below the province level                                                                                                    |
+| **OSY**                  | Out of School Youth - school-age individuals not currently enrolled in education                                                                                        |
+| **PhilHealth**           | Philippine Health Insurance Corporation - the national health insurance program                                                                                         |
+| **PhilSys**              | Philippine Identification System - the national ID program                                                                                                              |
+| **Project**              | A development initiative implemented in one or more sitios, tracked with details about cost, location, and outcomes                                                     |
+| **Sitio**                | The smallest administrative division in the Philippines, a subdivision of a barangay. In this system, refers to vulnerable communities targeted for development support |
+| **Sitio Profile**        | Comprehensive data about a sitio including demographics, infrastructure, facilities, livelihood, health, and risks                                                      |
+| **Water-Sealed Toilet**  | Sanitary toilet facility with water seal to prevent odor and contamination                                                                                              |
 
 ---
 
 ## 12. Version History
 
-| Version | Date       | Changes                                                                           |
-| ------- | ---------- | --------------------------------------------------------------------------------- |
-| 1.0     | 2024-01-01 | Initial document creation with Sitio Data Module                                  |
-| 2.0     | 2025-01-15 | Added Projects Module for tracking implemented development projects across sitios |
+| Version | Date       | Changes                                                                                                                                               |
+| ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2024-01-01 | Initial document creation with Sitio Data Module                                                                                                      |
+| 2.0     | 2025-01-15 | Added Projects Module for tracking implemented development projects across sitios                                                                     |
+| 3.0     | 2026-01-03 | Added Dynamic Form Builder module (Section 4.7) enabling administrators to configure custom data fields with flexible data types and validation rules |

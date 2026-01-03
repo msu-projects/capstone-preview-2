@@ -5,3 +5,4 @@ export { default as SitioDashboardEconomic } from './SitioDashboardEconomic.svel
 export { default as SitioDashboardInfrastructure } from './SitioDashboardInfrastructure.svelte';
 export { default as SitioDashboardMaps } from './SitioDashboardMaps.svelte';
 export { default as SitioDashboardOverview } from './SitioDashboardOverview.svelte';
+export { default as SitioDashboardSupplementary } from './SitioDashboardSupplementary.svelte';

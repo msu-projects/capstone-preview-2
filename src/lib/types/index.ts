@@ -16,6 +16,25 @@ export type {
 	WaterSourceStatus
 } from './sitio-profile';
 
+// Custom Field Types (Dynamic Form Builder)
+export {
+	AGGREGATION_TYPE_LABELS,
+	DATA_TYPE_LABELS,
+	DEFAULT_AGGREGATION_TYPE,
+	DEFAULT_VALIDATION_RULES,
+	generateFieldName,
+	getApplicableAggregationTypes,
+	validateCustomFieldValue
+} from './custom-fields';
+export type {
+	CustomFieldAggregationType,
+	CustomFieldData,
+	CustomFieldDataType,
+	CustomFieldDefinition,
+	CustomFieldFormData,
+	CustomFieldValidationRules
+} from './custom-fields';
+
 // Sitio Storage & Multi-year Data
 export type {
 	LocalStorageSchema,

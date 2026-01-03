@@ -267,6 +267,17 @@ export interface SitioProfile {
 
 	averageNeedScore: number;
 	recommendations: PPARecommendation[];
+
+	// ==========================================
+	// SECTION L. CUSTOM/SUPPLEMENTARY FIELDS
+	// ==========================================
+
+	/**
+	 * Custom fields defined by administrators via the Dynamic Form Builder.
+	 * Key: Custom field ID from CustomFieldDefinition
+	 * Value: Field value (type depends on field's dataType)
+	 */
+	customFields?: Record<string, unknown>;
 }
 
 // ==========================================

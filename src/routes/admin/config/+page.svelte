@@ -6,7 +6,8 @@
 	import * as Card from '$lib/components/ui/card';
 	import { hasLocationsOverride } from '$lib/config/location-data';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { ChevronRight, MapPin } from '@lucide/svelte';
+	import { hasCustomFieldsOverride } from '$lib/utils/custom-fields-storage';
+	import { ChevronRight, Layers, MapPin } from '@lucide/svelte';
 
 	interface ConfigSection {
 		id: string;
@@ -27,6 +28,15 @@
 			href: '/admin/config/locations',
 			hasOverride: hasLocationsOverride,
 			items: ['Municipalities', 'Barangays']
+		},
+		{
+			id: 'custom-fields',
+			title: 'Custom Fields',
+			description: 'Define supplementary data fields for sitio profiles',
+			icon: Layers,
+			href: '/admin/config/custom-fields',
+			hasOverride: hasCustomFieldsOverride,
+			items: ['Text', 'Number', 'Yes/No', 'Date']
 		}
 	];
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
+	import CustomFieldsTab from '$lib/components/admin/sitios/CustomFieldsTab.svelte';
 	import DemographicsSocialTab from '$lib/components/admin/sitios/DemographicsSocialTab.svelte';
 	import InfrastructureHousingTab from '$lib/components/admin/sitios/InfrastructureHousingTab.svelte';
 	import LivelihoodsEconomyTab from '$lib/components/admin/sitios/LivelihoodsEconomyTab.svelte';
@@ -17,6 +18,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import type { PriorityItem, SitioRecord } from '$lib/types';
 	import { cn } from '$lib/utils';
+	import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
 	import { loadSitios, updateSitio } from '$lib/utils/storage';
 	import {
 		AlertTriangle,
@@ -27,6 +29,7 @@
 		CheckCircle2,
 		Copy,
 		Image,
+		Layers,
 		Loader2,
 		MapPin,
 		Pencil,
@@ -241,6 +244,10 @@
 		}>
 	>([]);
 
+	// ===== Custom Fields (Dynamic Form Builder) =====
+	let customFields = $state<Record<string, unknown>>({});
+	let hasActiveCustomFields = $state(false);
+
 	// Validation
 	const isDemographicsValid = $derived(totalPopulation > 0 || totalHouseholds > 0);
 
@@ -279,6 +286,18 @@
 			icon: AlertTriangle,
 			isValid: priorities.some((p) => p.rating > 0)
 		},
+		// Only show custom fields tab if there are active custom field definitions
+		...(hasActiveCustomFields
+			? [
+					{
+						id: 'custom-fields',
+						label: 'Custom Fields',
+						shortLabel: 'Custom',
+						icon: Layers,
+						isValid: Object.keys(customFields).length > 0
+					}
+				]
+			: []),
 		{
 			id: 'images',
 			label: 'Photos & Images',
@@ -288,8 +307,15 @@
 		}
 	]);
 
-	// Step navigation - no basic info step
-	const stepOrder = ['demographics', 'livelihoods', 'infrastructure', 'needs-assessment', 'images'];
+	// Step navigation - dynamically include custom-fields if active
+	const stepOrder = $derived([
+		'demographics',
+		'livelihoods',
+		'infrastructure',
+		'needs-assessment',
+		...(hasActiveCustomFields ? ['custom-fields'] : []),
+		'images'
+	]);
 	const currentStepIndex = $derived(stepOrder.indexOf(activeStep));
 	const canGoNext = $derived(currentStepIndex < stepOrder.length - 1);
 	const canGoPrevious = $derived(currentStepIndex > 0);
@@ -308,6 +334,9 @@
 	onMount(() => {
 		const sitios = loadSitios();
 		const found = sitios.find((s) => s.id === sitioId);
+
+		// Check if there are active custom fields
+		hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
 
 		if (found) {
 			sitio = found;
@@ -411,6 +440,9 @@
 		recommendations = yearData.recommendations
 			? JSON.parse(JSON.stringify(yearData.recommendations))
 			: [];
+
+		// Load custom fields
+		customFields = yearData.customFields ? { ...yearData.customFields } : {};
 
 		hasUnsavedChanges = false;
 	}
@@ -693,7 +725,9 @@
 			foodSecurity,
 			priorities: JSON.parse(JSON.stringify(priorities)),
 			averageNeedScore,
-			recommendations: JSON.parse(JSON.stringify(recommendations))
+			recommendations: JSON.parse(JSON.stringify(recommendations)),
+			// Custom fields from Dynamic Form Builder
+			customFields: { ...customFields }
 		};
 
 		// Update only the yearly data, not the core identifiers
@@ -920,6 +954,8 @@
 										<Building class="size-5" />
 									{:else if activeStep === 'needs-assessment'}
 										<AlertTriangle class="size-5" />
+									{:else if activeStep === 'custom-fields'}
+										<Layers class="size-5" />
 									{:else}
 										<Image class="size-5" />
 									{/if}
@@ -980,6 +1016,8 @@
 										/>
 									{:else if activeStep === 'needs-assessment'}
 										<NeedsAssessmentTab bind:hazards bind:foodSecurity bind:priorities />
+									{:else if activeStep === 'custom-fields'}
+										<CustomFieldsTab bind:customFields />
 									{:else if activeStep === 'images'}
 										<SitioImagesTab bind:images />
 									{/if}

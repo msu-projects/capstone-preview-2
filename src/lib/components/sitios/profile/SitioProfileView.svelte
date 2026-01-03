@@ -1,16 +1,19 @@
 <script lang="ts">
 	import * as Tabs from '$lib/components/ui/tabs';
 	import type { SitioProfile } from '$lib/types';
-	import { FileText, FolderKanban, Home, ToolCase, Users } from '@lucide/svelte';
+	import { FileText, FolderKanban, Home, Layers, ToolCase, Users } from '@lucide/svelte';
 
 	import AppBreadcrumb from '$lib/components/AppBreadcrumb.svelte';
 	import ProjectsSection from '$lib/components/sitios/ProjectsSection.svelte';
+	import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
+	import { onMount } from 'svelte';
 	import SitioProfileHeader from './SitioProfileHeader.svelte';
 	import AssessmentSection from './sections/AssessmentSection.svelte';
 	import DemographicsSection from './sections/DemographicsSection.svelte';
 	import EconomySection from './sections/EconomySection.svelte';
 	import InfrastructureSection from './sections/InfrastructureSection.svelte';
 	import OverviewSection from './sections/OverviewSection.svelte';
+	import SupplementarySection from './sections/SupplementarySection.svelte';
 
 	interface Props {
 		sitio: SitioProfile;
@@ -20,20 +23,34 @@
 
 	const { sitio, sitioId = 0, isAdminView = false }: Props = $props();
 
-	const tabs = [
-		{ id: 'overview', label: 'Overview', icon: FileText } as const,
-		{ id: 'demographics', label: 'Demographics', icon: Users } as const,
-		{ id: 'infrastructure', label: 'Infrastructure', icon: Home } as const,
-		{ id: 'economy', label: 'Economy', icon: ToolCase } as const,
-		{ id: 'projects', label: 'Projects', icon: FolderKanban } as const
-		// { id: 'assessment', label: 'Assessment', icon: Shield } as const
-	];
+	let hasActiveCustomFields = $state(false);
 
-	type Tabs = (typeof tabs)[0]['id'];
+	onMount(() => {
+		hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
+	});
 
-	let currentTab = $state<Tabs>('overview');
+	// Base tabs that are always shown
+	const baseTabs = [
+		{ id: 'overview', label: 'Overview', icon: FileText },
+		{ id: 'demographics', label: 'Demographics', icon: Users },
+		{ id: 'infrastructure', label: 'Infrastructure', icon: Home },
+		{ id: 'economy', label: 'Economy', icon: ToolCase },
+		{ id: 'projects', label: 'Projects', icon: FolderKanban }
+	] as const;
 
-	const changeTab = (t: Tabs) => {
+	// Tabs including optional supplementary tab
+	const tabs = $derived([
+		...baseTabs,
+		...(hasActiveCustomFields
+			? [{ id: 'supplementary' as const, label: 'Supplementary', icon: Layers }]
+			: [])
+	]);
+
+	type TabId = (typeof baseTabs)[number]['id'] | 'supplementary';
+
+	let currentTab = $state<TabId>('overview');
+
+	const changeTab = (t: TabId) => {
 		currentTab = t;
 	};
 
@@ -97,6 +114,12 @@
 						baseUrl={isAdminView ? '/admin/projects' : '/projects'}
 					/>
 				</Tabs.Content>
+
+				{#if hasActiveCustomFields}
+					<Tabs.Content value="supplementary" class="">
+						<SupplementarySection {sitio} />
+					</Tabs.Content>
+				{/if}
 
 				<Tabs.Content value="assessment" class="">
 					<AssessmentSection {sitio} />
