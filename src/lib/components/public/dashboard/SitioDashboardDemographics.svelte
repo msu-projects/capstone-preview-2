@@ -820,13 +820,13 @@
                         : laborAnalytics.unemploymentComparison.status === 'worse'
                           ? 'bg-red-500'
                           : 'bg-slate-400'}"
-                      style="width: {Math.min(laborAnalytics.unemploymentRate * 5, 100)}%"
+                      style="width: {laborAnalytics.unemploymentRate}%;"
                     ></div>
                   </div>
                   <div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                     <div
                       class="h-full rounded-full bg-blue-400 transition-all duration-500"
-                      style="width: {laborAnalytics.nationalAverages.unemploymentRate.percent * 5}%"
+                      style="width: {laborAnalytics.nationalAverages.unemploymentRate.percent}%;"
                     ></div>
                   </div>
                 </div>
