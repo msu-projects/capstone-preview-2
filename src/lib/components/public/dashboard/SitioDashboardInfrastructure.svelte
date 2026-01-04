@@ -66,7 +66,11 @@
 
   // Time series data for utilities trends
   const utilityTrendData = $derived(
-    prepareTimeSeriesData(sitios, ['electricityPercent', 'toiletPercent', 'internetPercent'])
+    prepareTimeSeriesData(sitios, [
+      'householdsWithElectricity',
+      'householdsWithToilet',
+      'householdsWithInternet'
+    ])
   );
 
   // Time series data for road infrastructure trends
@@ -1719,7 +1723,7 @@
         height={300}
         curve="smooth"
         showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(1)}%`}
+        yAxisFormatter={(val) => `${val.toFixed(0)} HH`}
       />
     </div>
   </Dialog.Content>

@@ -109,6 +109,9 @@ export interface YearlyMetrics {
   electricityPercent: number;
   toiletPercent: number;
   internetPercent: number;
+  householdsWithElectricity: number;
+  householdsWithToilet: number;
+  householdsWithInternet: number;
   totalRoadLength: number;
   roadConcrete: number;
   roadAsphalt: number;
@@ -242,6 +245,9 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
       totalHouseholds > 0 ? (householdsWithElectricity / totalHouseholds) * 100 : 0,
     toiletPercent: totalHouseholds > 0 ? (householdsWithToilet / totalHouseholds) * 100 : 0,
     internetPercent: totalHouseholds > 0 ? (householdsWithInternet / totalHouseholds) * 100 : 0,
+    householdsWithElectricity,
+    householdsWithToilet,
+    householdsWithInternet,
     totalRoadLength,
     roadConcrete,
     roadAsphalt,
@@ -370,6 +376,9 @@ export function prepareTimeSeriesData(
     electricityPercent: 'Electricity',
     toiletPercent: 'Sanitation',
     internetPercent: 'Internet',
+    householdsWithElectricity: 'Electricity',
+    householdsWithToilet: 'Sanitary Toilet',
+    householdsWithInternet: 'Internet',
     totalRoadLength: 'Road Length (km)',
     roadConcrete: 'Concrete Roads',
     roadAsphalt: 'Asphalt Roads',
@@ -405,6 +414,9 @@ export function prepareTimeSeriesData(
     electricityPercent: 'hsl(45, 93%, 47%)',
     toiletPercent: 'hsl(187, 85%, 43%)',
     internetPercent: 'hsl(217, 91%, 60%)',
+    householdsWithElectricity: 'hsl(45, 93%, 47%)',
+    householdsWithToilet: 'hsl(217, 91%, 60%)',
+    householdsWithInternet: 'hsl(142, 71%, 45%)',
     totalRoadLength: 'hsl(25, 95%, 53%)',
     roadConcrete: 'hsl(217, 91%, 60%)',
     roadAsphalt: 'hsl(215, 20%, 55%)',

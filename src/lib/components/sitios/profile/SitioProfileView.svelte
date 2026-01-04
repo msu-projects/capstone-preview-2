@@ -101,7 +101,7 @@
         </Tabs.Content>
 
         <Tabs.Content value="infrastructure" class="">
-          <InfrastructureSection {sitio} />
+          <InfrastructureSection {sitio} {sitioRecord} />
         </Tabs.Content>
 
         <Tabs.Content value="economy" class="">

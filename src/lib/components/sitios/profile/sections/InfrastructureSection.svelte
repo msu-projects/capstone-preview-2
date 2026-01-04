@@ -1,12 +1,16 @@
 <script lang="ts">
+  import LineChart from '$lib/components/charts/LineChart.svelte';
   import { Badge } from '$lib/components/ui/badge';
+  import { Button } from '$lib/components/ui/button';
+  import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import { NATIONAL_AVERAGES } from '$lib/config/national-averages';
-  import type { SitioProfile } from '$lib/types';
+  import type { SitioProfile, SitioRecord } from '$lib/types';
   import {
     Building2,
     Car,
+    ChartLine,
     Check,
     Droplets,
     Footprints,
@@ -22,9 +26,197 @@
 
   interface Props {
     sitio: SitioProfile;
+    sitioRecord?: SitioRecord;
   }
 
-  const { sitio }: Props = $props();
+  const { sitio, sitioRecord }: Props = $props();
+
+  // Modal states for trend modals
+  let showUtilityTrendModal = $state(false);
+  let showRoadTrendModal = $state(false);
+  let showWaterTrendModal = $state(false);
+  let showSanitationTrendModal = $state(false);
+  let showSignalTrendModal = $state(false);
+  let showClassroomTrendModal = $state(false);
+
+  // Get available years for comparison
+  const availableYears = $derived(sitioRecord?.availableYears || []);
+  const hasMultipleYears = $derived(availableYears.length > 1);
+
+  // Time series data for utilities trends
+  const utilityTrendData = $derived.by(() => {
+    if (!sitioRecord || !hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories = availableYears.map((y) => y.toString());
+    const series = [
+      { name: 'Electricity', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+      { name: 'Sanitary Toilet', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      { name: 'Internet', data: [] as number[], color: 'hsl(142, 71%, 45%)' }
+    ];
+
+    availableYears.forEach((year) => {
+      const yearData = sitioRecord.yearlyData[year.toString()];
+      if (yearData) {
+        const electricityCount = yearData.householdsWithElectricity || 0;
+        const toiletCount = yearData.householdsWithToilet || 0;
+        const internetCount = yearData.householdsWithInternet || 0;
+
+        series[0].data.push(electricityCount);
+        series[1].data.push(toiletCount);
+        series[2].data.push(internetCount);
+      }
+    });
+
+    return { categories, series };
+  });
+
+  // Time series data for road infrastructure trends
+  const roadTrendData = $derived.by(() => {
+    if (!sitioRecord || !hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories = availableYears.map((y) => y.toString());
+    const series = [
+      { name: 'Concrete', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      { name: 'Asphalt', data: [] as number[], color: 'hsl(215, 20%, 55%)' },
+      { name: 'Gravel', data: [] as number[], color: 'hsl(27, 87%, 67%)' },
+      { name: 'Natural', data: [] as number[], color: 'hsl(25, 5%, 45%)' }
+    ];
+
+    availableYears.forEach((year) => {
+      const yearData = sitioRecord.yearlyData[year.toString()];
+      if (yearData) {
+        series[0].data.push(yearData.infrastructure.concrete.length || 0);
+        series[1].data.push(yearData.infrastructure.asphalt.length || 0);
+        series[2].data.push(yearData.infrastructure.gravel.length || 0);
+        series[3].data.push(yearData.infrastructure.natural.length || 0);
+      }
+    });
+
+    return { categories, series };
+  });
+
+  // Time series data for water sources trends
+  const waterTrendData = $derived.by(() => {
+    if (!sitioRecord || !hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories = availableYears.map((y) => y.toString());
+    const series = [
+      { name: 'Natural Source', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+      { name: 'Level 1', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      { name: 'Level 2', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+      { name: 'Level 3', data: [] as number[], color: 'hsl(263, 70%, 50%)' }
+    ];
+
+    availableYears.forEach((year) => {
+      const yearData = sitioRecord.yearlyData[year.toString()];
+      if (yearData) {
+        series[0].data.push(yearData.waterSources.natural.functioningCount || 0);
+        series[1].data.push(yearData.waterSources.level1.functioningCount || 0);
+        series[2].data.push(yearData.waterSources.level2.functioningCount || 0);
+        series[3].data.push(yearData.waterSources.level3.functioningCount || 0);
+      }
+    });
+
+    return { categories, series };
+  });
+
+  // Time series data for sanitation types trends
+  const sanitationTrendData = $derived.by(() => {
+    if (!sitioRecord || !hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories = availableYears.map((y) => y.toString());
+    const series = [
+      { name: 'Water Sealed', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      { name: 'Pit Latrine', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+      { name: 'Community CR', data: [] as number[], color: 'hsl(263, 70%, 50%)' },
+      { name: 'Open Defecation', data: [] as number[], color: 'hsl(0, 84%, 60%)' }
+    ];
+
+    availableYears.forEach((year) => {
+      const yearData = sitioRecord.yearlyData[year.toString()];
+      if (yearData) {
+        const waterSealed = yearData.sanitationTypes.waterSealed ? 1 : 0;
+        const pitLatrine = yearData.sanitationTypes.pitLatrine ? 1 : 0;
+        const communityCR = yearData.sanitationTypes.communityCR ? 1 : 0;
+        const openDefecation = yearData.sanitationTypes.openDefecation ? 1 : 0;
+
+        series[0].data.push(waterSealed);
+        series[1].data.push(pitLatrine);
+        series[2].data.push(communityCR);
+        series[3].data.push(openDefecation);
+      }
+    });
+
+    return { categories, series };
+  });
+
+  // Time series data for mobile signal trends
+  const signalTrendData = $derived.by(() => {
+    if (!sitioRecord || !hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories = availableYears.map((y) => y.toString());
+    const signalLevels = {
+      '5g': { name: '5G', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+      '4g': { name: '4G', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      '3g': { name: '3G', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+      '2g': { name: '2G', data: [] as number[], color: 'hsl(27, 87%, 67%)' },
+      none: { name: 'None', data: [] as number[], color: 'hsl(0, 84%, 60%)' }
+    };
+
+    availableYears.forEach((year) => {
+      const yearData = sitioRecord.yearlyData[year.toString()];
+      if (yearData) {
+        const signal = yearData.mobileSignal;
+        signalLevels['5g'].data.push(signal === '5g' ? 1 : 0);
+        signalLevels['4g'].data.push(signal === '4g' ? 1 : 0);
+        signalLevels['3g'].data.push(signal === '3g' ? 1 : 0);
+        signalLevels['2g'].data.push(signal === '2g' ? 1 : 0);
+        signalLevels.none.data.push(signal === 'none' ? 1 : 0);
+      }
+    });
+
+    return { categories, series: Object.values(signalLevels) };
+  });
+
+  // Time series data for classroom density trends
+  const classroomTrendData = $derived.by(() => {
+    if (!sitioRecord || !hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories = availableYears.map((y) => y.toString());
+    const densityLevels = {
+      less_than_46: { name: '<46 (Blue)', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      '46_50': { name: '46-50 (Yellow)', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+      '51_55': { name: '51-55 (Gold)', data: [] as number[], color: 'hsl(25, 95%, 53%)' },
+      more_than_56: { name: '>56 (Red)', data: [] as number[], color: 'hsl(0, 84%, 60%)' },
+      no_classroom: { name: 'No Classroom', data: [] as number[], color: 'hsl(0, 0%, 30%)' }
+    };
+
+    availableYears.forEach((year) => {
+      const yearData = sitioRecord.yearlyData[year.toString()];
+      if (yearData) {
+        const ratio = yearData.studentsPerRoom;
+        densityLevels.less_than_46.data.push(ratio === 'less_than_46' ? 1 : 0);
+        densityLevels['46_50'].data.push(ratio === '46_50' ? 1 : 0);
+        densityLevels['51_55'].data.push(ratio === '51_55' ? 1 : 0);
+        densityLevels.more_than_56.data.push(ratio === 'more_than_56' ? 1 : 0);
+        densityLevels.no_classroom.data.push(ratio === 'no_classroom' ? 1 : 0);
+      }
+    });
+
+    return { categories, series: Object.values(densityLevels) };
+  });
 
   // Calculate utility percentages
   const electricityPercent = $derived(
@@ -467,6 +659,19 @@
       iconBgColor="bg-yellow-50 dark:bg-yellow-900/20"
       iconTextColor="text-yellow-500"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && utilityTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showUtilityTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <!-- Analytics Summary -->
         <div
@@ -736,6 +941,19 @@
       iconBgColor="bg-slate-50 dark:bg-slate-900/20"
       iconTextColor="text-slate-400"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && roadTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showRoadTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <!-- Road Network Analytics: Paved vs Unpaved Comparison -->
         {#if roadNetworkAnalytics().hasData}
@@ -947,6 +1165,19 @@
       iconBgColor="bg-blue-50 dark:bg-blue-900/20"
       iconTextColor="text-blue-500"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && waterTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showWaterTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
           <table class="w-full border-collapse text-left">
@@ -1060,6 +1291,19 @@
       iconTextColor="text-slate-400"
       contentPadding="px-4 py-2"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && signalTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showSignalTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       <div class="mt-4 flex justify-between gap-1.5">
         {#each ['2G', '3G', '4G', '5G'] as network, index}
           {@const isActive = index + 1 <= signalInfo().bars}
@@ -1090,6 +1334,19 @@
       iconTextColor={classroomDensityAnalytics().textColor}
       contentPadding="p-4"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && classroomTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showClassroomTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <div
           class="rounded-lg border p-4 {classroomDensityAnalytics()
@@ -1258,3 +1515,167 @@
     </InfoCard>
   </div>
 </div>
+
+<!-- Utility Trend Modal -->
+<Dialog.Root bind:open={showUtilityTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/20">
+          <Zap class="size-5 text-yellow-600 dark:text-yellow-400" />
+        </div>
+        Utilities Access - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year utility coverage across {utilityTrendData.categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={utilityTrendData.series}
+        categories={utilityTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => `${val.toFixed(0)} HH`}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Road Infrastructure Trend Modal -->
+<Dialog.Root bind:open={showRoadTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-slate-100 p-2 dark:bg-slate-800">
+          <Car class="size-5 text-slate-600 dark:text-slate-400" />
+        </div>
+        Road Infrastructure - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year road network development across {roadTrendData.categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={roadTrendData.series}
+        categories={roadTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => `${val.toFixed(1)} km`}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Water Sources Trend Modal -->
+<Dialog.Root bind:open={showWaterTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20">
+          <Droplets class="size-5 text-blue-600 dark:text-blue-400" />
+        </div>
+        Water Sources - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year functional water sources across {waterTrendData.categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={waterTrendData.series}
+        categories={waterTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => `${val.toFixed(0)} units`}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Sanitation Types Trend Modal -->
+<Dialog.Root bind:open={showSanitationTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-teal-100 p-2 dark:bg-teal-900/20">
+          <Droplets class="size-5 text-teal-600 dark:text-teal-400" />
+        </div>
+        Sanitation Types - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year sanitation facility distribution across {sanitationTrendData.categories
+          .length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={sanitationTrendData.series}
+        categories={sanitationTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => (val === 1 ? 'Yes' : 'No')}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Mobile Signal Trend Modal -->
+<Dialog.Root bind:open={showSignalTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-slate-100 p-2 dark:bg-slate-800">
+          <Router class="size-5 text-slate-600 dark:text-slate-400" />
+        </div>
+        Mobile Signal - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year mobile signal availability across {signalTrendData.categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={signalTrendData.series}
+        categories={signalTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => (val === 1 ? 'Available' : 'N/A')}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Classroom Density Trend Modal -->
+<Dialog.Root bind:open={showClassroomTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20">
+          <GraduationCap class="size-5 text-blue-600 dark:text-blue-400" />
+        </div>
+        Classroom Density - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year classroom density (pupil:room ratio) across {classroomTrendData.categories
+          .length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={classroomTrendData.series}
+        categories={classroomTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => (val === 1 ? 'Yes' : 'No')}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
