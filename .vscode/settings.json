@@ -1,5 +1,7 @@
 {
 	"files.associations": {
 		"*.css": "tailwindcss"
-	}
+	},
+	"editor.insertSpaces": true,
+	"editor.detectIndentation": false
 }
