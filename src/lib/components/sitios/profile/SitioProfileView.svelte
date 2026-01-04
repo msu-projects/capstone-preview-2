@@ -26,6 +26,11 @@
 
   let hasActiveCustomFields = $state(false);
 
+  // Year selector state
+  const currentYear = new Date().getFullYear();
+  const availableYears = Array.from({ length: 10 }, (_, i) => currentYear - i);
+  let selectedYear = $state<number>(currentYear);
+
   onMount(() => {
     hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
   });
@@ -65,7 +70,14 @@
   class="min-h-screen bg-linear-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900"
 >
   <AppBreadcrumb items={breadcrumbItems} {isAdminView} />
-  <SitioProfileHeader {sitio} />
+  <SitioProfileHeader
+    {sitio}
+    {selectedYear}
+    {availableYears}
+    onYearChange={(year) => {
+      selectedYear = year;
+    }}
+  />
 
   <div class="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
     <!-- Tabbed Content -->
@@ -93,19 +105,19 @@
 
       <div class="mt-4">
         <Tabs.Content value="overview" class="">
-          <OverviewSection {sitio} {changeTab} />
+          <OverviewSection {sitio} {changeTab} {selectedYear} />
         </Tabs.Content>
 
         <Tabs.Content value="demographics" class="">
-          <DemographicsSection {sitio} {sitioRecord} />
+          <DemographicsSection {sitio} {sitioRecord} {selectedYear} />
         </Tabs.Content>
 
         <Tabs.Content value="infrastructure" class="">
-          <InfrastructureSection {sitio} {sitioRecord} />
+          <InfrastructureSection {sitio} {sitioRecord} {selectedYear} />
         </Tabs.Content>
 
         <Tabs.Content value="economy" class="">
-          <EconomySection {sitio} {sitioRecord} />
+          <EconomySection {sitio} {sitioRecord} {selectedYear} />
         </Tabs.Content>
 
         <Tabs.Content value="projects" class="">
@@ -113,17 +125,18 @@
             {sitioId}
             showAdminActions={isAdminView}
             baseUrl={isAdminView ? '/admin/projects' : '/projects'}
+            {selectedYear}
           />
         </Tabs.Content>
 
         {#if hasActiveCustomFields}
           <Tabs.Content value="supplementary" class="">
-            <SupplementarySection {sitio} />
+            <SupplementarySection {sitio} {selectedYear} />
           </Tabs.Content>
         {/if}
 
         <Tabs.Content value="assessment" class="">
-          <AssessmentSection {sitio} />
+          <AssessmentSection {sitio} {selectedYear} />
         </Tabs.Content>
       </div>
     </Tabs.Root>

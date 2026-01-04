@@ -1,15 +1,19 @@
 <script lang="ts">
   import { Badge } from '$lib/components/ui/badge';
   import * as Card from '$lib/components/ui/card';
+  import * as Select from '$lib/components/ui/select';
   import type { SitioProfile } from '$lib/types';
   import { formatNumber } from '$lib/utils/formatters';
   import { Calendar, Home, MapPin, TrendingUp, Users, Vote } from '@lucide/svelte';
 
   interface Props {
     sitio: SitioProfile;
+    selectedYear: number;
+    availableYears: number[];
+    onYearChange: (year: number) => void;
   }
 
-  const { sitio }: Props = $props();
+  const { sitio, selectedYear, availableYears, onYearChange }: Props = $props();
 
   const avgHouseholdSize = $derived(
     sitio.totalHouseholds > 0 ? (sitio.totalPopulation / sitio.totalHouseholds).toFixed(1) : '0'
@@ -99,7 +103,7 @@
         </div>
 
         <!-- Title & Need Score -->
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <!-- Title -->
           <div class="flex-1">
             <h1
@@ -111,6 +115,30 @@
               Community profile for {sitio.sitioName}, Barangay {sitio.barangay}, {sitio.municipality}.
               South Cotabato Province.
             </p>
+          </div>
+
+          <!-- Year Selector -->
+          <div class="flex shrink-0 items-center gap-2">
+            <Calendar class="size-4 text-slate-500 dark:text-slate-400" />
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Data Year:</span>
+            <Select.Root
+              type="single"
+              value={selectedYear.toString()}
+              onValueChange={(value: string | undefined) => {
+                if (value) {
+                  onYearChange(parseInt(value));
+                }
+              }}
+            >
+              <Select.Trigger class="w-30">
+                {selectedYear}
+              </Select.Trigger>
+              <Select.Content>
+                {#each availableYears as year}
+                  <Select.Item value={year.toString()}>{year}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
         </div>
 

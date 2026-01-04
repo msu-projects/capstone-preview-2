@@ -22,9 +22,15 @@
     showAdminActions?: boolean;
     /** Base URL for project links */
     baseUrl?: string;
+    selectedYear?: number;
   }
 
-  let { sitioId, showAdminActions = false, baseUrl = '/admin/projects' }: Props = $props();
+  let {
+    sitioId,
+    showAdminActions = false,
+    baseUrl = '/admin/projects',
+    selectedYear
+  }: Props = $props();
 
   let projects = $state<ProjectWithSitios[]>([]);
   let isLoading = $state(true);

@@ -27,9 +27,10 @@
   interface Props {
     sitio: SitioProfile;
     sitioRecord?: SitioRecord;
+    selectedYear?: number;
   }
 
-  const { sitio, sitioRecord }: Props = $props();
+  const { sitio, sitioRecord, selectedYear }: Props = $props();
 
   // Modal states for trend modals
   let showUtilityTrendModal = $state(false);

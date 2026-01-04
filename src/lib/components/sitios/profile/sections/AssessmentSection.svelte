@@ -15,9 +15,10 @@
 
   interface Props {
     sitio: SitioProfile;
+    selectedYear?: number;
   }
 
-  const { sitio }: Props = $props();
+  const { sitio, selectedYear }: Props = $props();
 
   // Selected recommendation for modal
   let selectedRecommendation = $state<PPARecommendation | null>(null);

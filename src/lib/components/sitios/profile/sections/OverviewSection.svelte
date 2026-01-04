@@ -28,9 +28,10 @@
   interface Props {
     sitio: SitioProfile;
     changeTab: (tab: 'overview' | 'demographics' | 'infrastructure' | 'economy') => void;
+    selectedYear?: number;
   }
 
-  const { sitio, changeTab }: Props = $props();
+  const { sitio, changeTab, selectedYear }: Props = $props();
 
   // Access mode configurations
   const accessModes = $derived([

@@ -25,9 +25,10 @@
 
   interface Props {
     sitio: SitioProfile;
+    selectedYear?: number;
   }
 
-  const { sitio }: Props = $props();
+  const { sitio, selectedYear }: Props = $props();
 
   let definitions = $state<CustomFieldDefinition[]>([]);
 
