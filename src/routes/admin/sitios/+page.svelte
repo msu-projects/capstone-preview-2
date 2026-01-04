@@ -68,6 +68,8 @@
   let newYearToAdd = $state<number>(new Date().getFullYear());
   let copyFromYear = $state<string>('none');
 
+  $inspect(isManageYearsDialogOpen);
+
   // Prepare sitios with profile data
   const sitiosWithProfile = $derived(prepareSitiosForSort(sitios, 'latest'));
 
@@ -491,7 +493,7 @@
         <Label class="text-sm font-medium">Current Years</Label>
         {#if selectedSitio && selectedSitio.availableYears.length > 0}
           <div class="flex flex-wrap gap-2">
-            {#each selectedSitio.availableYears.sort((a, b) => b - a) as year}
+            {#each selectedSitio.availableYears.toSorted((a, b) => b - a) as year}
               <Badge variant="secondary" class="gap-1.5 py-1.5 pr-1.5 pl-3">
                 {year}
                 <Button

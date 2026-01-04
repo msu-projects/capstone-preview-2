@@ -161,7 +161,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-red-500',
       textColor: 'text-red-600 dark:text-red-400',
       bgLight: 'bg-red-100 dark:bg-red-900/40',
-      description: `Less than official poverty threshold (<₱${dailyThreshold.toFixed(2)}/day)`
+      description: `Less than official poverty threshold (<₱${dailyThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     },
     low_income: {
       label: 'Low-Income (Not Poor)',
@@ -170,7 +170,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-orange-500',
       textColor: 'text-orange-600 dark:text-orange-400',
       bgLight: 'bg-orange-100 dark:bg-orange-900/40',
-      description: `Between poverty line and twice the poverty line (₱${dailyThreshold.toFixed(2)}–₱${(dailyThreshold * 2).toFixed(2)}/day)`
+      description: `Between poverty line and twice the poverty line (₱${dailyThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}–₱${(dailyThreshold * 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     },
     lower_middle: {
       label: 'Lower Middle-Income',
@@ -179,7 +179,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-amber-500',
       textColor: 'text-amber-600 dark:text-amber-400',
       bgLight: 'bg-amber-100 dark:bg-amber-900/40',
-      description: `Between two and four times the poverty line (₱${(dailyThreshold * 2).toFixed(2)}–₱${(dailyThreshold * 4).toFixed(2)}/day)`
+      description: `Between two and four times the poverty line (₱${(dailyThreshold * 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}–₱${(dailyThreshold * 4).toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     },
     middle_middle: {
       label: 'Middle Middle-Income',
@@ -188,7 +188,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-lime-500',
       textColor: 'text-lime-600 dark:text-lime-400',
       bgLight: 'bg-lime-100 dark:bg-lime-900/40',
-      description: `Between four and seven times the poverty line (₱${(dailyThreshold * 4).toFixed(2)}–₱${(dailyThreshold * 7).toFixed(2)}/day)`
+      description: `Between four and seven times the poverty line (₱${(dailyThreshold * 4).toLocaleString(undefined, { maximumFractionDigits: 2 })}–₱${(dailyThreshold * 7).toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     },
     upper_middle: {
       label: 'Upper Middle-Income',
@@ -197,7 +197,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-green-500',
       textColor: 'text-green-600 dark:text-green-400',
       bgLight: 'bg-green-100 dark:bg-green-900/40',
-      description: `Between seven and twelve times the poverty line (₱${(dailyThreshold * 7).toFixed(2)}–₱${(dailyThreshold * 12).toFixed(2)}/day)`
+      description: `Between seven and twelve times the poverty line (₱${(dailyThreshold * 7).toLocaleString(undefined, { maximumFractionDigits: 2 })}–₱${(dailyThreshold * 12).toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     },
     upper_income: {
       label: 'Upper-Income (Not Rich)',
@@ -206,7 +206,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-teal-500',
       textColor: 'text-teal-600 dark:text-teal-400',
       bgLight: 'bg-teal-100 dark:bg-teal-900/40',
-      description: `Between twelve and twenty times the poverty line (₱${(dailyThreshold * 12).toFixed(2)}–₱${(dailyThreshold * 20).toFixed(2)}/day)`
+      description: `Between twelve and twenty times the poverty line (₱${(dailyThreshold * 12).toLocaleString(undefined, { maximumFractionDigits: 2 })}–₱${(dailyThreshold * 20).toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     },
     rich: {
       label: 'Rich',
@@ -215,7 +215,7 @@ export function getIncomeClusterConfigMap(): Record<
       bgColor: 'bg-blue-500',
       textColor: 'text-blue-600 dark:text-blue-400',
       bgLight: 'bg-blue-100 dark:bg-blue-900/40',
-      description: `At least twenty times the poverty line (≥₱${(dailyThreshold * 20).toFixed(2)}/day)`
+      description: `At least twenty times the poverty line (≥₱${(dailyThreshold * 20).toLocaleString(undefined, { maximumFractionDigits: 2 })}/day)`
     }
   };
 }
@@ -316,7 +316,7 @@ export function createEmptyIncomeClusterCounts(): IncomeClusterCounts {
  */
 export function getPovertyThresholdLabel(): string {
   const dailyThreshold = getPovertyThresholdsWithDaily().dailyThreshold;
-  return `₱${dailyThreshold.toFixed(2)}/day`;
+  return `₱${dailyThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}/day`;
 }
 
 /**
@@ -324,7 +324,7 @@ export function getPovertyThresholdLabel(): string {
  */
 export function getPovertyThresholdDescription(): string {
   const config = getPovertyThresholdsWithDaily();
-  return `Based on ${config.referenceYear} ${config.source} poverty threshold of ₱${config.dailyThreshold.toFixed(2)}/day (₱${config.monthlyThreshold.toLocaleString()}/month) for a ${config.description.toLowerCase()}`;
+  return `Based on ${config.referenceYear} ${config.source} poverty threshold of ₱${config.dailyThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}/day (₱${config.monthlyThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}/month) for a ${config.description.toLowerCase()}`;
 }
 
 /**
@@ -346,10 +346,10 @@ export function getIncomeClusterRange(cluster: IncomeCluster): { min: number; ma
 export function getIncomeClusterRangeLabel(cluster: IncomeCluster): string {
   const range = getIncomeClusterRange(cluster);
   if (range.max === null) {
-    return `≥₱${range.min.toLocaleString()}/day`;
+    return `≥₱${range.min.toLocaleString(undefined, { maximumFractionDigits: 2 })}/day`;
   }
   if (range.min === 0) {
-    return `<₱${range.max.toLocaleString()}/day`;
+    return `<₱${range.max.toLocaleString(undefined, { maximumFractionDigits: 2 })}/day`;
   }
-  return `₱${range.min.toLocaleString()}–₱${range.max.toLocaleString()}/day`;
+  return `₱${range.min.toLocaleString(undefined, { maximumFractionDigits: 2 })}–₱${range.max.toLocaleString(undefined, { maximumFractionDigits: 2 })}/day`;
 }

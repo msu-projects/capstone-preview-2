@@ -681,7 +681,7 @@
                     data={workerClassData}
                     centerLabel="Total"
                     centerValue={totalWorkers.toLocaleString()}
-                    height={160}
+                    height={240}
                     showLegend={false}
                   />
                 </div>
