@@ -289,6 +289,7 @@ export interface YearComparison {
   trends: {
     population: YoYTrend | null;
     households: YoYTrend | null;
+    voters: YoYTrend | null;
     laborWorkforce: YoYTrend | null;
     employmentRate: YoYTrend | null;
     averageIncome: YoYTrend | null;
@@ -321,6 +322,7 @@ export function getYearComparison(sitios: SitioRecord[], currentYear: number): Y
       households: previous
         ? calculateYoYChange(current.totalHouseholds, previous.totalHouseholds)
         : null,
+      voters: previous ? calculateYoYChange(current.totalVoters, previous.totalVoters) : null,
       laborWorkforce: previous
         ? calculateYoYChange(current.totalLaborWorkforce, previous.totalLaborWorkforce)
         : null,

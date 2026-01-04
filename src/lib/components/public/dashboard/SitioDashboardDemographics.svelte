@@ -288,6 +288,9 @@
       subtitle="{demographics.voterRegistrationPercent.toFixed(1)}% registration rate"
       icon={Vote}
       variant="default"
+      trend={hasMultipleYears && yearComparison.trends.voters
+        ? yearComparison.trends.voters
+        : undefined}
     />
     <DashboardStatCard
       title="Labor Workforce"
