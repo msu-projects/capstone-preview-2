@@ -11,11 +11,13 @@
   import type { SitioRecord } from '$lib/types';
   import {
     aggregateLivelihood,
+    aggregateSafety,
     getAllAvailableYears,
     getMultiYearMetrics,
     getYearComparison,
     prepareTimeSeriesData,
     type LivelihoodAggregation,
+    type SafetyAggregation,
     type YearComparison
   } from '$lib/utils/sitio-chart-aggregation';
   import {
@@ -25,19 +27,24 @@
     Building2,
     ChartLine,
     CheckCircle2,
+    Droplets,
     Globe,
     HandCoins,
     Home,
     Info,
     Landmark,
     Leaf,
+    Mountain,
+    ShieldAlert,
     Sprout,
     Tractor,
     TrendingDown,
     TrendingUp,
     UserCheck,
     Users,
-    Wheat
+    Waves,
+    Wheat,
+    Wind
   } from '@lucide/svelte';
 
   interface Props {
@@ -62,6 +69,9 @@
 
   // Aggregated livelihood data (using selected year)
   const livelihood = $derived<LivelihoodAggregation>(aggregateLivelihood(sitios, currentYear));
+
+  // Aggregated safety/hazard data (using selected year)
+  const safety = $derived<SafetyAggregation>(aggregateSafety(sitios, currentYear));
 
   // Time series data for income trend
   const incomeTrendData = $derived(prepareTimeSeriesData(sitios, ['averageDailyIncome']));
@@ -318,6 +328,65 @@
       color: 'bg-green-500'
     }
   ]);
+
+  // Hazard exposure data
+  const hazardData = $derived([
+    {
+      label: 'Flood',
+      icon: Waves,
+      color: 'hsl(217, 91%, 60%)',
+      bgColor: 'bg-blue-500',
+      frequencyCounts: safety.floodFrequencyCounts,
+      description: 'Flood occurrences in the past 12 months'
+    },
+    {
+      label: 'Landslide',
+      icon: Mountain,
+      color: 'hsl(30, 70%, 50%)',
+      bgColor: 'bg-orange-500',
+      frequencyCounts: safety.landslideFrequencyCounts,
+      description: 'Landslide occurrences in the past 12 months'
+    },
+    {
+      label: 'Drought',
+      icon: Droplets,
+      color: 'hsl(38, 92%, 50%)',
+      bgColor: 'bg-amber-500',
+      frequencyCounts: safety.droughtFrequencyCounts,
+      description: 'Drought occurrences in the past 12 months'
+    },
+    {
+      label: 'Earthquake',
+      icon: Wind,
+      color: 'hsl(0, 84%, 60%)',
+      bgColor: 'bg-red-500',
+      frequencyCounts: safety.earthquakeFrequencyCounts,
+      description: 'Earthquake occurrences in the past 12 months'
+    }
+  ]);
+
+  // Calculate hazard statistics
+  const hazardStats = $derived.by(() => {
+    const stats = hazardData.map((hazard) => {
+      const counts = Array.from(hazard.frequencyCounts.entries());
+      const totalSitios = counts.reduce((sum, [, count]) => sum + count, 0);
+      const affectedSitios = counts
+        .filter(([freq]) => freq > 0)
+        .reduce((sum, [, count]) => sum + count, 0);
+      const totalOccurrences = counts.reduce((sum, [freq, count]) => sum + freq * count, 0);
+      const avgFrequency = totalSitios > 0 ? totalOccurrences / totalSitios : 0;
+
+      return {
+        ...hazard,
+        totalSitios,
+        affectedSitios,
+        totalOccurrences,
+        avgFrequency,
+        affectedPercent: totalSitios > 0 ? (affectedSitios / totalSitios) * 100 : 0
+      };
+    });
+    return stats;
+  });
 </script>
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -757,7 +826,7 @@
           </div>
 
           <!-- Poverty Rate Summary -->
-          <div
+          <!-- <div
             class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/80"
           >
             <div class="flex items-center justify-between">
@@ -772,7 +841,7 @@
                 {povertyRate.toFixed(1)}%
               </span>
             </div>
-          </div>
+          </div> -->
         </div>
       {/snippet}
     </InfoCard>
@@ -854,6 +923,84 @@
               <p class="text-[10px] text-muted-foreground">Livestock Types</p>
             </div>
           </div>
+        </div>
+      {/snippet}
+    </InfoCard>
+
+    <!-- Environmental Hazards Card -->
+    <InfoCard
+      title="Environmental Hazards"
+      description="Natural hazards exposure (past 12 months)"
+      icon={ShieldAlert}
+      iconBgColor="bg-red-50 dark:bg-red-900/20"
+      iconTextColor="text-red-500"
+    >
+      {#snippet children()}
+        <div class="flex flex-col gap-3">
+          {#each hazardStats as hazard}
+            {@const HazardIcon = hazard.icon}
+            <div
+              class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 transition-all hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50"
+            >
+              <div class="flex items-start gap-3">
+                <div class="rounded-lg p-2" style="background-color: {hazard.color}20">
+                  <HazardIcon class="size-5" style="color: {hazard.color}" />
+                </div>
+                <div class="flex-1">
+                  <div class="mb-2 flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
+                        {hazard.label}
+                      </h4>
+                      <p class="text-xs text-muted-foreground">{hazard.description}</p>
+                    </div>
+                    <HelpTooltip side="left">
+                      {hazard.affectedSitios} out of {hazard.totalSitios} sitios reported {hazard.label.toLowerCase()}
+                      occurrences
+                    </HelpTooltip>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="text-center">
+                      <p class="text-lg font-bold text-slate-900 dark:text-white">
+                        {hazard.affectedSitios}
+                      </p>
+                      <p class="text-[10px] text-muted-foreground">Affected</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-lg font-bold text-slate-900 dark:text-white">
+                        {hazard.totalOccurrences}
+                      </p>
+                      <p class="text-[10px] text-muted-foreground">Total Events</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-lg font-bold text-slate-900 dark:text-white">
+                        {hazard.avgFrequency.toFixed(1)}
+                      </p>
+                      <p class="text-[10px] text-muted-foreground">Avg/Sitio</p>
+                    </div>
+                  </div>
+                  {#if hazard.affectedPercent > 0}
+                    <div class="mt-2">
+                      <div class="mb-1 flex items-center justify-between">
+                        <span class="text-[10px] text-muted-foreground">Exposure Rate</span>
+                        <span class="text-xs font-semibold" style="color: {hazard.color}">
+                          {hazard.affectedPercent.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div
+                        class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
+                      >
+                        <div
+                          class="h-full rounded-full transition-all"
+                          style="width: {hazard.affectedPercent}%; background-color: {hazard.color}"
+                        ></div>
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+              </div>
+            </div>
+          {/each}
         </div>
       {/snippet}
     </InfoCard>

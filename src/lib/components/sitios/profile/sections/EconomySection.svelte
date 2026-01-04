@@ -1,17 +1,26 @@
 <script lang="ts">
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
+  import LineChart from '$lib/components/charts/LineChart.svelte';
   import { Badge } from '$lib/components/ui/badge';
+  import { Button } from '$lib/components/ui/button';
+  import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import * as Popover from '$lib/components/ui/popover';
-  import type { SitioProfile } from '$lib/types';
+  import type { SitioProfile, SitioRecord } from '$lib/types';
   import { formatCurrency } from '$lib/utils/formatters';
+  import {
+    aggregateLivelihood,
+    getMultiYearMetrics,
+    prepareTimeSeriesData
+  } from '$lib/utils/sitio-chart-aggregation';
   import {
     AlertTriangle,
     Banknote,
     Bird,
     Briefcase,
     Building2,
+    ChartLine,
     CheckCircle2,
     CircleAlert,
     Droplets,
@@ -35,9 +44,113 @@
 
   interface Props {
     sitio: SitioProfile;
+    sitioRecord?: SitioRecord;
   }
 
-  const { sitio }: Props = $props();
+  const { sitio, sitioRecord }: Props = $props();
+
+  // Modal states for trend modals
+  let showIncomeTrendModal = $state(false);
+  let showPovertyTrendModal = $state(false);
+  let showAgricultureTrendModal = $state(false);
+
+  // Check if we have multiple years of data
+  const hasMultipleYears = $derived(
+    sitioRecord && sitioRecord.availableYears && sitioRecord.availableYears.length > 1
+  );
+
+  // Prepare time series data if we have a sitioRecord
+  const sitioArray = $derived(sitioRecord ? [sitioRecord] : []);
+
+  // Time series data for income trend
+  const incomeTrendData = $derived(
+    hasMultipleYears
+      ? prepareTimeSeriesData(sitioArray, ['averageDailyIncome'])
+      : { categories: [], series: [] }
+  );
+
+  // Time series data for poverty trend (both below and above poverty)
+  const povertyTrendData = $derived.by(() => {
+    if (!hasMultipleYears || !sitioRecord) {
+      return { categories: [], series: [] };
+    }
+
+    const yearlyMetrics = getMultiYearMetrics(sitioArray);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+
+    const belowPovertyData: number[] = [];
+    const abovePovertyData: number[] = [];
+
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearNum = yearMetric.year;
+      const yearLivelihood = aggregateLivelihood(sitioArray, yearNum);
+      const belowCount = yearLivelihood.povertyCount;
+      const aboveCount = Math.max(0, yearLivelihood.sitiosWithIncome - yearLivelihood.povertyCount);
+
+      belowPovertyData.push(belowCount);
+      abovePovertyData.push(aboveCount);
+    });
+
+    return {
+      categories,
+      series: [
+        {
+          name: 'Below Poverty Line',
+          data: belowPovertyData,
+          color: 'hsl(0, 84%, 60%)'
+        },
+        {
+          name: 'Above Poverty Line',
+          data: abovePovertyData,
+          color: 'hsl(142, 71%, 45%)'
+        }
+      ]
+    };
+  });
+
+  // Time series data for agriculture trend
+  const agricultureTrendData = $derived.by(() => {
+    if (!hasMultipleYears || !sitioRecord) {
+      return { categories: [], series: [] };
+    }
+
+    const yearlyMetrics = getMultiYearMetrics(sitioArray);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+
+    const farmersData: number[] = [];
+    const orgsData: number[] = [];
+    const areaData: number[] = [];
+
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearNum = yearMetric.year;
+      const yearLivelihood = aggregateLivelihood(sitioArray, yearNum);
+
+      farmersData.push(yearLivelihood.totalFarmers);
+      orgsData.push(yearLivelihood.totalFarmerOrgs);
+      areaData.push(Math.round(yearLivelihood.totalFarmArea * 10) / 10);
+    });
+
+    return {
+      categories,
+      series: [
+        {
+          name: 'Farmers',
+          data: farmersData,
+          color: 'hsl(38, 92%, 50%)'
+        },
+        {
+          name: 'Organizations',
+          data: orgsData,
+          color: 'hsl(142, 71%, 45%)'
+        },
+        {
+          name: 'Farm Area (ha)',
+          data: areaData,
+          color: 'hsl(120, 60%, 50%)'
+        }
+      ]
+    };
+  });
 
   // Calculate total workers
   const totalWorkers = $derived(
@@ -249,6 +362,19 @@
       iconBgColor="bg-emerald-50 dark:bg-emerald-900/20"
       iconTextColor="text-emerald-500"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && incomeTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical income trend"
+            onclick={() => (showIncomeTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         {@const level = incomeLevel()}
         <div class="flex flex-col gap-6">
@@ -508,6 +634,19 @@
       iconBgColor="bg-amber-50 dark:bg-amber-900/20"
       iconTextColor="text-amber-500"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && agricultureTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical agriculture trend"
+            onclick={() => (showAgricultureTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <div class="flex flex-col gap-6">
           <!-- Stats Row -->
@@ -766,3 +905,87 @@
     <!-- Peace & Order Card removed -->
   </div>
 </div>
+
+<!-- Income Trend Modal -->
+<Dialog.Root bind:open={showIncomeTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-900/20">
+          <Banknote class="size-5 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        Average Daily Income - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year income trends for {sitio.sitioName} across {incomeTrendData.categories
+          .length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={incomeTrendData.series}
+        categories={incomeTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Poverty Classification Trend Modal -->
+<Dialog.Root bind:open={showPovertyTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
+          <TrendingDown class="size-5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        Poverty Classification - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year poverty status for {sitio.sitioName} across {povertyTrendData.categories
+          .length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={povertyTrendData.series}
+        categories={povertyTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => val.toLocaleString()}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Agriculture Trend Modal -->
+<Dialog.Root bind:open={showAgricultureTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
+          <Wheat class="size-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        Agriculture - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year agriculture metrics for {sitio.sitioName} across {agricultureTrendData
+          .categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={agricultureTrendData.series}
+        categories={agricultureTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => val.toLocaleString()}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
