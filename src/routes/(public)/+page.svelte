@@ -2,7 +2,21 @@
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
   import { stats } from '$lib/mock-data';
-  import { ArrowRight, Database, Folder, MapPin, Search, Target, Users } from '@lucide/svelte';
+  import {
+    ArrowRight,
+    BarChart3,
+    Database,
+    FileText,
+    Folder,
+    GitCompare,
+    History,
+    MapPin,
+    Settings2,
+    Shield,
+    Target,
+    TrendingUp,
+    Users
+  } from '@lucide/svelte';
 
   // Format large numbers
   function formatNumber(num: number): string {
@@ -49,18 +63,35 @@
       description:
         'Access detailed demographic, infrastructure, and socioeconomic data about vulnerable communities across South Cotabato.'
     },
-    // FUTURE FEATURE: Uncomment when recommendation system is ready
-    // {
-    // 	icon: Lightbulb,
-    // 	title: 'Smart Recommendations',
-    // 	description:
-    // 		"Data-driven recommendations for Programs, Projects, and Activities (PPAs) tailored to each community's specific needs."
-    // },
     {
-      icon: Search,
-      title: 'Transparent & Accessible',
+      icon: BarChart3,
+      title: 'Interactive Data Visualization',
       description:
-        'Public access to community data enables informed decision-making and fosters accountability in local governance.'
+        'Explore data through interactive charts, maps, and dashboards with filtering by municipality and barangay.'
+    },
+    {
+      icon: GitCompare,
+      title: 'Community Comparison',
+      description:
+        'Compare multiple sitios side-by-side across key indicators to identify patterns and prioritize interventions.'
+    },
+    {
+      icon: Folder,
+      title: 'Project Tracking',
+      description:
+        'Monitor development projects and their impact across communities with detailed information and photo documentation.'
+    },
+    {
+      icon: History,
+      title: 'Historical Trends',
+      description:
+        'Track changes over time with yearly data snapshots to measure progress and identify emerging needs.'
+    },
+    {
+      icon: FileText,
+      title: 'Comprehensive Reports',
+      description:
+        'Generate downloadable PDF reports with aggregated statistics and visualizations for evidence-based planning.'
     }
   ];
 </script>
@@ -89,7 +120,7 @@
         <h1 class="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-7xl">
           South Cotabato
           <span
-            class="block bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent"
+            class="block bg-linear-to-r from-primary to-primary/60 bg-clip-text pb-1 text-transparent"
           >
             Convergence Data Bank
           </span>
@@ -160,24 +191,98 @@
         <p class="text-lg leading-relaxed text-muted-foreground">
           The Convergence Data Bank provides comprehensive, transparent, and accessible information
           about vulnerable communities to guide evidence-based development initiatives across South
-          Cotabato.
+          Cotabato. Our system combines detailed community profiling, project tracking, and powerful
+          analytics to support data-driven decision-making.
         </p>
       </div>
 
-      <div class="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
+      <div class="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
         {#each features as feature}
           <Card.Root class="border-2 transition-all hover:border-primary/50 hover:shadow-xl">
-            <Card.Content class="p-8">
+            <Card.Content class="p-6">
               <div
-                class="mb-6 flex size-16 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/5"
+                class="mb-4 flex size-14 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/5"
               >
-                <feature.icon class="size-8 text-primary" />
+                <feature.icon class="size-7 text-primary" />
               </div>
-              <h3 class="mb-3 text-xl font-bold">{feature.title}</h3>
-              <p class="leading-relaxed text-muted-foreground">{feature.description}</p>
+              <h3 class="mb-2 text-lg font-bold">{feature.title}</h3>
+              <p class="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
             </Card.Content>
           </Card.Root>
         {/each}
+      </div>
+    </div>
+  </section>
+
+  <!-- Key Capabilities -->
+  <section class="border-y bg-muted/10 py-16">
+    <div class="container mx-auto px-4">
+      <div class="mx-auto mb-12 max-w-3xl text-center">
+        <h2 class="mb-4 text-3xl font-bold md:text-4xl">
+          Powerful Tools for Data-Driven Development
+        </h2>
+        <p class="text-lg leading-relaxed text-muted-foreground">
+          Built with transparency and accountability at its core, the system provides comprehensive
+          tools for community development planning and monitoring.
+        </p>
+      </div>
+
+      <div class="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card.Root class="border transition-all hover:shadow-lg">
+          <Card.Content class="p-6 text-center">
+            <div
+              class="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-blue-500/10"
+            >
+              <MapPin class="size-6 text-blue-600" />
+            </div>
+            <h3 class="mb-2 font-semibold">Interactive Maps</h3>
+            <p class="text-sm text-muted-foreground">
+              Visualize sitio locations, boundaries, and project sites on interactive maps
+            </p>
+          </Card.Content>
+        </Card.Root>
+
+        <Card.Root class="border transition-all hover:shadow-lg">
+          <Card.Content class="p-6 text-center">
+            <div
+              class="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-emerald-500/10"
+            >
+              <TrendingUp class="size-6 text-emerald-600" />
+            </div>
+            <h3 class="mb-2 font-semibold">Progress Tracking</h3>
+            <p class="text-sm text-muted-foreground">
+              Monitor changes across multiple years with historical data snapshots
+            </p>
+          </Card.Content>
+        </Card.Root>
+
+        <Card.Root class="border transition-all hover:shadow-lg">
+          <Card.Content class="p-6 text-center">
+            <div
+              class="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-purple-500/10"
+            >
+              <Settings2 class="size-6 text-purple-600" />
+            </div>
+            <h3 class="mb-2 font-semibold">Custom Fields</h3>
+            <p class="text-sm text-muted-foreground">
+              Flexible data collection with administrator-defined custom fields
+            </p>
+          </Card.Content>
+        </Card.Root>
+
+        <Card.Root class="border transition-all hover:shadow-lg">
+          <Card.Content class="p-6 text-center">
+            <div
+              class="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-amber-500/10"
+            >
+              <Shield class="size-6 text-amber-600" />
+            </div>
+            <h3 class="mb-2 font-semibold">Audit Trail</h3>
+            <p class="text-sm text-muted-foreground">
+              Complete accountability with comprehensive tracking of all system actions
+            </p>
+          </Card.Content>
+        </Card.Root>
       </div>
     </div>
   </section>
@@ -186,18 +291,18 @@
   <section class="bg-linear-to-b from-muted/30 to-background py-20">
     <div class="container mx-auto px-4">
       <div class="mx-auto mb-16 max-w-3xl text-center">
-        <h2 class="mb-4 text-3xl font-bold md:text-4xl">Explore the System</h2>
+        <h2 class="mb-4 text-3xl font-bold md:text-4xl">Start Exploring</h2>
         <p class="text-lg leading-relaxed text-muted-foreground">
-          Access comprehensive community data and development projects across South Cotabato
-          Province.
+          Dive into comprehensive community profiles, compare sitios, track development projects,
+          and generate insightful reports to support evidence-based planning.
         </p>
       </div>
 
-      <div class="mx-auto grid max-w-6xl gap-8 md:grid-cols-2">
+      <div class="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
         <!-- Sitio Data Module -->
         <a href="/sitios" class="group">
           <Card.Root
-            class="h-full border-2 transition-all hover:border-primary/50 hover:shadow-2xl"
+            class="h-full border-2 py-0 transition-all hover:border-primary/50 hover:shadow-2xl"
           >
             <Card.Content class="p-8">
               <div
@@ -205,90 +310,101 @@
               >
                 <Database class="size-10 text-primary" />
               </div>
-              <h3
-                class="mb-4 text-2xl font-bold transition-colors group-hover:text-primary md:text-3xl"
-              >
+              <h3 class="mb-4 text-2xl font-bold transition-colors group-hover:text-primary">
                 Community Profiles
               </h3>
-              <p class="mb-6 leading-relaxed text-muted-foreground">
+              <p class="mb-6 text-sm leading-relaxed text-muted-foreground">
                 Browse comprehensive profiles of vulnerable communities including demographics,
-                infrastructure, facilities, livelihood, and socioeconomic data.
+                infrastructure, facilities, livelihood, and socioeconomic data with multi-year
+                historical tracking.
               </p>
               <ul class="mb-8 space-y-3">
                 <li class="flex items-start gap-3">
                   <div class="mt-1 rounded-full bg-primary/10 p-1">
                     <MapPin class="size-4 text-primary" />
                   </div>
-                  <span class="text-sm"
-                    >Interactive maps showing sitio locations and boundaries</span
-                  >
+                  <span class="text-sm">Interactive maps with sitio locations</span>
                 </li>
                 <li class="flex items-start gap-3">
                   <div class="mt-1 rounded-full bg-primary/10 p-1">
                     <Users class="size-4 text-primary" />
                   </div>
-                  <span class="text-sm">Detailed demographic and population statistics</span>
+                  <span class="text-sm">Demographics and population data</span>
                 </li>
                 <li class="flex items-start gap-3">
                   <div class="mt-1 rounded-full bg-primary/10 p-1">
-                    <Target class="size-4 text-primary" />
+                    <BarChart3 class="size-4 text-primary" />
                   </div>
-                  <span class="text-sm">Infrastructure, utilities, and facility assessments</span>
+                  <span class="text-sm">Visual charts and dashboards</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="mt-1 rounded-full bg-primary/10 p-1">
+                    <History class="size-4 text-primary" />
+                  </div>
+                  <span class="text-sm">Historical trends across years</span>
                 </li>
               </ul>
+            </Card.Content>
+            <Card.Footer class="pb-10">
               <div class="flex items-center gap-2 text-lg font-semibold text-primary">
                 Explore Communities
                 <ArrowRight class="size-5 transition-transform group-hover:translate-x-2" />
               </div>
-            </Card.Content>
+            </Card.Footer>
           </Card.Root>
         </a>
 
-        <!-- Projects Module -->
-        <a href="/projects" class="group">
+        <!-- Comparison Module -->
+        <a href="/compare" class="group">
           <Card.Root
-            class="h-full border-2 transition-all hover:border-emerald-500/50 hover:shadow-2xl"
+            class="h-full border-2 py-0 transition-all hover:border-primary/50 hover:shadow-2xl"
           >
             <Card.Content class="p-8">
               <div
-                class="mb-6 flex size-20 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-500/20 to-emerald-500/5 transition-all group-hover:scale-110 group-hover:shadow-lg"
+                class="mb-6 flex size-20 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500/20 to-blue-500/5 transition-all group-hover:scale-110 group-hover:shadow-lg"
               >
-                <Target class="size-10 text-emerald-600" />
+                <GitCompare class="size-10 text-blue-600" />
               </div>
-              <h3
-                class="mb-4 text-2xl font-bold transition-colors group-hover:text-emerald-600 md:text-3xl"
-              >
-                Development Projects
+              <h3 class="mb-4 text-2xl font-bold transition-colors group-hover:text-blue-600">
+                Compare Communities
               </h3>
-              <p class="mb-6 leading-relaxed text-muted-foreground">
-                Track programs, projects, and activities (PPAs) implemented across communities with
-                detailed monitoring and progress tracking.
+              <p class="mb-6 text-sm leading-relaxed text-muted-foreground">
+                Compare multiple sitios side-by-side to identify disparities, patterns, and
+                priorities across key development indicators.
               </p>
               <ul class="mb-8 space-y-3">
                 <li class="flex items-start gap-3">
-                  <div class="mt-1 rounded-full bg-emerald-500/10 p-1">
-                    <Search class="size-4 text-emerald-600" />
+                  <div class="mt-1 rounded-full bg-blue-500/10 p-1">
+                    <GitCompare class="size-4 text-blue-600" />
                   </div>
-                  <span class="text-sm">Browse active and completed development projects</span>
+                  <span class="text-sm">Side-by-side community comparison</span>
                 </li>
                 <li class="flex items-start gap-3">
-                  <div class="mt-1 rounded-full bg-emerald-500/10 p-1">
-                    <Database class="size-4 text-emerald-600" />
+                  <div class="mt-1 rounded-full bg-blue-500/10 p-1">
+                    <Target class="size-4 text-blue-600" />
                   </div>
-                  <span class="text-sm">View project details, beneficiaries, and outcomes</span>
+                  <span class="text-sm">Key indicator analysis</span>
                 </li>
                 <li class="flex items-start gap-3">
-                  <div class="mt-1 rounded-full bg-emerald-500/10 p-1">
-                    <MapPin class="size-4 text-emerald-600" />
+                  <div class="mt-1 rounded-full bg-blue-500/10 p-1">
+                    <BarChart3 class="size-4 text-blue-600" />
                   </div>
-                  <span class="text-sm">See project distribution across municipalities</span>
+                  <span class="text-sm">Visual comparison charts</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="mt-1 rounded-full bg-blue-500/10 p-1">
+                    <FileText class="size-4 text-blue-600" />
+                  </div>
+                  <span class="text-sm">Exportable comparison reports</span>
                 </li>
               </ul>
-              <div class="flex items-center gap-2 text-lg font-semibold text-emerald-600">
-                View Projects
+            </Card.Content>
+            <Card.Footer class="">
+              <div class="flex items-center gap-2 text-lg font-semibold text-blue-600">
+                Compare Sitios
                 <ArrowRight class="size-5 transition-transform group-hover:translate-x-2" />
               </div>
-            </Card.Content>
+            </Card.Footer>
           </Card.Root>
         </a>
 

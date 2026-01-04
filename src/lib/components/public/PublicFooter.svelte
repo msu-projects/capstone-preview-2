@@ -29,7 +29,7 @@
             <a href="/sitios" class="transition-colors hover:text-foreground">Explore Sitios</a>
           </li>
           <li>
-            <a href="/compare" class="transition-colors hover:text-foreground">Comapre</a>
+            <a href="/compare" class="transition-colors hover:text-foreground">Compare</a>
           </li>
 
           <li>
