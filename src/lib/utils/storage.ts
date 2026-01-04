@@ -12,17 +12,17 @@ const MAX_STORAGE_SIZE = 5 * 1024 * 1024; // 5MB
  * @returns true if successful, false otherwise
  */
 export function saveSitios(sitios: SitioRecord[]): boolean {
-	try {
-		const json = JSON.stringify(sitios);
-		if (json.length > MAX_STORAGE_SIZE) {
-			throw new Error('Data exceeds LocalStorage limit (5MB)');
-		}
-		localStorage.setItem(SITIOS_STORAGE_KEY, json);
-		return true;
-	} catch (error) {
-		console.error('Failed to save sitios:', error);
-		return false;
-	}
+  try {
+    const json = JSON.stringify(sitios);
+    if (json.length > MAX_STORAGE_SIZE) {
+      throw new Error('Data exceeds LocalStorage limit (5MB)');
+    }
+    localStorage.setItem(SITIOS_STORAGE_KEY, json);
+    return true;
+  } catch (error) {
+    console.error('Failed to save sitios:', error);
+    return false;
+  }
 }
 
 /**
@@ -30,20 +30,20 @@ export function saveSitios(sitios: SitioRecord[]): boolean {
  * @returns Array of SitioRecord objects, empty array if none found or on error
  */
 export function loadSitios(): SitioRecord[] {
-	try {
-		const json = localStorage.getItem(SITIOS_STORAGE_KEY);
-		return json ? JSON.parse(json) : [];
-	} catch (error) {
-		console.error('Failed to load sitios:', error);
-		return [];
-	}
+  try {
+    const json = localStorage.getItem(SITIOS_STORAGE_KEY);
+    return json ? JSON.parse(json) : [];
+  } catch (error) {
+    console.error('Failed to load sitios:', error);
+    return [];
+  }
 }
 
 /**
  * Clear all sitios from LocalStorage
  */
 export function clearSitios(): void {
-	localStorage.removeItem(SITIOS_STORAGE_KEY);
+  localStorage.removeItem(SITIOS_STORAGE_KEY);
 }
 
 /**
@@ -51,8 +51,8 @@ export function clearSitios(): void {
  * @returns Size in bytes
  */
 export function getSitiosStorageSize(): number {
-	const json = localStorage.getItem(SITIOS_STORAGE_KEY);
-	return json ? json.length : 0;
+  const json = localStorage.getItem(SITIOS_STORAGE_KEY);
+  return json ? json.length : 0;
 }
 
 /**
@@ -60,8 +60,8 @@ export function getSitiosStorageSize(): number {
  * @returns Percentage (0-100)
  */
 export function getSitiosStorageUsagePercentage(): number {
-	const size = getSitiosStorageSize();
-	return (size / MAX_STORAGE_SIZE) * 100;
+  const size = getSitiosStorageSize();
+  return (size / MAX_STORAGE_SIZE) * 100;
 }
 
 /**
@@ -69,7 +69,7 @@ export function getSitiosStorageUsagePercentage(): number {
  * @returns true if storage is at or above 80% capacity
  */
 export function isSitiosStorageNearLimit(): boolean {
-	return getSitiosStorageUsagePercentage() >= 80;
+  return getSitiosStorageUsagePercentage() >= 80;
 }
 
 /**
@@ -78,19 +78,19 @@ export function isSitiosStorageNearLimit(): boolean {
  * @returns true if successful, false otherwise
  */
 export function addSitio(sitio: SitioRecord): boolean {
-	const sitios = loadSitios();
-	sitios.push(sitio);
-	const success = saveSitios(sitios);
-	if (success) {
-		logAuditAction(
-			'create',
-			'sitio',
-			sitio.coding,
-			sitio.sitioName,
-			`Created sitio in ${sitio.barangay}, ${sitio.municipality}`
-		);
-	}
-	return success;
+  const sitios = loadSitios();
+  sitios.push(sitio);
+  const success = saveSitios(sitios);
+  if (success) {
+    logAuditAction(
+      'create',
+      'sitio',
+      sitio.coding,
+      sitio.sitioName,
+      `Created sitio in ${sitio.barangay}, ${sitio.municipality}`
+    );
+  }
+  return success;
 }
 
 /**
@@ -100,38 +100,38 @@ export function addSitio(sitio: SitioRecord): boolean {
  * @returns true if successful, false otherwise
  */
 export function updateSitio(id: number, updates: Partial<SitioRecord>): boolean {
-	const sitios = loadSitios();
-	const index = sitios.findIndex((s) => s.id === id);
+  const sitios = loadSitios();
+  const index = sitios.findIndex((s) => s.id === id);
 
-	if (index === -1) {
-		console.error(`Sitio with coding ${id} not found`);
-		return false;
-	}
+  if (index === -1) {
+    console.error(`Sitio with coding ${id} not found`);
+    return false;
+  }
 
-	const oldSitio = sitios[index];
-	const sitioName = updates.sitioName || oldSitio.sitioName;
+  const oldSitio = sitios[index];
+  const sitioName = updates.sitioName || oldSitio.sitioName;
 
-	// Calculate what fields changed
-	const changes = calculateChanges(oldSitio, updates);
+  // Calculate what fields changed
+  const changes = calculateChanges(oldSitio, updates);
 
-	sitios[index] = {
-		...oldSitio,
-		...updates
-	};
+  sitios[index] = {
+    ...oldSitio,
+    ...updates
+  };
 
-	const success = saveSitios(sitios);
-	if (success) {
-		const changedFields = changes.map((c) => c.field).join(', ');
-		logAuditAction(
-			'update',
-			'sitio',
-			id,
-			sitioName,
-			changedFields ? `Updated: ${changedFields}` : 'Updated sitio information',
-			changes
-		);
-	}
-	return success;
+  const success = saveSitios(sitios);
+  if (success) {
+    const changedFields = changes.map((c) => c.field).join(', ');
+    logAuditAction(
+      'update',
+      'sitio',
+      id,
+      sitioName,
+      changedFields ? `Updated: ${changedFields}` : 'Updated sitio information',
+      changes
+    );
+  }
+  return success;
 }
 
 /**
@@ -140,26 +140,26 @@ export function updateSitio(id: number, updates: Partial<SitioRecord>): boolean 
  * @returns true if successful, false otherwise
  */
 export function deleteSitio(id: number): boolean {
-	const sitios = loadSitios();
-	const sitioToDelete = sitios.find((s) => s.id === id);
-	const filteredSitios = sitios.filter((s) => s.id !== id);
+  const sitios = loadSitios();
+  const sitioToDelete = sitios.find((s) => s.id === id);
+  const filteredSitios = sitios.filter((s) => s.id !== id);
 
-	if (filteredSitios.length === sitios.length) {
-		console.error(`Sitio with coding ${id} not found`);
-		return false;
-	}
+  if (filteredSitios.length === sitios.length) {
+    console.error(`Sitio with coding ${id} not found`);
+    return false;
+  }
 
-	const success = saveSitios(filteredSitios);
-	if (success && sitioToDelete) {
-		logAuditAction(
-			'delete',
-			'sitio',
-			id,
-			sitioToDelete.sitioName,
-			`Deleted sitio from ${sitioToDelete.municipality}`
-		);
-	}
-	return success;
+  const success = saveSitios(filteredSitios);
+  if (success && sitioToDelete) {
+    logAuditAction(
+      'delete',
+      'sitio',
+      id,
+      sitioToDelete.sitioName,
+      `Deleted sitio from ${sitioToDelete.municipality}`
+    );
+  }
+  return success;
 }
 
 /**
@@ -168,6 +168,6 @@ export function deleteSitio(id: number): boolean {
  * @returns SitioRecord object or null if not found
  */
 export function getSitioByCoding(coding: string): SitioRecord | null {
-	const sitios = loadSitios();
-	return sitios.find((s) => s.coding === coding) || null;
+  const sitios = loadSitios();
+  return sitios.find((s) => s.coding === coding) || null;
 }

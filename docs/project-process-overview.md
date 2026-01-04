@@ -1381,10 +1381,10 @@ When a record is updated, the system captures the specific field changes:
 
 ```json
 {
-	"changes": [
-		{ "field": "totalHouseholds", "oldValue": 120, "newValue": 125 },
-		{ "field": "householdsWithElectricity", "oldValue": 80, "newValue": 90 }
-	]
+  "changes": [
+    { "field": "totalHouseholds", "oldValue": 120, "newValue": 125 },
+    { "field": "householdsWithElectricity", "oldValue": 80, "newValue": 90 }
+  ]
 }
 ```
 

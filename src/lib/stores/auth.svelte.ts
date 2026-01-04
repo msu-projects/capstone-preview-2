@@ -15,95 +15,95 @@ const isViewer = $derived(currentUser?.role === 'viewer');
 
 // Initialize from session storage on module load
 function initializeFromSession(): void {
-	if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return;
 
-	try {
-		const sessionData = localStorage.getItem(AUTH_SESSION_KEY);
-		if (sessionData) {
-			const session = JSON.parse(sessionData);
-			// Validate session (simple timestamp check - 24 hours)
-			if (session.expires && new Date(session.expires) > new Date()) {
-				currentUser = session.user;
-			} else {
-				// Session expired
-				localStorage.removeItem(AUTH_SESSION_KEY);
-			}
-		}
-	} catch (error) {
-		console.error('Failed to restore session:', error);
-		localStorage.removeItem(AUTH_SESSION_KEY);
-	}
+  try {
+    const sessionData = localStorage.getItem(AUTH_SESSION_KEY);
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      // Validate session (simple timestamp check - 24 hours)
+      if (session.expires && new Date(session.expires) > new Date()) {
+        currentUser = session.user;
+      } else {
+        // Session expired
+        localStorage.removeItem(AUTH_SESSION_KEY);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to restore session:', error);
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  }
 }
 
 // Login function
 function login(email: string, password: string): { success: boolean; error?: string } {
-	const users = loadUsers();
-	const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const users = loadUsers();
+  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
 
-	if (!user) {
-		return { success: false, error: 'User not found' };
-	}
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
 
-	if (!user.is_active) {
-		return { success: false, error: 'Account is deactivated' };
-	}
+  if (!user.is_active) {
+    return { success: false, error: 'Account is deactivated' };
+  }
 
-	// For prototype, plain text comparison
-	if (user.password_hash !== password) {
-		return { success: false, error: 'Invalid password' };
-	}
+  // For prototype, plain text comparison
+  if (user.password_hash !== password) {
+    return { success: false, error: 'Invalid password' };
+  }
 
-	// Set current user
-	currentUser = {
-		...user,
-		last_login: new Date().toISOString()
-	};
+  // Set current user
+  currentUser = {
+    ...user,
+    last_login: new Date().toISOString()
+  };
 
-	// Save session
-	const session = {
-		user: currentUser,
-		expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-	};
-	localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  // Save session
+  const session = {
+    user: currentUser,
+    expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+  };
+  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
 
-	// Log audit action
-	logAuditAction('login', 'system', undefined, undefined, `User logged in: ${user.email}`);
+  // Log audit action
+  logAuditAction('login', 'system', undefined, undefined, `User logged in: ${user.email}`);
 
-	return { success: true };
+  return { success: true };
 }
 
 // Logout function
 function logout(): void {
-	if (currentUser) {
-		logAuditAction(
-			'logout',
-			'system',
-			undefined,
-			undefined,
-			`User logged out: ${currentUser.email}`
-		);
-	}
+  if (currentUser) {
+    logAuditAction(
+      'logout',
+      'system',
+      undefined,
+      undefined,
+      `User logged out: ${currentUser.email}`
+    );
+  }
 
-	currentUser = null;
-	localStorage.removeItem(AUTH_SESSION_KEY);
+  currentUser = null;
+  localStorage.removeItem(AUTH_SESSION_KEY);
 }
 
 // Check permission
 function hasPermission(
-	resource: keyof UserPermissions,
-	action: 'read' | 'write' | 'delete'
+  resource: keyof UserPermissions,
+  action: 'read' | 'write' | 'delete'
 ): boolean {
-	if (!currentUser) return false;
+  if (!currentUser) return false;
 
-	// Superadmin has all permissions
-	if (currentUser.role === 'superadmin') return true;
+  // Superadmin has all permissions
+  if (currentUser.role === 'superadmin') return true;
 
-	return currentUser.permissions[resource]?.[action] ?? false;
+  return currentUser.permissions[resource]?.[action] ?? false;
 }
 
 // Check if user can perform action (for UI conditional rendering)
 function canPerform(resource: keyof UserPermissions, action: 'read' | 'write' | 'delete'): boolean {
-	return hasPermission(resource, action);
+  return hasPermission(resource, action);
 }
 
 /**
@@ -111,7 +111,7 @@ function canPerform(resource: keyof UserPermissions, action: 'read' | 'write' | 
  * Only superadmin can edit core identifiers (municipality, barangay, sitioName, coding, coordinates, classification)
  */
 function canEditCoreIdentifiers(): boolean {
-	return isSuperadmin;
+  return isSuperadmin;
 }
 
 /**
@@ -119,7 +119,7 @@ function canEditCoreIdentifiers(): boolean {
  * Only superadmin can create new sitio entries
  */
 function canCreateSitio(): boolean {
-	return isSuperadmin;
+  return isSuperadmin;
 }
 
 /**
@@ -127,44 +127,44 @@ function canCreateSitio(): boolean {
  * Only superadmin can delete yearly data entries
  */
 function canDeleteYearlyData(): boolean {
-	return isSuperadmin;
+  return isSuperadmin;
 }
 
 // Log action helper (wraps audit utility with current user)
 function logAction(
-	action: AuditAction,
-	resourceType: AuditResourceType,
-	resourceId?: number | string,
-	resourceName?: string,
-	details?: string
+  action: AuditAction,
+  resourceType: AuditResourceType,
+  resourceId?: number | string,
+  resourceName?: string,
+  details?: string
 ): void {
-	logAuditAction(action, resourceType, resourceId, resourceName, details);
+  logAuditAction(action, resourceType, resourceId, resourceName, details);
 }
 
 // Export reactive getters and functions
 export const authStore = {
-	get currentUser() {
-		return currentUser;
-	},
-	get isAuthenticated() {
-		return isAuthenticated;
-	},
-	get isSuperadmin() {
-		return isSuperadmin;
-	},
-	get isAdmin() {
-		return isAdmin;
-	},
-	get isViewer() {
-		return isViewer;
-	},
-	initialize: initializeFromSession,
-	login,
-	logout,
-	hasPermission,
-	canPerform,
-	canEditCoreIdentifiers,
-	canCreateSitio,
-	canDeleteYearlyData,
-	logAction
+  get currentUser() {
+    return currentUser;
+  },
+  get isAuthenticated() {
+    return isAuthenticated;
+  },
+  get isSuperadmin() {
+    return isSuperadmin;
+  },
+  get isAdmin() {
+    return isAdmin;
+  },
+  get isViewer() {
+    return isViewer;
+  },
+  initialize: initializeFromSession,
+  login,
+  logout,
+  hasPermission,
+  canPerform,
+  canEditCoreIdentifiers,
+  canCreateSitio,
+  canDeleteYearlyData,
+  logAction
 };
