@@ -73,6 +73,9 @@ export interface ComparisonConfig {
 
   /** Selected aggregate entities for comparison (municipality names or barangay names) */
   aggregateEntities?: string[];
+
+  /** Municipality filter for barangay-level aggregation */
+  municipalityFilter?: string;
 }
 
 /**

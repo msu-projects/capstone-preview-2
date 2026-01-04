@@ -44,6 +44,10 @@
   const availableBarangays = $derived(() => {
     const barangays = new Set<string>();
     for (const sitio of sitios) {
+      // Filter by municipality if specified
+      if (config.municipalityFilter && sitio.municipality !== config.municipalityFilter) {
+        continue;
+      }
       barangays.add(sitio.barangay);
     }
     return Array.from(barangays).sort();
@@ -118,6 +122,7 @@
       config.years = config.years.slice(0, 1);
       config.aggregateLevel = config.aggregateLevel || 'municipality';
       config.aggregateEntities = config.aggregateEntities || [];
+      config.municipalityFilter = undefined;
     }
   }
 
@@ -268,6 +273,7 @@
           onValueChange={(v) => {
             config.aggregateLevel = v as AggregateLevel;
             config.aggregateEntities = [];
+            config.municipalityFilter = undefined;
           }}
         >
           <Select.Trigger class="w-full">
@@ -281,6 +287,31 @@
           </Select.Content>
         </Select.Root>
       </div>
+
+      <!-- Municipality Filter (for barangay level only) -->
+      {#if config.aggregateLevel === 'barangay'}
+        <div class="space-y-2">
+          <Label class="text-sm font-medium">Filter by Municipality</Label>
+          <Select.Root
+            type="single"
+            value={config.municipalityFilter}
+            onValueChange={(v) => {
+              config.municipalityFilter = v === 'all' ? undefined : v;
+              config.aggregateEntities = [];
+            }}
+          >
+            <Select.Trigger class="w-full">
+              {config.municipalityFilter || 'All Municipalities'}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="all">All Municipalities</Select.Item>
+              {#each availableMunicipalities() as municipality}
+                <Select.Item value={municipality}>{municipality}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+        </div>
+      {/if}
 
       <div class="space-y-2">
         <div class="flex items-center justify-between">

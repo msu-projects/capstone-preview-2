@@ -63,6 +63,9 @@ export function serializeConfigToURL(config: ComparisonConfig): URLSearchParams 
   if (serialized.ae) {
     params.set('ae', serialized.ae);
   }
+  if (config.municipalityFilter) {
+    params.set('mf', config.municipalityFilter);
+  }
 
   return params;
 }
@@ -120,6 +123,11 @@ export function parseConfigFromURL(params: URLSearchParams): ComparisonConfig | 
   const aggregateEntities = params.get('ae');
   if (aggregateEntities) {
     config.aggregateEntities = aggregateEntities.split(',').filter(Boolean);
+  }
+
+  const municipalityFilter = params.get('mf');
+  if (municipalityFilter) {
+    config.municipalityFilter = municipalityFilter;
   }
 
   return config;
@@ -950,7 +958,8 @@ export function calculateAggregateComparison(
   year: number,
   aggregateLevel: AggregateLevel,
   entities: string[],
-  metricGroups: ComparisonMetricGroup[]
+  metricGroups: ComparisonMetricGroup[],
+  municipalityFilter?: string
 ): AggregateComparisonResult {
   // Build aggregated data for each entity
   const aggregatedEntities: AggregatedEntityData[] = [];
@@ -960,6 +969,10 @@ export function calculateAggregateComparison(
     const entitySitios = sitios.filter((s) => {
       if (aggregateLevel === 'municipality') {
         return s.municipality === entityName;
+      }
+      // For barangay level, also filter by municipality if specified
+      if (municipalityFilter && s.municipality !== municipalityFilter) {
+        return false;
       }
       return s.barangay === entityName;
     });
@@ -1211,7 +1224,8 @@ export function executeComparison(
         config.years[0],
         config.aggregateLevel,
         config.aggregateEntities,
-        config.metricGroups
+        config.metricGroups,
+        config.municipalityFilter
       );
     }
 
