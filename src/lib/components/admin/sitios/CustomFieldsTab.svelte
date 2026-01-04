@@ -8,10 +8,13 @@
   import { NumberInput } from '$lib/components/ui/number-input';
   import * as RadioGroup from '$lib/components/ui/radio-group';
   import { Switch } from '$lib/components/ui/switch';
-  import type { CustomFieldDefinition } from '$lib/types';
+  import type { CustomFieldDefinition, CustomFieldGroup } from '$lib/types';
   import { DATA_TYPE_LABELS, validateCustomFieldValue } from '$lib/types';
   import { cn } from '$lib/utils';
-  import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
+  import {
+    getActiveCustomFieldDefinitions,
+    getActiveCustomFieldGroups
+  } from '$lib/utils/custom-fields-storage';
   import {
     AlertCircle,
     Calendar,
@@ -27,6 +30,8 @@
     X
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
+  // Import additional icons that might be used for groups
+  import * as LucideIcons from '@lucide/svelte';
 
   interface Props {
     customFields: Record<string, unknown>;
@@ -35,11 +40,13 @@
   let { customFields = $bindable({}) }: Props = $props();
 
   let definitions = $state<CustomFieldDefinition[]>([]);
+  let groups = $state<CustomFieldGroup[]>([]);
   let validationErrors = $state<Record<string, string>>({});
   let arrayInputs = $state<Record<string, string>>({});
 
   onMount(() => {
     definitions = getActiveCustomFieldDefinitions();
+    groups = getActiveCustomFieldGroups();
     // Initialize missing fields with defaults
     for (const def of definitions) {
       if (customFields[def.id] === undefined) {
@@ -84,6 +91,12 @@
       case 'radio':
         return Circle;
     }
+  }
+
+  function getGroupIcon(iconName?: string): typeof LucideIcons.Layers {
+    if (!iconName) return Layers;
+    // @ts-expect-error - Dynamic icon access
+    return LucideIcons[iconName] ?? Layers;
   }
 
   function handleFieldChange(def: CustomFieldDefinition, value: unknown) {
@@ -165,6 +178,52 @@
       return true;
     })
   );
+
+  // Group fields by their group
+  const groupedFields = $derived.by(() => {
+    const grouped = new Map<string | null, CustomFieldDefinition[]>();
+
+    for (const def of definitions) {
+      const groupId = def.groupId ?? null;
+      if (!grouped.has(groupId)) {
+        grouped.set(groupId, []);
+      }
+      grouped.get(groupId)!.push(def);
+    }
+
+    // Sort fields within each group by groupDisplayOrder or displayOrder
+    for (const fields of grouped.values()) {
+      fields.sort((a, b) => {
+        const orderA = a.groupDisplayOrder ?? a.displayOrder;
+        const orderB = b.groupDisplayOrder ?? b.displayOrder;
+        return orderA - orderB;
+      });
+    }
+
+    return grouped;
+  });
+
+  // Get sorted groups for rendering
+  const sortedGroups = $derived.by(() => {
+    return [...groups].sort((a, b) => a.displayOrder - b.displayOrder);
+  });
+
+  // Check if a group has filled fields
+  function groupHasFilledFields(groupId: string | null): boolean {
+    const fields = groupedFields.get(groupId) ?? [];
+    return fields.some((def) => {
+      const value = customFields[def.id];
+      if (value === undefined || value === null) return false;
+      if (def.dataType === 'text' && value === '') return false;
+      if (def.dataType === 'number' && value === 0) return false;
+      if (def.dataType === 'boolean' && value === false) return false;
+      if (def.dataType === 'date' && value === '') return false;
+      if (def.dataType === 'array' && Array.isArray(value) && value.length === 0) return false;
+      if (def.dataType === 'checkbox' && Array.isArray(value) && value.length === 0) return false;
+      if (def.dataType === 'radio' && value === '') return false;
+      return true;
+    });
+  }
 </script>
 
 <div class="space-y-6">
@@ -188,217 +247,444 @@
       </p>
     </div>
   {:else}
-    <FormSection
-      title="Supplementary Data Fields"
-      description="Additional data fields configured by administrators"
-      icon={Layers}
-      variant="purple"
-      isComplete={hasFilledFields}
-    >
-      <div class="space-y-6">
-        {#each definitions as def (def.id)}
-          {@const Icon = getIcon(def.dataType)}
-          {@const error = validationErrors[def.id]}
-          {@const value = customFields[def.id]}
+    <!-- Render groups in order -->
+    {#each sortedGroups as group (group.id)}
+      {@const groupFields = groupedFields.get(group.id) ?? []}
+      {#if groupFields.length > 0}
+        {@const GroupIcon = getGroupIcon(group.icon)}
+        <FormSection
+          title={group.name}
+          description={group.description ?? `Custom fields for ${group.name.toLowerCase()}`}
+          icon={GroupIcon}
+          variant="purple"
+          isComplete={groupHasFilledFields(group.id)}
+        >
+          <div class="space-y-6">
+            {#each groupFields as def (def.id)}
+              {@const Icon = getIcon(def.dataType)}
+              {@const error = validationErrors[def.id]}
+              {@const value = customFields[def.id]}
 
-          <div class="space-y-2">
-            <div class="flex items-center gap-2">
-              <Label for={def.id} class="flex items-center gap-2">
-                <Icon class="size-4 text-muted-foreground" />
-                {def.displayLabel}
-                {#if def.validationRules.required}
-                  <span class="text-destructive">*</span>
-                {/if}
-              </Label>
-              {#if def.description}
-                <HelpTooltip content={def.description} />
-              {/if}
-              <span
-                class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-              >
-                {DATA_TYPE_LABELS[def.dataType]}
-              </span>
-            </div>
-
-            {#if def.dataType === 'text'}
-              <Input
-                id={def.id}
-                type="text"
-                value={typeof value === 'string' ? value : ''}
-                oninput={(e) => handleTextChange(def, e)}
-                placeholder={`Enter ${def.displayLabel.toLowerCase()}...`}
-                class={cn(error && 'border-destructive')}
-                minlength={def.validationRules.minLength}
-                maxlength={def.validationRules.maxLength}
-              />
-            {:else if def.dataType === 'number'}
-              <NumberInput
-                id={def.id}
-                value={typeof value === 'number' ? value : 0}
-                onvaluechange={(v) => handleNumberChange(def, v)}
-                class={cn(error && 'border-destructive')}
-                min={def.validationRules.min}
-                max={def.validationRules.max}
-              />
-            {:else if def.dataType === 'boolean'}
-              <div class="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-                <Switch
-                  id={def.id}
-                  checked={typeof value === 'boolean' ? value : false}
-                  onCheckedChange={(checked) => handleBooleanChange(def, checked)}
-                />
-                <Label for={def.id} class="cursor-pointer text-sm">
-                  {typeof value === 'boolean' && value ? 'Yes' : 'No'}
-                </Label>
-              </div>
-            {:else if def.dataType === 'date'}
-              <Input
-                id={def.id}
-                type="date"
-                value={typeof value === 'string' ? value : ''}
-                oninput={(e) => handleDateChange(def, e)}
-                class={cn(error && 'border-destructive')}
-              />
-            {:else if def.dataType === 'array'}
-              {@const arrayValue = Array.isArray(value) ? (value as string[]) : []}
               <div class="space-y-2">
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
+                  <Label for={def.id} class="flex items-center gap-2">
+                    <Icon class="size-4 text-muted-foreground" />
+                    {def.displayLabel}
+                    {#if def.validationRules.required}
+                      <span class="text-destructive">*</span>
+                    {/if}
+                  </Label>
+                  {#if def.description}
+                    <HelpTooltip content={def.description} />
+                  {/if}
+                  <span
+                    class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                  >
+                    {DATA_TYPE_LABELS[def.dataType]}
+                  </span>
+                </div>
+
+                {#if def.dataType === 'text'}
                   <Input
                     id={def.id}
                     type="text"
-                    bind:value={arrayInputs[def.id]}
-                    placeholder="Add item..."
+                    value={typeof value === 'string' ? value : ''}
+                    oninput={(e) => handleTextChange(def, e)}
+                    placeholder={`Enter ${def.displayLabel.toLowerCase()}...`}
                     class={cn(error && 'border-destructive')}
-                    onkeydown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleArrayAdd(def);
-                      }
-                    }}
+                    minlength={def.validationRules.minLength}
+                    maxlength={def.validationRules.maxLength}
                   />
-                  <button
-                    type="button"
-                    class="flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
-                    onclick={() => handleArrayAdd(def)}
-                  >
-                    <Plus class="size-4" />
-                    Add
-                  </button>
-                </div>
-                {#if arrayValue.length > 0}
-                  <div class="flex flex-wrap gap-2">
-                    {#each arrayValue as item, index (index)}
-                      <Badge variant="secondary" class="gap-1 pr-1">
-                        {item}
-                        <button
-                          type="button"
-                          class="ml-1 rounded-full hover:bg-destructive/20"
-                          onclick={() => handleArrayRemove(def, index)}
-                        >
-                          <X class="size-3" />
-                        </button>
-                      </Badge>
-                    {/each}
+                {:else if def.dataType === 'number'}
+                  <NumberInput
+                    id={def.id}
+                    value={typeof value === 'number' ? value : 0}
+                    onvaluechange={(v) => handleNumberChange(def, v)}
+                    class={cn(error && 'border-destructive')}
+                    min={def.validationRules.min}
+                    max={def.validationRules.max}
+                  />
+                {:else if def.dataType === 'boolean'}
+                  <div class="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                    <Switch
+                      id={def.id}
+                      checked={typeof value === 'boolean' ? value : false}
+                      onCheckedChange={(checked) => handleBooleanChange(def, checked)}
+                    />
+                    <Label for={def.id} class="cursor-pointer text-sm">
+                      {typeof value === 'boolean' && value ? 'Yes' : 'No'}
+                    </Label>
                   </div>
-                {/if}
-              </div>
-            {:else if def.dataType === 'checkbox'}
-              {@const checkboxValue = Array.isArray(value) ? (value as string[]) : []}
-              <div class={cn('rounded-lg border bg-muted/30 p-3', error && 'border-destructive')}>
-                {#if def.validationRules.choices && def.validationRules.choices.length > 0}
-                  <div class="flex flex-wrap gap-3">
-                    {#each def.validationRules.choices as choice (choice)}
-                      <div class="flex items-center gap-2">
-                        <Checkbox
-                          id={`${def.id}-${choice}`}
-                          checked={checkboxValue.includes(choice)}
-                          onCheckedChange={(checked: boolean) =>
-                            handleCheckboxChange(def, choice, checked)}
-                        />
-                        <Label for={`${def.id}-${choice}`} class="cursor-pointer text-sm">
-                          {choice}
-                        </Label>
+                {:else if def.dataType === 'date'}
+                  <Input
+                    id={def.id}
+                    type="date"
+                    value={typeof value === 'string' ? value : ''}
+                    oninput={(e) => handleDateChange(def, e)}
+                    class={cn(error && 'border-destructive')}
+                  />
+                {:else if def.dataType === 'array'}
+                  {@const arrayValue = Array.isArray(value) ? (value as string[]) : []}
+                  <div class="space-y-2">
+                    <div class="flex gap-2">
+                      <Input
+                        id={def.id}
+                        type="text"
+                        bind:value={arrayInputs[def.id]}
+                        placeholder="Add item..."
+                        class={cn(error && 'border-destructive')}
+                        onkeydown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleArrayAdd(def);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        class="flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+                        onclick={() => handleArrayAdd(def)}
+                      >
+                        <Plus class="size-4" />
+                        Add
+                      </button>
+                    </div>
+                    {#if arrayValue.length > 0}
+                      <div class="flex flex-wrap gap-2">
+                        {#each arrayValue as item, index (index)}
+                          <Badge variant="secondary" class="gap-1 pr-1">
+                            {item}
+                            <button
+                              type="button"
+                              class="ml-1 rounded-full hover:bg-destructive/20"
+                              onclick={() => handleArrayRemove(def, index)}
+                            >
+                              <X class="size-3" />
+                            </button>
+                          </Badge>
+                        {/each}
                       </div>
-                    {/each}
+                    {/if}
                   </div>
-                {:else}
-                  <p class="text-sm text-muted-foreground">No choices configured</p>
+                {:else if def.dataType === 'checkbox'}
+                  {@const checkboxValue = Array.isArray(value) ? (value as string[]) : []}
+                  <div
+                    class={cn('rounded-lg border bg-muted/30 p-3', error && 'border-destructive')}
+                  >
+                    {#if def.validationRules.choices && def.validationRules.choices.length > 0}
+                      <div class="flex flex-wrap gap-3">
+                        {#each def.validationRules.choices as choice (choice)}
+                          <div class="flex items-center gap-2">
+                            <Checkbox
+                              id={`${def.id}-${choice}`}
+                              checked={checkboxValue.includes(choice)}
+                              onCheckedChange={(checked: boolean) =>
+                                handleCheckboxChange(def, choice, checked)}
+                            />
+                            <Label for={`${def.id}-${choice}`} class="cursor-pointer text-sm">
+                              {choice}
+                            </Label>
+                          </div>
+                        {/each}
+                      </div>
+                    {:else}
+                      <p class="text-sm text-muted-foreground">No choices configured</p>
+                    {/if}
+                  </div>
+                {:else if def.dataType === 'radio'}
+                  {@const radioValue = typeof value === 'string' ? value : ''}
+                  <div
+                    class={cn('rounded-lg border bg-muted/30 p-3', error && 'border-destructive')}
+                  >
+                    {#if def.validationRules.choices && def.validationRules.choices.length > 0}
+                      <RadioGroup.Root
+                        value={radioValue}
+                        onValueChange={(v) => handleRadioChange(def, v)}
+                      >
+                        <div class="flex flex-wrap gap-3">
+                          {#each def.validationRules.choices as choice (choice)}
+                            <div class="flex items-center gap-2">
+                              <RadioGroup.Item id={`${def.id}-${choice}`} value={choice} />
+                              <Label for={`${def.id}-${choice}`} class="cursor-pointer text-sm">
+                                {choice}
+                              </Label>
+                            </div>
+                          {/each}
+                        </div>
+                      </RadioGroup.Root>
+                    {:else}
+                      <p class="text-sm text-muted-foreground">No choices configured</p>
+                    {/if}
+                  </div>
+                {/if}
+
+                {#if error}
+                  <p class="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle class="size-3" />
+                    {error}
+                  </p>
+                {/if}
+
+                {#if def.dataType === 'number' && (def.validationRules.min !== undefined || def.validationRules.max !== undefined)}
+                  <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Info class="size-3" />
+                    {#if def.validationRules.min !== undefined && def.validationRules.max !== undefined}
+                      Value must be between {def.validationRules.min} and {def.validationRules.max}
+                    {:else if def.validationRules.min !== undefined}
+                      Minimum value: {def.validationRules.min}
+                    {:else if def.validationRules.max !== undefined}
+                      Maximum value: {def.validationRules.max}
+                    {/if}
+                  </p>
+                {/if}
+
+                {#if def.dataType === 'text' && (def.validationRules.minLength || def.validationRules.maxLength)}
+                  <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Info class="size-3" />
+                    {#if def.validationRules.minLength && def.validationRules.maxLength}
+                      {def.validationRules.minLength}-{def.validationRules.maxLength} characters
+                    {:else if def.validationRules.maxLength}
+                      Maximum {def.validationRules.maxLength} characters
+                    {:else if def.validationRules.minLength}
+                      Minimum {def.validationRules.minLength} characters
+                    {/if}
+                  </p>
+                {/if}
+
+                {#if def.dataType === 'array' && (def.validationRules.minLength || def.validationRules.maxLength)}
+                  <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Info class="size-3" />
+                    {#if def.validationRules.minLength && def.validationRules.maxLength}
+                      {def.validationRules.minLength}-{def.validationRules.maxLength} items
+                    {:else if def.validationRules.maxLength}
+                      Maximum {def.validationRules.maxLength} items
+                    {:else if def.validationRules.minLength}
+                      Minimum {def.validationRules.minLength} items
+                    {/if}
+                  </p>
                 {/if}
               </div>
-            {:else if def.dataType === 'radio'}
-              {@const radioValue = typeof value === 'string' ? value : ''}
-              <div class={cn('rounded-lg border bg-muted/30 p-3', error && 'border-destructive')}>
-                {#if def.validationRules.choices && def.validationRules.choices.length > 0}
-                  <RadioGroup.Root
-                    value={radioValue}
-                    onValueChange={(v) => handleRadioChange(def, v)}
-                  >
+            {/each}
+          </div>
+        </FormSection>
+      {/if}
+    {/each}
+
+    <!-- Render ungrouped fields if any exist -->
+    {@const ungroupedFields = groupedFields.get(null) ?? []}
+    {#if ungroupedFields.length > 0}
+      <FormSection
+        title="Other Custom Fields"
+        description="Additional custom fields not assigned to a specific group"
+        icon={Layers}
+        variant="purple"
+        isComplete={groupHasFilledFields(null)}
+      >
+        <div class="space-y-6">
+          {#each ungroupedFields as def (def.id)}
+            {@const Icon = getIcon(def.dataType)}
+            {@const error = validationErrors[def.id]}
+            {@const value = customFields[def.id]}
+
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <Label for={def.id} class="flex items-center gap-2">
+                  <Icon class="size-4 text-muted-foreground" />
+                  {def.displayLabel}
+                  {#if def.validationRules.required}
+                    <span class="text-destructive">*</span>
+                  {/if}
+                </Label>
+                {#if def.description}
+                  <HelpTooltip content={def.description} />
+                {/if}
+                <span
+                  class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                >
+                  {DATA_TYPE_LABELS[def.dataType]}
+                </span>
+              </div>
+
+              {#if def.dataType === 'text'}
+                <Input
+                  id={def.id}
+                  type="text"
+                  value={typeof value === 'string' ? value : ''}
+                  oninput={(e) => handleTextChange(def, e)}
+                  placeholder={`Enter ${def.displayLabel.toLowerCase()}...`}
+                  class={cn(error && 'border-destructive')}
+                  minlength={def.validationRules.minLength}
+                  maxlength={def.validationRules.maxLength}
+                />
+              {:else if def.dataType === 'number'}
+                <NumberInput
+                  id={def.id}
+                  value={typeof value === 'number' ? value : 0}
+                  onvaluechange={(v) => handleNumberChange(def, v)}
+                  class={cn(error && 'border-destructive')}
+                  min={def.validationRules.min}
+                  max={def.validationRules.max}
+                />
+              {:else if def.dataType === 'boolean'}
+                <div class="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                  <Switch
+                    id={def.id}
+                    checked={typeof value === 'boolean' ? value : false}
+                    onCheckedChange={(checked) => handleBooleanChange(def, checked)}
+                  />
+                  <Label for={def.id} class="cursor-pointer text-sm">
+                    {typeof value === 'boolean' && value ? 'Yes' : 'No'}
+                  </Label>
+                </div>
+              {:else if def.dataType === 'date'}
+                <Input
+                  id={def.id}
+                  type="date"
+                  value={typeof value === 'string' ? value : ''}
+                  oninput={(e) => handleDateChange(def, e)}
+                  class={cn(error && 'border-destructive')}
+                />
+              {:else if def.dataType === 'array'}
+                {@const arrayValue = Array.isArray(value) ? (value as string[]) : []}
+                <div class="space-y-2">
+                  <div class="flex gap-2">
+                    <Input
+                      id={def.id}
+                      type="text"
+                      bind:value={arrayInputs[def.id]}
+                      placeholder="Add item..."
+                      class={cn(error && 'border-destructive')}
+                      onkeydown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleArrayAdd(def);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      class="flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+                      onclick={() => handleArrayAdd(def)}
+                    >
+                      <Plus class="size-4" />
+                      Add
+                    </button>
+                  </div>
+                  {#if arrayValue.length > 0}
+                    <div class="flex flex-wrap gap-2">
+                      {#each arrayValue as item, index (index)}
+                        <Badge variant="secondary" class="gap-1 pr-1">
+                          {item}
+                          <button
+                            type="button"
+                            class="ml-1 rounded-full hover:bg-destructive/20"
+                            onclick={() => handleArrayRemove(def, index)}
+                          >
+                            <X class="size-3" />
+                          </button>
+                        </Badge>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {:else if def.dataType === 'checkbox'}
+                {@const checkboxValue = Array.isArray(value) ? (value as string[]) : []}
+                <div class={cn('rounded-lg border bg-muted/30 p-3', error && 'border-destructive')}>
+                  {#if def.validationRules.choices && def.validationRules.choices.length > 0}
                     <div class="flex flex-wrap gap-3">
                       {#each def.validationRules.choices as choice (choice)}
                         <div class="flex items-center gap-2">
-                          <RadioGroup.Item id={`${def.id}-${choice}`} value={choice} />
+                          <Checkbox
+                            id={`${def.id}-${choice}`}
+                            checked={checkboxValue.includes(choice)}
+                            onCheckedChange={(checked: boolean) =>
+                              handleCheckboxChange(def, choice, checked)}
+                          />
                           <Label for={`${def.id}-${choice}`} class="cursor-pointer text-sm">
                             {choice}
                           </Label>
                         </div>
                       {/each}
                     </div>
-                  </RadioGroup.Root>
-                {:else}
-                  <p class="text-sm text-muted-foreground">No choices configured</p>
-                {/if}
-              </div>
-            {/if}
+                  {:else}
+                    <p class="text-sm text-muted-foreground">No choices configured</p>
+                  {/if}
+                </div>
+              {:else if def.dataType === 'radio'}
+                {@const radioValue = typeof value === 'string' ? value : ''}
+                <div class={cn('rounded-lg border bg-muted/30 p-3', error && 'border-destructive')}>
+                  {#if def.validationRules.choices && def.validationRules.choices.length > 0}
+                    <RadioGroup.Root
+                      value={radioValue}
+                      onValueChange={(v) => handleRadioChange(def, v)}
+                    >
+                      <div class="flex flex-wrap gap-3">
+                        {#each def.validationRules.choices as choice (choice)}
+                          <div class="flex items-center gap-2">
+                            <RadioGroup.Item id={`${def.id}-${choice}`} value={choice} />
+                            <Label for={`${def.id}-${choice}`} class="cursor-pointer text-sm">
+                              {choice}
+                            </Label>
+                          </div>
+                        {/each}
+                      </div>
+                    </RadioGroup.Root>
+                  {:else}
+                    <p class="text-sm text-muted-foreground">No choices configured</p>
+                  {/if}
+                </div>
+              {/if}
 
-            {#if error}
-              <p class="flex items-center gap-1 text-xs text-destructive">
-                <AlertCircle class="size-3" />
-                {error}
-              </p>
-            {/if}
+              {#if error}
+                <p class="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle class="size-3" />
+                  {error}
+                </p>
+              {/if}
 
-            {#if def.dataType === 'number' && (def.validationRules.min !== undefined || def.validationRules.max !== undefined)}
-              <p class="flex items-center gap-1 text-xs text-muted-foreground">
-                <Info class="size-3" />
-                {#if def.validationRules.min !== undefined && def.validationRules.max !== undefined}
-                  Value must be between {def.validationRules.min} and {def.validationRules.max}
-                {:else if def.validationRules.min !== undefined}
-                  Minimum value: {def.validationRules.min}
-                {:else if def.validationRules.max !== undefined}
-                  Maximum value: {def.validationRules.max}
-                {/if}
-              </p>
-            {/if}
+              {#if def.dataType === 'number' && (def.validationRules.min !== undefined || def.validationRules.max !== undefined)}
+                <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Info class="size-3" />
+                  {#if def.validationRules.min !== undefined && def.validationRules.max !== undefined}
+                    Value must be between {def.validationRules.min} and {def.validationRules.max}
+                  {:else if def.validationRules.min !== undefined}
+                    Minimum value: {def.validationRules.min}
+                  {:else if def.validationRules.max !== undefined}
+                    Maximum value: {def.validationRules.max}
+                  {/if}
+                </p>
+              {/if}
 
-            {#if def.dataType === 'text' && (def.validationRules.minLength || def.validationRules.maxLength)}
-              <p class="flex items-center gap-1 text-xs text-muted-foreground">
-                <Info class="size-3" />
-                {#if def.validationRules.minLength && def.validationRules.maxLength}
-                  {def.validationRules.minLength}-{def.validationRules.maxLength} characters
-                {:else if def.validationRules.maxLength}
-                  Maximum {def.validationRules.maxLength} characters
-                {:else if def.validationRules.minLength}
-                  Minimum {def.validationRules.minLength} characters
-                {/if}
-              </p>
-            {/if}
+              {#if def.dataType === 'text' && (def.validationRules.minLength || def.validationRules.maxLength)}
+                <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Info class="size-3" />
+                  {#if def.validationRules.minLength && def.validationRules.maxLength}
+                    {def.validationRules.minLength}-{def.validationRules.maxLength} characters
+                  {:else if def.validationRules.maxLength}
+                    Maximum {def.validationRules.maxLength} characters
+                  {:else if def.validationRules.minLength}
+                    Minimum {def.validationRules.minLength} characters
+                  {/if}
+                </p>
+              {/if}
 
-            {#if def.dataType === 'array' && (def.validationRules.minLength || def.validationRules.maxLength)}
-              <p class="flex items-center gap-1 text-xs text-muted-foreground">
-                <Info class="size-3" />
-                {#if def.validationRules.minLength && def.validationRules.maxLength}
-                  {def.validationRules.minLength}-{def.validationRules.maxLength} items
-                {:else if def.validationRules.maxLength}
-                  Maximum {def.validationRules.maxLength} items
-                {:else if def.validationRules.minLength}
-                  Minimum {def.validationRules.minLength} items
-                {/if}
-              </p>
-            {/if}
-          </div>
-        {/each}
-      </div>
-    </FormSection>
+              {#if def.dataType === 'array' && (def.validationRules.minLength || def.validationRules.maxLength)}
+                <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Info class="size-3" />
+                  {#if def.validationRules.minLength && def.validationRules.maxLength}
+                    {def.validationRules.minLength}-{def.validationRules.maxLength} items
+                  {:else if def.validationRules.maxLength}
+                    Maximum {def.validationRules.maxLength} items
+                  {:else if def.validationRules.minLength}
+                    Minimum {def.validationRules.minLength} items
+                  {/if}
+                </p>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </FormSection>
+    {/if}
 
     <!-- Info about data persistence -->
     <div

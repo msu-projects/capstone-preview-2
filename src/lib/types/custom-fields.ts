@@ -42,6 +42,35 @@ export interface CustomFieldValidationRules {
 }
 
 /**
+ * Custom Field Group
+ * Groups related custom fields together for organized display
+ */
+export interface CustomFieldGroup {
+  /** Unique identifier (auto-generated) */
+  id: string;
+  /** Display name for the group */
+  name: string;
+  /** Optional description for the group */
+  description?: string;
+  /** Lucide icon name for the group (e.g., 'Layers', 'Users') */
+  icon?: string;
+  /** Display order among groups (lower = first) */
+  displayOrder: number;
+  /** Whether the group can be collapsed in the UI */
+  isCollapsible: boolean;
+  /** Whether the group is active (false = archived/soft-deleted) */
+  isActive: boolean;
+  /** ISO timestamp when the group was created */
+  createdAt: string;
+  /** User ID who created the group */
+  createdBy: string;
+  /** ISO timestamp when the group was last modified */
+  updatedAt?: string;
+  /** User ID who last modified the group */
+  updatedBy?: string;
+}
+
+/**
  * Custom Field Definition
  * Defines the schema for an admin-created custom data field
  */
@@ -64,6 +93,10 @@ export interface CustomFieldDefinition {
   isActive: boolean;
   /** Optional description/help text for the field */
   description?: string;
+  /** Group ID this field belongs to (null = uncategorized) */
+  groupId?: string;
+  /** Display order within the group (lower = first) */
+  groupDisplayOrder?: number;
   /** ISO timestamp when the field was created */
   createdAt: string;
   /** User ID who created the field */
@@ -90,7 +123,56 @@ export interface CustomFieldFormData {
   validationRules: CustomFieldValidationRules;
   aggregationType: CustomFieldAggregationType;
   description?: string;
+  groupId?: string;
 }
+
+/**
+ * Form state for creating/editing a custom field group
+ */
+export interface CustomFieldGroupFormData {
+  name: string;
+  description?: string;
+  icon?: string;
+  isCollapsible: boolean;
+}
+
+/**
+ * Default values for new groups
+ */
+export const DEFAULT_GROUP_VALUES: CustomFieldGroupFormData = {
+  name: '',
+  description: '',
+  icon: 'Folder',
+  isCollapsible: true
+};
+
+/**
+ * Available icons for groups
+ */
+export const GROUP_ICON_OPTIONS = [
+  'Folder',
+  'Layers',
+  'Users',
+  'Building',
+  'Home',
+  'Briefcase',
+  'Heart',
+  'Shield',
+  'Leaf',
+  'Droplet',
+  'Zap',
+  'BookOpen',
+  'Truck',
+  'Map',
+  'Activity',
+  'PieChart',
+  'Settings',
+  'Star',
+  'Target',
+  'Award'
+] as const;
+
+export type GroupIconName = (typeof GROUP_ICON_OPTIONS)[number];
 
 /**
  * Default validation rules by data type

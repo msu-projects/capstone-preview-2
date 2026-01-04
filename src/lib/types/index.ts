@@ -22,7 +22,9 @@ export {
   AGGREGATION_TYPE_LABELS,
   DATA_TYPE_LABELS,
   DEFAULT_AGGREGATION_TYPE,
+  DEFAULT_GROUP_VALUES,
   DEFAULT_VALIDATION_RULES,
+  GROUP_ICON_OPTIONS,
   generateFieldName,
   getApplicableAggregationTypes,
   validateCustomFieldValue
@@ -33,6 +35,8 @@ export type {
   CustomFieldDataType,
   CustomFieldDefinition,
   CustomFieldFormData,
+  CustomFieldGroup,
+  CustomFieldGroupFormData,
   CustomFieldValidationRules
 } from './custom-fields';
 
