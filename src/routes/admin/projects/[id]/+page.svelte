@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
+  import { type BreadcrumbItem } from '$lib/components/AppBreadcrumb.svelte';
   import * as AlertDialog from '$lib/components/ui/alert-dialog';
   import { Base64Gallery } from '$lib/components/ui/base64-gallery';
   import { Button } from '$lib/components/ui/button';
@@ -134,6 +135,16 @@
       minute: '2-digit'
     });
   }
+
+  const breadcrumbs = $derived<BreadcrumbItem[]>([
+    {
+      label: 'Project',
+      href: '/admin/projects'
+    },
+    {
+      label: project?.title || ''
+    }
+  ]);
 </script>
 
 <svelte:head>
@@ -145,7 +156,11 @@
     <Loader2 class="size-8 animate-spin text-muted-foreground" />
   </div>
 {:else if project}
-  <AdminHeader title="Project Details" description="View and manage project information">
+  <AdminHeader
+    title="Project Details"
+    description="View and manage project information"
+    {breadcrumbs}
+  >
     {#snippet actions()}
       <Button variant="ghost" size="sm" href="/admin/projects" class="gap-2">
         <ArrowLeft class="size-4" />
