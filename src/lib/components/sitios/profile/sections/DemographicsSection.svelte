@@ -50,6 +50,7 @@
   let showCulturalTrendModal = $state(false);
   let showVulnerableTrendModal = $state(false);
   let showDependencyTrendModal = $state(false);
+  let showHouseholdTrendModal = $state(false);
 
   // Check if we have multiple years of data
   const hasMultipleYears = $derived(
@@ -101,6 +102,20 @@
           'totalNoBirthCert',
           'totalNoNationalID'
         ])
+      : { categories: [], series: [] }
+  );
+
+  // Time series data for households
+  const householdsTrend = $derived(
+    hasMultipleYears
+      ? prepareTimeSeriesData(sitioArray, ['totalHouseholds'])
+      : { categories: [], series: [] }
+  );
+
+  // Time series data for total population
+  const populationTrend = $derived(
+    hasMultipleYears
+      ? prepareTimeSeriesData(sitioArray, ['totalPopulation'])
       : { categories: [], series: [] }
   );
 
@@ -1018,6 +1033,98 @@
 
   <!-- Right Column: Sidebar Stats (1/3 width) -->
   <div class="flex flex-col gap-6">
+    <!-- Households & Population Card -->
+    <InfoCard
+      title="Households & Population"
+      description="Community size metrics"
+      icon={Users}
+      iconBgColor="bg-cyan-50 dark:bg-cyan-900/20"
+      iconTextColor="text-cyan-600 dark:text-cyan-400"
+    >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && householdsTrend.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showHouseholdTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
+      {#snippet children()}
+        <div class="space-y-6">
+          <!-- Total Households -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Users class="size-5 text-cyan-600 dark:text-cyan-400" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Total Households
+                </span>
+              </div>
+              <span class="text-lg font-bold text-slate-900 dark:text-white">
+                {sitio.totalHouseholds.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-cyan-500 transition-all duration-500"
+                style="width: 100%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">Family units</p>
+          </div>
+
+          <!-- Total Population -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Users class="size-5 text-blue-600 dark:text-blue-400" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Total Population
+                </span>
+              </div>
+              <span class="text-lg font-bold text-slate-900 dark:text-white">
+                {sitio.totalPopulation.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-blue-500 transition-all duration-500"
+                style="width: 100%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">Total individuals</p>
+          </div>
+
+          <!-- Average Household Size -->
+          <div
+            class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/30"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  Avg. Household Size
+                </p>
+                <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                  {sitio.totalHouseholds > 0
+                    ? (sitio.totalPopulation / sitio.totalHouseholds).toFixed(1)
+                    : '0'}
+                </p>
+              </div>
+              <div class="rounded-lg bg-cyan-100 p-3 dark:bg-cyan-900/30">
+                <Users class="size-6 text-cyan-600 dark:text-cyan-400" />
+              </div>
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">People per household</p>
+          </div>
+        </div>
+      {/snippet}
+    </InfoCard>
+
     <!-- Cultural & Demographic Groups -->
     <InfoCard
       title="Cultural & Demographic Groups"
@@ -1302,47 +1409,47 @@
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Dependency Ratio Trend Modal -->
-<Dialog.Root bind:open={showDependencyTrendModal}>
+<!-- Household & Population Trend Modal -->
+<Dialog.Root bind:open={showHouseholdTrendModal}>
   <Dialog.Content class="max-w-4xl!">
     <Dialog.Header>
       <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
-          <Scale class="size-5 text-amber-600 dark:text-amber-400" />
+        <div class="rounded-lg bg-cyan-50 p-2 dark:bg-cyan-900/20">
+          <Users class="size-5 text-cyan-600 dark:text-cyan-400" />
         </div>
-        Economic Dependency - Historical Trend
+        Households & Population - Historical Trend
       </Dialog.Title>
       <Dialog.Description>
-        Year-over-year dependency metrics across {dependencyRatioTrend().categories.length} years
+        Year-over-year trends across {householdsTrend.categories.length} years
       </Dialog.Description>
     </Dialog.Header>
     <div class="space-y-6 py-4">
-      <!-- Dependency Ratio Chart -->
+      <!-- Households Chart -->
       <div>
         <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dependency Ratio (per 100 workers)
+          Total Households
         </h4>
         <LineChart
-          categories={dependencyRatioTrend().categories}
-          series={dependencyRatioTrend().ratioSeries}
+          categories={householdsTrend.categories}
+          series={householdsTrend.series}
           height={250}
           curve="smooth"
-          showLegend={false}
-          yAxisFormatter={(val) => val.toFixed(1)}
+          showLegend={true}
+          yAxisFormatter={(val) => val.toLocaleString()}
         />
       </div>
 
-      <!-- Dependent Population Chart -->
+      <!-- Population Chart -->
       <div>
         <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dependent Population (non-working residents)
+          Total Population
         </h4>
         <LineChart
-          categories={dependencyRatioTrend().categories}
-          series={dependencyRatioTrend().populationSeries}
+          categories={populationTrend.categories}
+          series={populationTrend.series}
           height={250}
           curve="smooth"
-          showLegend={false}
+          showLegend={true}
           yAxisFormatter={(val) => val.toLocaleString()}
         />
       </div>
