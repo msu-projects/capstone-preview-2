@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as Tabs from '$lib/components/ui/tabs';
-	import type { SitioProfile } from '$lib/types';
+	import type { SitioProfile, SitioRecord } from '$lib/types';
 	import { FileText, FolderKanban, Home, Layers, ToolCase, Users } from '@lucide/svelte';
 
 	import AppBreadcrumb from '$lib/components/AppBreadcrumb.svelte';
@@ -19,9 +19,10 @@
 		sitio: SitioProfile;
 		sitioId?: number;
 		isAdminView?: boolean;
+		sitioRecord?: SitioRecord;
 	}
 
-	const { sitio, sitioId = 0, isAdminView = false }: Props = $props();
+	const { sitio, sitioId = 0, isAdminView = false, sitioRecord }: Props = $props();
 
 	let hasActiveCustomFields = $state(false);
 
@@ -96,7 +97,7 @@
 				</Tabs.Content>
 
 				<Tabs.Content value="demographics" class="">
-					<DemographicsSection {sitio} />
+					<DemographicsSection {sitio} {sitioRecord} />
 				</Tabs.Content>
 
 				<Tabs.Content value="infrastructure" class="">
