@@ -129,8 +129,7 @@
     { id: 'overview', label: 'Overview', icon: FileText },
     { id: 'demographics', label: 'Demographics', icon: Users },
     { id: 'infrastructure', label: 'Infrastructure', icon: Building2 },
-    { id: 'economic', label: 'Economic', icon: TrendingUp },
-    { id: 'maps', label: 'Maps', icon: Map }
+    { id: 'economic', label: 'Economic', icon: TrendingUp }
   ];
 
   const tabs = $derived([
@@ -138,6 +137,7 @@
     ...(hasActiveCustomFields
       ? [{ id: 'supplementary', label: 'Supplementary', icon: Layers }]
       : []),
+    { id: 'maps', label: 'Maps', icon: Map },
     { id: 'activity', label: 'Activity', icon: Activity }
   ]);
 

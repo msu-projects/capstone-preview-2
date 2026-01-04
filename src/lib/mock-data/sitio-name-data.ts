@@ -3,6 +3,11 @@
  * Authentic Filipino sitio/purok names and agricultural data
  */
 
+// ===== BACKYARD GARDEN CROP OPTIONS =====
+// Common crops grown in household backyard gardens in the Philippines
+// Three main categories: Vegetables, Fruits, and Root Crops
+export const BACKYARD_CROP_OPTIONS = ['Vegetables', 'Fruits', 'Root Crops'] as const;
+
 // ===== SITIO NAME GENERATORS =====
 // More authentic Filipino sitio/purok names
 

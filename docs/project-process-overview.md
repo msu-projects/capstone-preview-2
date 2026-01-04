@@ -337,6 +337,27 @@ Each water source contains:
 | crops     | string[] | Main crops produced (e.g., 'Palay', 'Corn', 'Banana') |
 | livestock | string[] | Livestock/Poultry (e.g., 'Pig', 'Cow', 'Chicken')     |
 
+#### Pets (pets object - number counts)
+
+| Field          | Type   | Description                              |
+| -------------- | ------ | ---------------------------------------- |
+| catsCount      | number | Total number of cats in the sitio        |
+| dogsCount      | number | Total number of dogs in the sitio        |
+| vaccinatedCats | number | Number of cats that have been vaccinated |
+| vaccinatedDogs | number | Number of dogs that have been vaccinated |
+
+**Validation Rules:**
+
+- vaccinatedCats must be ≤ catsCount
+- vaccinatedDogs must be ≤ dogsCount
+
+#### Backyard Gardens (backyardGardens object)
+
+| Field                 | Type     | Description                                                             |
+| --------------------- | -------- | ----------------------------------------------------------------------- |
+| householdsWithGardens | number   | Number of households with backyard gardens                              |
+| commonCrops           | string[] | Common crop categories: 'Vegetables', 'Fruits', or 'Root Crops' (max 3) |
+
 ### 3.9 Safety & Risk Context
 
 #### Environmental & Natural Hazards (hazards object)
@@ -1535,15 +1556,21 @@ When a record is updated, the system captures the specific field changes:
 
 #### Livelihood Validation
 
-| Field                                 | Rule                                               |
-| ------------------------------------- | -------------------------------------------------- |
-| workerClass.\*                        | Non-negative integer counts for worker classes     |
-| averageDailyIncome                    | Required, non-negative number                      |
-| agriculture.numberOfFarmers           | Optional, non-negative integer, ≤ total population |
-| agriculture.numberOfAssociations      | Optional, non-negative integer, ≤ numberOfFarmers  |
-| agriculture.estimatedFarmAreaHectares | Optional, non-negative number                      |
-| crops                                 | Array of strings (crop names)                      |
-| livestock                             | Array of strings (livestock/poultry names)         |
+| Field                                 | Rule                                                                         |
+| ------------------------------------- | ---------------------------------------------------------------------------- |
+| workerClass.\*                        | Non-negative integer counts for worker classes                               |
+| averageDailyIncome                    | Required, non-negative number                                                |
+| agriculture.numberOfFarmers           | Optional, non-negative integer, ≤ total population                           |
+| agriculture.numberOfAssociations      | Optional, non-negative integer, ≤ numberOfFarmers                            |
+| agriculture.estimatedFarmAreaHectares | Optional, non-negative number                                                |
+| crops                                 | Array of strings (crop names)                                                |
+| livestock                             | Array of strings (livestock/poultry names)                                   |
+| pets.catsCount                        | Non-negative integer                                                         |
+| pets.dogsCount                        | Non-negative integer                                                         |
+| pets.vaccinatedCats                   | Non-negative integer, ≤ pets.catsCount                                       |
+| pets.vaccinatedDogs                   | Non-negative integer, ≤ pets.dogsCount                                       |
+| backyardGardens.householdsWithGardens | Non-negative integer, ≤ totalHouseholds                                      |
+| backyardGardens.commonCrops           | Array of crop categories ('Vegetables', 'Fruits', 'Root Crops'), max 3 items |
 
 #### Priorities Validation
 

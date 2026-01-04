@@ -3,10 +3,17 @@
  * Helper functions for generating realistic sitio data
  */
 
-import type { FacilityDetails, HazardDetails, RoadDetails, WaterSourceStatus } from '$lib/types';
+import type {
+  BackyardCropCategory,
+  FacilityDetails,
+  HazardDetails,
+  RoadDetails,
+  WaterSourceStatus
+} from '$lib/types';
 import type { MunicipalityProfile } from './municipality-profiles';
 import type { SeededRandom } from './seeded-random';
 import {
+  BACKYARD_CROP_OPTIONS,
   CROP_OPTIONS_COMMERCIAL,
   CROP_OPTIONS_HIGHLAND,
   CROP_OPTIONS_LOWLAND,
@@ -317,6 +324,31 @@ export function selectLivestock(rng: SeededRandom, profile: MunicipalityProfile)
   }
 
   return Array.from(livestock);
+}
+
+/**
+ * Select backyard garden crops based on rural/urban context
+ * Returns 1-3 categories from: Vegetables, Fruits, Root Crops
+ */
+export function selectBackyardCrops(
+  rng: SeededRandom,
+  profile: MunicipalityProfile,
+  hasGarden: boolean
+): BackyardCropCategory[] {
+  if (!hasGarden) return [];
+
+  const crops: Set<BackyardCropCategory> = new Set();
+
+  // Number of crop categories depends on area type
+  // Rural/highland areas tend to have more diverse backyard gardens
+  const maxCategories = profile.type === 'rural' || profile.type === 'highland' ? 3 : 2;
+  const numCategories = rng.nextInt(1, maxCategories);
+
+  // Shuffle all available categories and select the desired number
+  const shuffled = rng.shuffle([...BACKYARD_CROP_OPTIONS]);
+  shuffled.slice(0, numCategories).forEach((c) => crops.add(c));
+
+  return Array.from(crops);
 }
 
 /**

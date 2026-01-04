@@ -1,12 +1,23 @@
 <script lang="ts">
+  import { Checkbox } from '$lib/components/ui/checkbox';
   import { ComboboxMultiSelect } from '$lib/components/ui/combobox';
   import CurrencyInput from '$lib/components/ui/currency-input/currency-input.svelte';
   import FormSection from '$lib/components/ui/form-section/form-section.svelte';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import { Label } from '$lib/components/ui/label';
   import { NumberInput } from '$lib/components/ui/number-input';
+  import type { BackyardCropCategory } from '$lib/types/sitio-profile';
   import { cn } from '$lib/utils';
-  import { Briefcase, Coins, PawPrint, Wheat } from '@lucide/svelte';
+  import {
+    AlertTriangle,
+    Briefcase,
+    Cat,
+    Coins,
+    Dog,
+    PawPrint,
+    Sprout,
+    Wheat
+  } from '@lucide/svelte';
 
   // Props matching SitioProfile Section H - Livelihood & Agriculture
   let {
@@ -25,7 +36,18 @@
       estimatedFarmAreaHectares: 0
     }),
     crops = $bindable<string[]>([]),
-    livestock = $bindable<string[]>([])
+    livestock = $bindable<string[]>([]),
+    pets = $bindable({
+      catsCount: 0,
+      dogsCount: 0,
+      vaccinatedCats: 0,
+      vaccinatedDogs: 0
+    }),
+    backyardGardens = $bindable({
+      householdsWithGardens: 0,
+      commonCrops: [] as BackyardCropCategory[]
+    }),
+    totalHouseholds = 0
   }: {
     workerClass: {
       privateHousehold: number;
@@ -43,6 +65,17 @@
     };
     crops: string[];
     livestock: string[];
+    pets: {
+      catsCount: number;
+      dogsCount: number;
+      vaccinatedCats: number;
+      vaccinatedDogs: number;
+    };
+    backyardGardens: {
+      householdsWithGardens: number;
+      commonCrops: BackyardCropCategory[];
+    };
+    totalHouseholds?: number;
   } = $props();
 
   // Computed totals
@@ -61,6 +94,14 @@
   const isAgricultureComplete = $derived(
     agriculture.numberOfFarmers > 0 || crops.length > 0 || livestock.length > 0
   );
+  const isPetsComplete = $derived(pets.catsCount > 0 || pets.dogsCount > 0);
+  const isBackyardGardensComplete = $derived(
+    backyardGardens.householdsWithGardens > 0 || backyardGardens.commonCrops.length > 0
+  );
+
+  // Validation for vaccination counts
+  const isCatVaccinationValid = $derived(pets.vaccinatedCats <= pets.catsCount);
+  const isDogVaccinationValid = $derived(pets.vaccinatedDogs <= pets.dogsCount);
 
   const cropOptions = [
     'Rice',
@@ -88,6 +129,8 @@
     'Chickens',
     'Ducks'
   ];
+
+  const backyardCropOptions: BackyardCropCategory[] = ['Vegetables', 'Fruits', 'Root Crops'];
 </script>
 
 <div class="space-y-6">
@@ -296,6 +339,174 @@
         allowCustom
         variant="list"
       />
+    </div>
+  </FormSection>
+
+  <!-- Pets Section -->
+  <FormSection
+    title="Pets"
+    description="Cats and dogs in the sitio with vaccination data"
+    icon={Dog}
+    variant="default"
+    isComplete={isPetsComplete}
+    defaultOpen={false}
+  >
+    <div class="grid gap-4 sm:grid-cols-2">
+      <!-- Cats -->
+      <div class="space-y-4 rounded-lg border p-4">
+        <div class="flex items-center gap-2 text-sm font-medium">
+          <Cat class="size-4 text-orange-500" />
+          <span>Cats</span>
+        </div>
+        <div class="space-y-2">
+          <Label for="catsCount">Total Cats</Label>
+          <NumberInput
+            id="catsCount"
+            bind:value={pets.catsCount}
+            placeholder="0"
+            min={0}
+            class={cn(pets.catsCount > 0 && 'border-primary/30 bg-primary/5')}
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="vaccinatedCats" class="flex items-center gap-1.5">
+            Vaccinated Cats
+            <HelpTooltip
+              content="Number of cats that have been vaccinated (should not exceed total cats)"
+            />
+          </Label>
+          <NumberInput
+            id="vaccinatedCats"
+            bind:value={pets.vaccinatedCats}
+            placeholder="0"
+            min={0}
+            max={pets.catsCount || undefined}
+            class={cn(
+              pets.vaccinatedCats > 0 && 'border-primary/30 bg-primary/5',
+              !isCatVaccinationValid && 'border-destructive bg-destructive/5'
+            )}
+          />
+          {#if !isCatVaccinationValid}
+            <p class="flex items-center gap-1 text-xs text-destructive">
+              <AlertTriangle class="size-3" />
+              Vaccinated cats cannot exceed total cats
+            </p>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Dogs -->
+      <div class="space-y-4 rounded-lg border p-4">
+        <div class="flex items-center gap-2 text-sm font-medium">
+          <Dog class="size-4 text-amber-600" />
+          <span>Dogs</span>
+        </div>
+        <div class="space-y-2">
+          <Label for="dogsCount">Total Dogs</Label>
+          <NumberInput
+            id="dogsCount"
+            bind:value={pets.dogsCount}
+            placeholder="0"
+            min={0}
+            class={cn(pets.dogsCount > 0 && 'border-primary/30 bg-primary/5')}
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="vaccinatedDogs" class="flex items-center gap-1.5">
+            Vaccinated Dogs
+            <HelpTooltip
+              content="Number of dogs that have been vaccinated (should not exceed total dogs)"
+            />
+          </Label>
+          <NumberInput
+            id="vaccinatedDogs"
+            bind:value={pets.vaccinatedDogs}
+            placeholder="0"
+            min={0}
+            max={pets.dogsCount || undefined}
+            class={cn(
+              pets.vaccinatedDogs > 0 && 'border-primary/30 bg-primary/5',
+              !isDogVaccinationValid && 'border-destructive bg-destructive/5'
+            )}
+          />
+          {#if !isDogVaccinationValid}
+            <p class="flex items-center gap-1 text-xs text-destructive">
+              <AlertTriangle class="size-3" />
+              Vaccinated dogs cannot exceed total dogs
+            </p>
+          {/if}
+        </div>
+      </div>
+    </div>
+  </FormSection>
+
+  <!-- Backyard Gardens Section -->
+  <FormSection
+    title="Backyard Gardens"
+    description="Household gardening activities"
+    icon={Sprout}
+    variant="default"
+    isComplete={isBackyardGardensComplete}
+    defaultOpen={false}
+  >
+    <div class="space-y-4">
+      <div class="max-w-sm space-y-2">
+        <Label for="householdsWithGardens" class="flex items-center gap-1.5">
+          Households with Backyard Gardens
+          <HelpTooltip
+            content="Number of households that maintain backyard gardens for food production"
+          />
+        </Label>
+        <NumberInput
+          id="householdsWithGardens"
+          bind:value={backyardGardens.householdsWithGardens}
+          placeholder="0"
+          min={0}
+          max={totalHouseholds || undefined}
+          class={cn(backyardGardens.householdsWithGardens > 0 && 'border-primary/30 bg-primary/5')}
+        />
+        {#if totalHouseholds > 0 && backyardGardens.householdsWithGardens > 0}
+          <p class="text-xs text-muted-foreground">
+            {Math.round((backyardGardens.householdsWithGardens / totalHouseholds) * 100)}% of
+            households
+          </p>
+        {/if}
+      </div>
+
+      <div class="space-y-3">
+        <Label class="flex items-center gap-1.5">
+          Common Backyard Crops
+          <HelpTooltip content="Select crop categories grown in household gardens" />
+        </Label>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {#each backyardCropOptions as cropCategory}
+            {@const cropId = cropCategory.toLowerCase().replace(/\s+/g, '-')}
+            <Label
+              for={cropId}
+              class={cn(
+                'flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors hover:bg-muted/50',
+                backyardGardens.commonCrops.includes(cropCategory) &&
+                  'border-primary/50 bg-primary/5'
+              )}
+            >
+              <Checkbox
+                id={cropId}
+                checked={backyardGardens.commonCrops.includes(cropCategory)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    backyardGardens.commonCrops = [...backyardGardens.commonCrops, cropCategory];
+                  } else {
+                    backyardGardens.commonCrops = backyardGardens.commonCrops.filter(
+                      (c) => c !== cropCategory
+                    );
+                  }
+                }}
+              />
+              <span class="text-sm">{cropCategory}</span>
+            </Label>
+          {/each}
+        </div>
+      </div>
     </div>
   </FormSection>
 </div>

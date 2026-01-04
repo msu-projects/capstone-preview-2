@@ -847,6 +847,19 @@ export interface LivelihoodAggregation {
 
   // Poverty estimate (based on daily income thresholds)
   povertyCount: number; // Below 668 PHP/day (2025 DEPDev threshold)
+
+  // Pets data
+  totalCats: number;
+  totalDogs: number;
+  totalVaccinatedCats: number;
+  totalVaccinatedDogs: number;
+  catVaccinationRate: number;
+  dogVaccinationRate: number;
+
+  // Backyard gardens data
+  totalHouseholdsWithGardens: number;
+  backyardGardenRate: number;
+  backyardCropCounts: Map<string, number>;
 }
 
 export function aggregateLivelihood(sitios: SitioRecord[], year?: number): LivelihoodAggregation {
@@ -867,6 +880,17 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
 
   const cropCounts = new Map<string, number>();
   const livestockCounts = new Map<string, number>();
+
+  // Pets aggregation
+  let totalCats = 0;
+  let totalDogs = 0;
+  let totalVaccinatedCats = 0;
+  let totalVaccinatedDogs = 0;
+
+  // Backyard gardens aggregation
+  let totalHouseholdsWithGardens = 0;
+  let totalHouseholds = 0;
+  const backyardCropCounts = new Map<string, number>();
 
   for (const sitio of sitios) {
     const profile = getDataForYearOrLatest(sitio, year);
@@ -903,6 +927,23 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
     for (const animal of profile.livestock || []) {
       livestockCounts.set(animal, (livestockCounts.get(animal) || 0) + 1);
     }
+
+    // Pets
+    if (profile.pets) {
+      totalCats += profile.pets.catsCount || 0;
+      totalDogs += profile.pets.dogsCount || 0;
+      totalVaccinatedCats += profile.pets.vaccinatedCats || 0;
+      totalVaccinatedDogs += profile.pets.vaccinatedDogs || 0;
+    }
+
+    // Backyard gardens
+    totalHouseholds += profile.totalHouseholds || 0;
+    if (profile.backyardGardens) {
+      totalHouseholdsWithGardens += profile.backyardGardens.householdsWithGardens || 0;
+      for (const crop of profile.backyardGardens.commonCrops || []) {
+        backyardCropCounts.set(crop, (backyardCropCounts.get(crop) || 0) + 1);
+      }
+    }
   }
 
   return {
@@ -924,7 +965,21 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
     cropCounts,
     livestockCounts,
 
-    povertyCount
+    povertyCount,
+
+    // Pets
+    totalCats,
+    totalDogs,
+    totalVaccinatedCats,
+    totalVaccinatedDogs,
+    catVaccinationRate: totalCats > 0 ? (totalVaccinatedCats / totalCats) * 100 : 0,
+    dogVaccinationRate: totalDogs > 0 ? (totalVaccinatedDogs / totalDogs) * 100 : 0,
+
+    // Backyard gardens
+    totalHouseholdsWithGardens,
+    backyardGardenRate:
+      totalHouseholds > 0 ? (totalHouseholdsWithGardens / totalHouseholds) * 100 : 0,
+    backyardCropCounts
   };
 }
 

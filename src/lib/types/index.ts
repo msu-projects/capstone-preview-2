@@ -6,6 +6,7 @@
 
 // Sitio Profile Types
 export type {
+  BackyardCropCategory,
   FacilityDetails,
   HazardDetails,
   PriorityItem,

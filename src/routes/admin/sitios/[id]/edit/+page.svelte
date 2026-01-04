@@ -205,6 +205,16 @@
   });
   let crops = $state<string[]>([]);
   let livestock = $state<string[]>([]);
+  let pets = $state({
+    catsCount: 0,
+    dogsCount: 0,
+    vaccinatedCats: 0,
+    vaccinatedDogs: 0
+  });
+  let backyardGardens = $state({
+    householdsWithGardens: 0,
+    commonCrops: [] as import('$lib/types/sitio-profile').BackyardCropCategory[]
+  });
 
   // ===== Section I: Safety & Risk Context =====
   let hazards = $state<{
@@ -426,6 +436,23 @@
         };
     crops = yearData.crops ? [...yearData.crops] : [];
     livestock = yearData.livestock ? [...yearData.livestock] : [];
+    pets = yearData.pets
+      ? { ...yearData.pets }
+      : {
+          catsCount: 0,
+          dogsCount: 0,
+          vaccinatedCats: 0,
+          vaccinatedDogs: 0
+        };
+    backyardGardens = yearData.backyardGardens
+      ? {
+          ...yearData.backyardGardens,
+          commonCrops: [...(yearData.backyardGardens.commonCrops || [])]
+        }
+      : {
+          householdsWithGardens: 0,
+          commonCrops: []
+        };
 
     if (yearData.hazards) {
       hazards = JSON.parse(JSON.stringify(yearData.hazards));
@@ -721,6 +748,8 @@
       agriculture: { ...agriculture },
       crops: [...crops],
       livestock: [...livestock],
+      pets: { ...pets },
+      backyardGardens: { ...backyardGardens, commonCrops: [...backyardGardens.commonCrops] },
       hazards: JSON.parse(JSON.stringify(hazards)),
       foodSecurity,
       priorities: JSON.parse(JSON.stringify(priorities)),
@@ -1000,6 +1029,9 @@
                       bind:agriculture
                       bind:crops
                       bind:livestock
+                      bind:pets
+                      bind:backyardGardens
+                      {totalHouseholds}
                     />
                   {:else if activeStep === 'infrastructure'}
                     <InfrastructureHousingTab

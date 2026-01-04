@@ -26,12 +26,13 @@ import {
   generateRoadDetailsWithProgression,
   generateSitioName,
   generateWaterSourceStatusWithProgression,
+  selectBackyardCrops,
   selectCrops,
   selectLivestock
 } from './sitio-generator-helpers';
 
 // ===== STORAGE KEYS =====
-export const STORAGE_VERSION = 10; // Increment to clear outdated data (2020-2026 yearly data with improved realism)
+export const STORAGE_VERSION = 11; // Increment to clear outdated data (added pets and backyard gardens)
 export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
 export const MOCK_DATA_INITIALIZED_KEY = 'sccdp_mock_data_initialized';
 
@@ -1408,6 +1409,58 @@ function generateYearProfile(
   const crops = selectCrops(rng, municipalityProfile);
   const livestock = selectLivestock(rng, municipalityProfile);
 
+  // Pets - cats and dogs with vaccination rates
+  // More pets in rural areas, higher vaccination in urban areas
+  const petsPerHousehold =
+    municipalityProfile.type === 'urban'
+      ? rng.nextFloat(0.3, 0.8)
+      : municipalityProfile.type === 'rural' || municipalityProfile.type === 'highland'
+        ? rng.nextFloat(0.8, 2.0)
+        : rng.nextFloat(0.5, 1.2);
+
+  const totalPets = Math.round(totalHouseholds * petsPerHousehold);
+  const dogRatio = rng.nextFloat(0.5, 0.7); // Dogs are typically more common
+  const dogsCount = Math.round(totalPets * dogRatio);
+  const catsCount = totalPets - dogsCount;
+
+  // Vaccination rates - higher in urban areas, improve over years
+  const baseVaccinationRate =
+    municipalityProfile.type === 'urban'
+      ? rng.nextFloat(0.4, 0.7)
+      : isGida
+        ? rng.nextFloat(0.1, 0.3)
+        : rng.nextFloat(0.2, 0.5);
+  const vaccinationImprovement = yearOffset * 0.03; // Improves over years
+  const vaccinationRate = Math.min(0.9, baseVaccinationRate + vaccinationImprovement);
+
+  const pets = {
+    catsCount,
+    dogsCount,
+    vaccinatedCats: Math.round(catsCount * vaccinationRate * rng.nextFloat(0.8, 1.1)),
+    vaccinatedDogs: Math.round(dogsCount * vaccinationRate * rng.nextFloat(0.9, 1.1))
+  };
+
+  // Ensure vaccinated counts don't exceed total counts
+  pets.vaccinatedCats = Math.min(pets.vaccinatedCats, catsCount);
+  pets.vaccinatedDogs = Math.min(pets.vaccinatedDogs, dogsCount);
+
+  // Backyard Gardens - more common in rural/highland areas
+  const gardenProbability =
+    municipalityProfile.type === 'urban'
+      ? rng.nextFloat(0.15, 0.35)
+      : municipalityProfile.type === 'rural' || municipalityProfile.type === 'highland'
+        ? rng.nextFloat(0.5, 0.8)
+        : rng.nextFloat(0.3, 0.5);
+
+  const householdsWithGardens = Math.round(totalHouseholds * gardenProbability);
+  const hasGardens = householdsWithGardens > 0;
+  const backyardCrops = selectBackyardCrops(rng, municipalityProfile, hasGardens);
+
+  const backyardGardens = {
+    householdsWithGardens,
+    commonCrops: backyardCrops
+  };
+
   // ========== I. SAFETY & RISK CONTEXT ==========
   const hazards = {
     flood: generateHazardDetails(rng, 'flood', municipalityProfile),
@@ -1611,6 +1664,8 @@ function generateYearProfile(
     agriculture,
     crops,
     livestock,
+    pets,
+    backyardGardens,
 
     // Section I - Safety & Risk Context
     hazards,

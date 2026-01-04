@@ -422,6 +422,16 @@
       },
       crops: [],
       livestock: [],
+      pets: {
+        catsCount: 0,
+        dogsCount: 0,
+        vaccinatedCats: 0,
+        vaccinatedDogs: 0
+      },
+      backyardGardens: {
+        householdsWithGardens: 0,
+        commonCrops: [] as import('$lib/types/sitio-profile').BackyardCropCategory[]
+      },
       hazards: {
         flood: { frequency: 0 },
         landslide: { frequency: 0 },

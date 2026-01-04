@@ -230,6 +230,32 @@ export interface SitioProfile {
    */
   livestock: string[];
 
+  /**
+   * Pet Statistics
+   * Counts of cats and dogs in the sitio with vaccination data
+   */
+  pets: {
+    /** Total number of cats */
+    catsCount: number;
+    /** Total number of dogs */
+    dogsCount: number;
+    /** Number of vaccinated cats */
+    vaccinatedCats: number;
+    /** Number of vaccinated dogs */
+    vaccinatedDogs: number;
+  };
+
+  /**
+   * Backyard Gardens Information
+   * Households with backyard gardens and their common crops
+   */
+  backyardGardens: {
+    /** Number of households with backyard gardens */
+    householdsWithGardens: number;
+    /** Most common crops grown in backyard gardens (Vegetables, Fruits, or Root Crops) */
+    commonCrops: BackyardCropCategory[];
+  };
+
   // ==========================================
   // SECTION I. SAFETY & RISK CONTEXT
   // ==========================================
@@ -360,3 +386,9 @@ export interface HazardDetails {
    */
   frequency: number;
 }
+
+/**
+ * Backyard garden crop categories
+ * Represents the three main categories of crops grown in household gardens
+ */
+export type BackyardCropCategory = 'Vegetables' | 'Fruits' | 'Root Crops';

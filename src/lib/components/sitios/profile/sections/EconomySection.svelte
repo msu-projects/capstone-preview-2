@@ -20,9 +20,11 @@
     Bird,
     Briefcase,
     Building2,
+    Cat,
     ChartLine,
     CheckCircle2,
     CircleAlert,
+    Dog,
     Droplets,
     Flame,
     Globe,
@@ -33,7 +35,9 @@
     Leaf,
     Mountain,
     Sprout,
+    Syringe,
     Tractor,
+    TreeDeciduous,
     TrendingDown,
     TrendingUp,
     UserCheck,
@@ -327,6 +331,30 @@
   // Total hazard frequency
   const totalHazardFrequency = $derived(hazardsList.reduce((sum, h) => sum + h.frequency, 0));
   const hasHazards = $derived(totalHazardFrequency > 0);
+
+  // Pets data
+  const hasPets = $derived(sitio.pets && (sitio.pets.catsCount > 0 || sitio.pets.dogsCount > 0));
+  const totalPets = $derived(sitio.pets ? sitio.pets.catsCount + sitio.pets.dogsCount : 0);
+  const catVaccinationRate = $derived(
+    sitio.pets && sitio.pets.catsCount > 0
+      ? Math.round((sitio.pets.vaccinatedCats / sitio.pets.catsCount) * 100)
+      : 0
+  );
+  const dogVaccinationRate = $derived(
+    sitio.pets && sitio.pets.dogsCount > 0
+      ? Math.round((sitio.pets.vaccinatedDogs / sitio.pets.dogsCount) * 100)
+      : 0
+  );
+
+  // Backyard gardens data
+  const hasBackyardGardens = $derived(
+    sitio.backyardGardens && sitio.backyardGardens.householdsWithGardens > 0
+  );
+  const backyardGardenRate = $derived(
+    sitio.backyardGardens && sitio.totalHouseholds > 0
+      ? Math.round((sitio.backyardGardens.householdsWithGardens / sitio.totalHouseholds) * 100)
+      : 0
+  );
 
   // Agriculture summary stats
   const agricultureStats = $derived([
@@ -724,6 +752,134 @@
                   <span class="text-sm text-muted-foreground italic">No livestock reported</span>
                 {/if}
               </div>
+            </div>
+          </div>
+
+          <!-- Pets & Backyard Gardens Grid -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <!-- Pets -->
+            <div
+              class="rounded-xl border border-violet-100 bg-linear-to-br from-violet-50/80 to-purple-50/50 p-4 dark:border-violet-800/30 dark:from-violet-900/15 dark:to-purple-900/10"
+            >
+              <div class="mb-3 flex items-center gap-2">
+                <div class="rounded-lg bg-violet-100 p-1.5 dark:bg-violet-800/40">
+                  <Dog class="size-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Pets</h4>
+              </div>
+              {#if hasPets}
+                <div class="space-y-3">
+                  <!-- Dogs -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <Dog class="size-4 text-amber-600 dark:text-amber-400" />
+                      <span class="text-sm text-slate-700 dark:text-slate-300">Dogs</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold text-slate-900 dark:text-white">
+                        {sitio.pets?.dogsCount ?? 0}
+                      </span>
+                      {#if (sitio.pets?.dogsCount ?? 0) > 0}
+                        <Badge
+                          variant="outline"
+                          class="border-emerald-200 bg-emerald-50 text-xs text-emerald-700 dark:border-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-300"
+                        >
+                          <Syringe class="mr-1 size-3" />
+                          {dogVaccinationRate}% vaccinated
+                        </Badge>
+                      {/if}
+                    </div>
+                  </div>
+                  <!-- Cats -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <Cat class="size-4 text-orange-600 dark:text-orange-400" />
+                      <span class="text-sm text-slate-700 dark:text-slate-300">Cats</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold text-slate-900 dark:text-white">
+                        {sitio.pets?.catsCount ?? 0}
+                      </span>
+                      {#if (sitio.pets?.catsCount ?? 0) > 0}
+                        <Badge
+                          variant="outline"
+                          class="border-emerald-200 bg-emerald-50 text-xs text-emerald-700 dark:border-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-300"
+                        >
+                          <Syringe class="mr-1 size-3" />
+                          {catVaccinationRate}% vaccinated
+                        </Badge>
+                      {/if}
+                    </div>
+                  </div>
+                  <!-- Total -->
+                  <div class="mt-2 border-t border-violet-200/50 pt-2 dark:border-violet-700/30">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-muted-foreground">Total Pets</span>
+                      <span class="text-sm font-bold text-slate-900 dark:text-white">
+                        {totalPets}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              {:else}
+                <span class="text-sm text-muted-foreground italic">No pets reported</span>
+              {/if}
+            </div>
+
+            <!-- Backyard Gardens -->
+            <div
+              class="rounded-xl border border-teal-100 bg-linear-to-br from-teal-50/80 to-cyan-50/50 p-4 dark:border-teal-800/30 dark:from-teal-900/15 dark:to-cyan-900/10"
+            >
+              <div class="mb-3 flex items-center gap-2">
+                <div class="rounded-lg bg-teal-100 p-1.5 dark:bg-teal-800/40">
+                  <TreeDeciduous class="size-4 text-teal-600 dark:text-teal-400" />
+                </div>
+                <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
+                  Backyard Gardens
+                </h4>
+              </div>
+              {#if hasBackyardGardens}
+                <div class="space-y-3">
+                  <!-- Households with Gardens -->
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-slate-700 dark:text-slate-300">
+                      Households with Gardens
+                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold text-slate-900 dark:text-white">
+                        {sitio.backyardGardens?.householdsWithGardens ?? 0}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        class="border-teal-200 bg-teal-50 text-xs text-teal-700 dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
+                      >
+                        {backyardGardenRate}%
+                      </Badge>
+                    </div>
+                  </div>
+                  <!-- Common Crops -->
+                  {#if sitio.backyardGardens?.commonCrops && sitio.backyardGardens.commonCrops.length > 0}
+                    <div class="mt-2 border-t border-teal-200/50 pt-2 dark:border-teal-700/30">
+                      <span class="text-xs text-muted-foreground">Crop Categories</span>
+                      <div class="mt-1.5 flex flex-wrap gap-1.5">
+                        {#each sitio.backyardGardens.commonCrops as crop}
+                          <Badge
+                            variant="outline"
+                            class="border-teal-200 bg-white/80 px-2 py-0.5 text-xs font-medium text-teal-700 shadow-sm dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
+                          >
+                            <Sprout class="mr-1 size-3" />
+                            {crop}
+                          </Badge>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+              {:else}
+                <span class="text-sm text-muted-foreground italic"
+                  >No backyard gardens reported</span
+                >
+              {/if}
             </div>
           </div>
         </div>
