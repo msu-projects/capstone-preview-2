@@ -52,6 +52,7 @@
   let showCulturalTrendModal = $state(false);
   let showVulnerableTrendModal = $state(false);
   let showDependencyTrendModal = $state(false);
+  let showHouseholdTrendModal = $state(false);
 
   interface Props {
     sitios: SitioRecord[];
@@ -104,6 +105,16 @@
       'totalNoBirthCert',
       'totalNoNationalID'
     ])
+  );
+
+  // Time series data for households
+  const householdsTrend = $derived(
+    prepareTimeSeriesData(sitios, ['totalHouseholds'])
+  );
+
+  // Time series data for total population
+  const populationTrend = $derived(
+    prepareTimeSeriesData(sitios, ['totalPopulation'])
   );
 
   // Time series data for dependency ratio (calculated from aggregated metrics)
@@ -936,6 +947,93 @@
 
     <!-- Right Column: Sidebar Stats (1/3 width) -->
     <div class="flex flex-col gap-6">
+      <!-- Households & Population Card -->
+      <InfoCard
+        title="Households & Population"
+        description="Community size metrics"
+        icon={Users}
+        iconBgColor="bg-cyan-100"
+        iconTextColor="text-cyan-600"
+        headerBgColor="bg-cyan-50/50"
+      >
+        {#snippet headerAction()}
+          {#if hasMultipleYears && householdsTrend.categories.length > 1}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 text-muted-foreground hover:text-foreground"
+              title="View historical trend"
+              onclick={() => (showHouseholdTrendModal = true)}
+            >
+              <ChartLine class="size-4" />
+            </Button>
+          {/if}
+        {/snippet}
+        <div class="space-y-6">
+          <!-- Total Households -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Heart class="size-4 text-cyan-600" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Total Households</span
+                >
+              </div>
+              <span class="text-2xl font-bold text-slate-900 dark:text-white"
+                >{demographics.totalHouseholds.toLocaleString()}</span
+              >
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-linear-to-r from-cyan-500 to-blue-500 transition-all"
+                style="width: {Math.min((demographics.totalHouseholds / (demographics.totalHouseholds * 1.2)) * 100, 100)}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">Family units</p>
+          </div>
+
+          <!-- Total Population -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Users class="size-4 text-blue-600" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Total Population</span
+                >
+              </div>
+              <span class="text-2xl font-bold text-slate-900 dark:text-white"
+                >{demographics.totalPopulation.toLocaleString()}</span
+              >
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-linear-to-r from-blue-500 to-indigo-500 transition-all"
+                style="width: {Math.min((demographics.totalPopulation / (demographics.totalPopulation * 1.2)) * 100, 100)}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">Total individuals</p>
+          </div>
+
+          <!-- Average Household Size -->
+          <div
+            class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/30"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Baby class="size-4 text-slate-600 dark:text-slate-400" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Avg Household Size</span
+                >
+              </div>
+              <span class="text-2xl font-bold text-slate-900 dark:text-white"
+                >{demographics.averageHouseholdSize.toFixed(1)}</span
+              >
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">People per household</p>
+          </div>
+        </div>
+      </InfoCard>
+
       <!-- Cultural & Demographic Groups -->
       <InfoCard
         title="Cultural & Demographic Groups"
@@ -1423,6 +1521,54 @@
         showLegend={true}
         yAxisFormatter={(val) => val.toLocaleString()}
       />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Household & Population Trend Modal -->
+<Dialog.Root bind:open={showHouseholdTrendModal}>
+  <Dialog.Content class="max-w-4xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-cyan-50 p-2 dark:bg-cyan-900/20">
+          <Users class="size-5 text-cyan-600 dark:text-cyan-400" />
+        </div>
+        Households & Population - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year trends across {householdsTrend.categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="space-y-6 py-4">
+      <!-- Households Chart -->
+      <div>
+        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Total Households
+        </h4>
+        <LineChart
+          categories={householdsTrend.categories}
+          series={householdsTrend.series}
+          height={250}
+          curve="smooth"
+          showLegend={true}
+          yAxisFormatter={(val) => val.toLocaleString()}
+        />
+      </div>
+
+      <!-- Population Chart -->
+      <div>
+        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Total Population
+        </h4>
+        <LineChart
+          categories={populationTrend.categories}
+          series={populationTrend.series}
+          height={250}
+          curve="smooth"
+          showLegend={true}
+          yAxisFormatter={(val) => val.toLocaleString()}
+        />
+      </div>
     </div>
   </Dialog.Content>
 </Dialog.Root>

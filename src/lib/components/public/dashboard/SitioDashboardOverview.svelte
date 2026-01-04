@@ -1,9 +1,7 @@
 <script lang="ts">
   import BarChart from '$lib/components/charts/BarChart.svelte';
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
-  import LineChart from '$lib/components/charts/LineChart.svelte';
   import { Badge } from '$lib/components/ui/badge';
-  import * as Card from '$lib/components/ui/card';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import type { SitioRecord } from '$lib/types';
   import {
@@ -390,7 +388,7 @@
   </InfoCard>
 
   <!-- Population Trend Chart (only show if multiple years) -->
-  {#if hasMultipleYears && populationTrendData.categories.length > 1}
+  <!-- {#if hasMultipleYears && populationTrendData.categories.length > 1}
     <Card.Root>
       <Card.Header class="pb-2">
         <div class="flex items-center gap-2">
@@ -414,7 +412,7 @@
         />
       </Card.Content>
     </Card.Root>
-  {/if}
+  {/if} -->
 
   <!-- Bottom Row: Classification + Charts -->
   <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
