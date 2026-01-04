@@ -36,7 +36,7 @@
       icon: Layers,
       href: '/admin/config/custom-fields',
       hasOverride: hasCustomFieldsOverride,
-      items: ['Text', 'Number', 'Yes/No', 'Date']
+      items: ['Text', 'Number', 'Yes/No', 'Date', 'etc']
     }
   ];
 

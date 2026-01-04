@@ -1,7 +1,4 @@
 <script lang="ts">
-  import BarChart from '$lib/components/charts/BarChart.svelte';
-  import DonutChart from '$lib/components/charts/DonutChart.svelte';
-  import RadarChart from '$lib/components/charts/RadarChart.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import * as Card from '$lib/components/ui/card';
   import * as Tooltip from '$lib/components/ui/tooltip';
@@ -10,7 +7,6 @@
   import { cn } from '$lib/utils';
   import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
   import {
-    BarChart3,
     Calendar,
     CheckCircle2,
     CircleCheck,
@@ -22,9 +18,7 @@
     Layers,
     List,
     ListChecks,
-    PieChart,
     ToggleLeft,
-    TrendingUp,
     Type
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
@@ -325,12 +319,12 @@
 
     <!-- Visualizations -->
     {#if hasAnyData}
-      <section class="space-y-6">
+      <section class="hidden space-y-6">
         <!-- Primary Visualizations -->
         <div class="grid gap-6 lg:grid-cols-2">
           <!-- Number Fields Bar Chart -->
-          {#if numberChartData.length > 0}
-            <Card.Root class="shadow-sm">
+          <!-- {#if numberChartData.length > 0}
+            <Card.Root class="col-span-2 shadow-sm">
               <Card.Header class="pb-2">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
@@ -351,10 +345,10 @@
                 <BarChart data={numberChartData} height={220} showGrid={true} />
               </Card.Content>
             </Card.Root>
-          {/if}
+          {/if} -->
 
           <!-- Radar Chart for Numeric Data (only if we have 3+ fields) -->
-          {#if radarChartData().length >= 3}
+          <!-- {#if radarChartData().length >= 3}
             <Card.Root class="shadow-sm">
               <Card.Header class="pb-2">
                 <div class="flex items-center justify-between">
@@ -390,9 +384,9 @@
                 />
               </Card.Content>
             </Card.Root>
-          {:else if booleanFields.length > 0 && booleanChartData().some((d) => d.value > 0)}
-            <!-- Boolean Fields Donut Chart (shown if not enough for radar) -->
-            <Card.Root class="shadow-sm">
+          {:else if booleanFields.length > 0 && booleanChartData().some((d) => d.value > 0)} -->
+          <!-- Boolean Fields Donut Chart (shown if not enough for radar) -->
+          <!-- <Card.Root class="shadow-sm">
               <Card.Header class="pb-2">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
@@ -419,11 +413,11 @@
                 </div>
               </Card.Content>
             </Card.Root>
-          {/if}
+          {/if} -->
         </div>
 
         <!-- Boolean Fields with Radar (if we had radar above) -->
-        {#if radarChartData().length >= 3 && booleanFields.length > 0 && booleanChartData().some((d) => d.value > 0)}
+        <!-- {#if radarChartData().length >= 3 && booleanFields.length > 0 && booleanChartData().some((d) => d.value > 0)}
           <Card.Root class="shadow-sm">
             <Card.Header class="pb-2">
               <div class="flex items-center justify-between">
@@ -475,7 +469,7 @@
               </div>
             </Card.Content>
           </Card.Root>
-        {/if}
+        {/if} -->
       </section>
     {/if}
 

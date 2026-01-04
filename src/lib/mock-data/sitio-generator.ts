@@ -11,6 +11,11 @@ import type {
   SitioProfile,
   SitioRecord
 } from '$lib/types';
+import type { CustomFieldDefinition } from '$lib/types/custom-fields';
+import {
+  CUSTOM_FIELDS_STORAGE_KEY,
+  getCustomFieldDefinitions
+} from '$lib/utils/custom-fields-storage';
 import { clearSitios, loadSitios, saveSitios } from '$lib/utils/storage';
 import { getMunicipalityProfile, type MunicipalityProfile } from './municipality-profiles';
 import { SeededRandom } from './seeded-random';
@@ -89,6 +94,9 @@ export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
   // Generate and save mock data with 9 years (2018-2026)
   const sitios = generateSitios(10, 42, 2018, 9);
 
+  // Initialize custom field definitions
+  initializeCustomFieldDefinitions();
+
   saveSitios(sitios);
   markMockDataInitialized();
   setStorageVersion();
@@ -110,6 +118,9 @@ export function resetMockData(): { sitios: SitioRecord[] } {
   // Regenerate with new seed based on current time and 9 years of data (2018-2026)
   const seed = Date.now() % 1000000;
   const sitios = generateSitios(50, seed, 2018, 9);
+
+  // Reinitialize custom field definitions
+  initializeCustomFieldDefinitions();
 
   saveSitios(sitios);
   markMockDataInitialized();
@@ -373,6 +384,456 @@ function updateProgressionState(
       state.mobileSignalLevel = Math.min(canGet5G ? 4 : 3, state.mobileSignalLevel + 1);
     }
   }
+}
+
+// ===== CUSTOM FIELD DEFINITIONS =====
+
+/**
+ * Initialize custom field definitions in localStorage
+ * Creates example field definitions that match the mock data structure
+ */
+export function initializeCustomFieldDefinitions(): void {
+  if (typeof window === 'undefined') return;
+
+  // Check if custom field definitions already exist
+  const existing = getCustomFieldDefinitions();
+  if (existing.length > 0) return; // Already initialized
+
+  const now = new Date().toISOString();
+  const systemUser = 'system';
+
+  const mockDefinitions: CustomFieldDefinition[] = [
+    {
+      id: 'cf_beneficiaries',
+      fieldName: 'beneficiariesCount',
+      displayLabel: 'Number of Beneficiaries',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 1,
+      isActive: true,
+      description: 'Total count of program beneficiaries in the sitio',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_training',
+      fieldName: 'trainingAttendees',
+      displayLabel: 'Training Attendees',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 2,
+      isActive: true,
+      description: 'Number of residents who attended training sessions',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_seedlings',
+      fieldName: 'seedlingsDistributed',
+      displayLabel: 'Seedlings Distributed',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 3,
+      isActive: true,
+      description: 'Number of seedlings distributed for agricultural support',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_budget',
+      fieldName: 'communityProjectsBudget',
+      displayLabel: 'Community Projects Budget',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 4,
+      isActive: true,
+      description: 'Total budget allocated for community projects (in PHP)',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_disaster_plan',
+      fieldName: 'hasDisasterPreparednessplan',
+      displayLabel: 'Has Disaster Preparedness Plan',
+      dataType: 'boolean',
+      validationRules: { required: false },
+      aggregationType: 'count',
+      displayOrder: 5,
+      isActive: true,
+      description: 'Whether the sitio has a disaster preparedness plan in place',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_community_org',
+      fieldName: 'hasCommunityOrganization',
+      displayLabel: 'Has Community Organization',
+      dataType: 'boolean',
+      validationRules: { required: false },
+      aggregationType: 'count',
+      displayOrder: 6,
+      isActive: true,
+      description: 'Whether the sitio has an active community organization',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_training_participation',
+      fieldName: 'participatedInRecentTraining',
+      displayLabel: 'Participated in Recent Training',
+      dataType: 'boolean',
+      validationRules: { required: false },
+      aggregationType: 'count',
+      displayOrder: 7,
+      isActive: true,
+      description: 'Whether community members participated in recent training programs',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_recent_project',
+      fieldName: 'recentProjectImplemented',
+      displayLabel: 'Recent Project Implemented',
+      dataType: 'text',
+      validationRules: { required: false, maxLength: 500 },
+      aggregationType: 'count',
+      displayOrder: 8,
+      isActive: true,
+      description: 'Description of the most recent project implemented in the sitio',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_remarks',
+      fieldName: 'remarks',
+      displayLabel: 'General Remarks',
+      dataType: 'text',
+      validationRules: { required: false, maxLength: 1000 },
+      aggregationType: 'count',
+      displayOrder: 9,
+      isActive: true,
+      description: 'General observations or remarks about the sitio',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_assembly_date',
+      fieldName: 'lastCommunityAssembly',
+      displayLabel: 'Last Community Assembly Date',
+      dataType: 'date',
+      validationRules: { required: false },
+      aggregationType: 'count',
+      displayOrder: 10,
+      isActive: true,
+      description: 'Date of the most recent community assembly',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_completed_activities',
+      fieldName: 'completedActivities',
+      displayLabel: 'Completed Activities',
+      dataType: 'array',
+      validationRules: { required: false, minLength: 0, maxLength: 100 },
+      aggregationType: 'count',
+      displayOrder: 11,
+      isActive: true,
+      description: 'List of activities completed in the sitio',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_available_services',
+      fieldName: 'availableServices',
+      displayLabel: 'Available Services',
+      dataType: 'checkbox',
+      validationRules: {
+        required: false,
+        choices: [
+          'Mobile clinic',
+          'Satellite office',
+          'Community library',
+          'Skills training center',
+          'Day care center'
+        ]
+      },
+      aggregationType: 'count',
+      displayOrder: 12,
+      isActive: true,
+      description: 'Services available in or near the sitio',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_intervention_priority',
+      fieldName: 'interventionPriority',
+      displayLabel: 'Intervention Priority Level',
+      dataType: 'radio',
+      validationRules: {
+        required: false,
+        choices: ['Low', 'Medium', 'High', 'Critical']
+      },
+      aggregationType: 'count',
+      displayOrder: 13,
+      isActive: true,
+      description: 'Overall priority level for interventions in this sitio',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_implementation_status',
+      fieldName: 'projectImplementationStatus',
+      displayLabel: 'Project Implementation Status',
+      dataType: 'radio',
+      validationRules: {
+        required: false,
+        choices: ['Not started', 'Planning phase', 'Ongoing', 'Completed', 'On hold']
+      },
+      aggregationType: 'count',
+      displayOrder: 14,
+      isActive: true,
+      description: 'Current status of project implementation',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_participation_rate',
+      fieldName: 'programParticipationRate',
+      displayLabel: 'Program Participation Rate',
+      dataType: 'number',
+      validationRules: { required: false, min: 0, max: 1 },
+      aggregationType: 'average',
+      displayOrder: 15,
+      isActive: true,
+      description: 'Percentage of community participation in programs (0.0 to 1.0)',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_contribution',
+      fieldName: 'communityContributionAmount',
+      displayLabel: 'Community Contribution Amount',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 16,
+      isActive: true,
+      description: 'Total community contribution amount in PHP',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_ip_leaders',
+      fieldName: 'indigenousLeadersCount',
+      displayLabel: 'Indigenous Leaders Count',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 17,
+      isActive: true,
+      description: 'Number of indigenous leaders in the community (for IP communities)',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_cultural_activities',
+      fieldName: 'culturalActivitiesPerYear',
+      displayLabel: 'Cultural Activities Per Year',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'average',
+      displayOrder: 18,
+      isActive: true,
+      description: 'Number of cultural activities held per year (for IP communities)',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_peace_dialogues',
+      fieldName: 'peaceDialoguesConducted',
+      displayLabel: 'Peace Dialogues Conducted',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 19,
+      isActive: true,
+      description: 'Number of peace dialogues conducted (for conflict-affected areas)',
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cf_security_incidents',
+      fieldName: 'securityIncidentsLastYear',
+      displayLabel: 'Security Incidents Last Year',
+      dataType: 'number',
+      validationRules: { required: false, min: 0 },
+      aggregationType: 'sum',
+      displayOrder: 20,
+      isActive: true,
+      description: 'Number of security incidents in the past year (for conflict-affected areas)',
+      createdAt: now,
+      createdBy: systemUser
+    }
+  ];
+
+  // Save to localStorage
+  try {
+    localStorage.setItem(CUSTOM_FIELDS_STORAGE_KEY, JSON.stringify(mockDefinitions));
+    console.log(`Initialized ${mockDefinitions.length} custom field definitions`);
+  } catch (error) {
+    console.error('Failed to initialize custom field definitions:', error);
+  }
+}
+
+// ===== CUSTOM FIELDS GENERATOR =====
+
+/**
+ * Generate mock custom fields data with various data types
+ * Simulates dynamically configured supplementary data fields
+ */
+function generateCustomFields(
+  rng: SeededRandom,
+  municipalityProfile: MunicipalityProfile,
+  classification: { gida: boolean; indigenous: boolean; conflict: boolean },
+  currentYear: number,
+  totalPopulation: number,
+  totalHouseholds: number
+): Record<string, unknown> {
+  const isGida = classification.gida;
+  const isUrban = municipalityProfile.type === 'urban';
+
+  // Example custom fields that might be configured by administrators
+  const customFields: Record<string, unknown> = {};
+
+  // Number fields with different purposes
+  customFields.beneficiariesCount = rng.nextInt(
+    Math.floor(totalHouseholds * 0.1),
+    Math.floor(totalHouseholds * 0.6)
+  );
+
+  customFields.trainingAttendees = rng.nextInt(10, Math.min(100, totalPopulation / 5));
+
+  customFields.seedlingsDistributed = rng.nextInt(0, 1000);
+
+  customFields.communityProjectsBudget = rng.nextInt(50000, 500000);
+
+  // Boolean fields for yes/no questions
+  customFields.hasDisasterPreparednessplan = rng.boolean(isUrban ? 0.7 : isGida ? 0.3 : 0.5);
+
+  customFields.hasCommunityOrganization = rng.boolean(0.6);
+
+  customFields.participatedInRecentTraining = rng.boolean(0.4);
+
+  // Text fields for qualitative data
+  const projectExamples = [
+    'Community livelihood program',
+    'Water system improvement',
+    'Farm-to-market road construction',
+    'Health and nutrition program',
+    'Indigenous peoples support program',
+    'Disaster risk reduction initiative'
+  ];
+  customFields.recentProjectImplemented = rng.boolean(0.5) ? rng.pick(projectExamples) : '';
+
+  const remarksOptions = [
+    'Community actively participates in programs',
+    'Needs more infrastructure support',
+    'Strong community leadership present',
+    'Requires capacity building interventions',
+    'Good collaboration with local government',
+    ''
+  ];
+  customFields.remarks = rng.pick(remarksOptions);
+
+  // Date fields for tracking
+  if (currentYear >= 2020) {
+    // Last community assembly date (within past year)
+    const daysAgo = rng.nextInt(1, 365);
+    const assemblyDate = new Date(currentYear, 11, 31);
+    assemblyDate.setDate(assemblyDate.getDate() - daysAgo);
+    customFields.lastCommunityAssembly = assemblyDate.toISOString().split('T')[0];
+  }
+
+  // Array fields for lists
+  const completedActivities: string[] = [];
+  const activityOptions = [
+    'Feeding program',
+    'Medical mission',
+    'Livelihood training',
+    'Infrastructure repair',
+    'Educational support',
+    'Emergency response'
+  ];
+  const numActivities = rng.nextInt(0, 4);
+  for (let i = 0; i < numActivities; i++) {
+    const activity = rng.pick(activityOptions.filter((a) => !completedActivities.includes(a)));
+    if (activity && !completedActivities.includes(activity)) {
+      completedActivities.push(activity);
+    }
+  }
+  customFields.completedActivities = completedActivities;
+
+  // Checkbox field (multiple selection)
+  const availableServices: string[] = [];
+  const serviceOptions = [
+    { name: 'Mobile clinic', probability: 0.4 },
+    { name: 'Satellite office', probability: 0.3 },
+    { name: 'Community library', probability: 0.25 },
+    { name: 'Skills training center', probability: 0.35 },
+    { name: 'Day care center', probability: 0.5 }
+  ];
+  serviceOptions.forEach((service) => {
+    if (rng.boolean(service.probability)) {
+      availableServices.push(service.name);
+    }
+  });
+  customFields.availableServices = availableServices;
+
+  // Radio field (single selection)
+  const priorityLevelOptions = ['Low', 'Medium', 'High', 'Critical'];
+  const priorityWeights = isGida
+    ? [0.1, 0.2, 0.4, 0.3] // GIDA tends to have higher priority
+    : [0.2, 0.4, 0.3, 0.1]; // Others more moderate
+  customFields.interventionPriority = rng.pickWeighted(priorityLevelOptions, priorityWeights);
+
+  const implementationStatusOptions = [
+    'Not started',
+    'Planning phase',
+    'Ongoing',
+    'Completed',
+    'On hold'
+  ];
+  customFields.projectImplementationStatus = rng.pick(implementationStatusOptions);
+
+  // Numeric field with decimal for percentages
+  customFields.programParticipationRate = Number(rng.nextFloat(0.15, 0.85).toFixed(2));
+
+  customFields.communityContributionAmount = rng.nextInt(5000, 50000);
+
+  // Additional context-specific fields (always present to match definitions)
+  // For indigenous communities - higher values, for others - lower or zero
+  if (classification.indigenous) {
+    customFields.indigenousLeadersCount = rng.nextInt(1, 8);
+    customFields.culturalActivitiesPerYear = rng.nextInt(2, 12);
+  } else {
+    customFields.indigenousLeadersCount = 0;
+    customFields.culturalActivitiesPerYear = 0;
+  }
+
+  // For conflict-affected areas - actual values, for others - zero
+  if (classification.conflict) {
+    customFields.peaceDialoguesConducted = rng.nextInt(0, 6);
+    customFields.securityIncidentsLastYear = rng.nextInt(0, 5);
+  } else {
+    customFields.peaceDialoguesConducted = 0;
+    customFields.securityIncidentsLastYear = 0;
+  }
+
+  return customFields;
 }
 
 // ===== MAIN SITIO PROFILE GENERATOR =====
@@ -1081,6 +1542,16 @@ function generateYearProfile(
     (priorities.reduce((sum, p) => sum + p.rating, 0) / priorities.length).toFixed(2)
   );
 
+  // ========== L. CUSTOM FIELDS (SUPPLEMENTARY DATA) ==========
+  const customFields = generateCustomFields(
+    rng,
+    municipalityProfile,
+    sitioClassification,
+    currentYear,
+    totalPopulation,
+    totalHouseholds
+  );
+
   // ========== BUILD PROFILE ==========
   const profile: SitioProfile = {
     // Section A - Basic Sitio Information
@@ -1150,6 +1621,10 @@ function generateYearProfile(
 
     // Section K - Recommendation
     averageNeedScore,
+
+    // Section L - Custom Fields (Supplementary Data)
+    customFields,
+
     recommendations: []
   };
 

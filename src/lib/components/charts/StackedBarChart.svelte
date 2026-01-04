@@ -18,6 +18,7 @@
     stacked100?: boolean;
     orientation?: 'horizontal' | 'vertical';
     showDataLabels?: boolean;
+    yAxisMinWidth?: number;
   }
 
   let {
@@ -27,7 +28,8 @@
     title,
     stacked100 = false,
     orientation = 'horizontal',
-    showDataLabels = true
+    showDataLabels = true,
+    yAxisMinWidth
   }: Props = $props();
 
   // Get theme-aware colors

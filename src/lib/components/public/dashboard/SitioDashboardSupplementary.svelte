@@ -2,7 +2,6 @@
   import BarChart from '$lib/components/charts/BarChart.svelte';
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
   import StackedBarChart from '$lib/components/charts/StackedBarChart.svelte';
-  import TreemapChart from '$lib/components/charts/TreemapChart.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import * as Card from '$lib/components/ui/card';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
@@ -18,13 +17,11 @@
     ChartColumn,
     ChartPie,
     CircleCheck,
-    Grid3x3,
     Hash,
     HelpCircle,
     Layers,
     List,
     ListChecks,
-    Percent,
     ToggleLeft,
     TrendingUp,
     Type,
@@ -259,8 +256,10 @@
 
   // Prepare stacked bar data for boolean fields across categories
   const booleanStackedData = $derived(() => {
-    const categories = booleanFields.map((def) =>
-      def.displayLabel.length > 12 ? def.displayLabel.slice(0, 12) + '...' : def.displayLabel
+    const categories = booleanFields.map(
+      (def) =>
+        // def.displayLabel.length > 12 ? def.displayLabel.slice(0, 12) + '...' : def.displayLabel
+        def.displayLabel
     );
 
     const yesData: number[] = [];
@@ -538,7 +537,7 @@
           <!-- Number Fields Charts -->
           <div class="grid gap-6 lg:grid-cols-2">
             <!-- Bar Chart -->
-            {#if numberComparisonData.some((d) => d.value > 0)}
+            <!-- {#if numberComparisonData.some((d) => d.value > 0)}
               <Card.Root class="shadow-sm">
                 <Card.Header class="pb-2">
                   <div class="flex items-center justify-between">
@@ -559,10 +558,10 @@
                   <BarChart data={numberComparisonData} height={220} />
                 </Card.Content>
               </Card.Root>
-            {/if}
+            {/if} -->
 
             <!-- Treemap for proportional view -->
-            {#if treemapData.length >= 2}
+            <!-- {#if treemapData.length >= 2}
               <Card.Root class="shadow-sm">
                 <Card.Header class="pb-2">
                   <div class="flex items-center justify-between">
@@ -593,7 +592,7 @@
                   <TreemapChart data={treemapData} height={220} />
                 </Card.Content>
               </Card.Root>
-            {/if}
+            {/if} -->
           </div>
         {/if}
 
@@ -609,7 +608,7 @@
             </div>
 
             <!-- Overall Boolean Summary Card -->
-            {#if overallBooleanSummary().total > 0}
+            <!-- {#if overallBooleanSummary().total > 0}
               {@const summary = overallBooleanSummary()}
               <Card.Root class="mb-4 shadow-sm">
                 <Card.Header class="pb-2">
@@ -696,7 +695,7 @@
                   </div>
                 </Card.Content>
               </Card.Root>
-            {/if}
+            {/if} -->
 
             <!-- Stacked Bar Chart for Boolean Fields Comparison -->
             {#if booleanStackedData().categories.length > 1}
@@ -762,7 +761,7 @@
                                 ]
                               : [])
                           ]}
-                          height={100}
+                          height={140}
                           showLegend={false}
                         />
                       </div>
@@ -841,7 +840,7 @@
         {/if}
 
         <!-- Date Fields Info -->
-        {#if dateFields.length > 0}
+        <!-- {#if dateFields.length > 0}
           <section>
             <div class="mb-4 flex items-center justify-between">
               <h3 class="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -874,7 +873,7 @@
               </Card.Content>
             </Card.Root>
           </section>
-        {/if}
+        {/if} -->
 
         <!-- Checkbox Fields Analysis -->
         {#if checkboxFields.length > 0}
