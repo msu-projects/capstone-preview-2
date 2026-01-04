@@ -2,9 +2,9 @@
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
   import LineChart from '$lib/components/charts/LineChart.svelte';
   import { Button } from '$lib/components/ui/button';
-  import * as Card from '$lib/components/ui/card';
   import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
+  import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import {
     LABOR_EMPLOYMENT_AVERAGES,
     getLaborComparisonStatus
@@ -310,225 +310,216 @@
     <!-- Left Column: Main Charts (2/3 width) -->
     <div class="flex flex-col gap-6 lg:col-span-2">
       <!-- Gender Distribution Card -->
-      <Card.Root>
-        <Card.Header>
-          <div class="flex items-start justify-between">
-            <div>
-              <Card.Title class="flex items-center gap-2 text-base">
-                <PersonStanding class="size-5 text-pink-500" />
-                Gender Distribution
-              </Card.Title>
-              <Card.Description>Breakdown of population by sex</Card.Description>
-            </div>
-            {#if hasMultipleYears && populationGenderTrend.categories.length > 1}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-8 text-muted-foreground hover:text-foreground"
-                title="View historical trend"
-                onclick={() => (showGenderTrendModal = true)}
-              >
-                <ChartLine class="size-4" />
-              </Button>
-            {/if}
+      <InfoCard
+        title="Gender Distribution"
+        description="Breakdown of population by sex"
+        icon={PersonStanding}
+        iconBgColor="bg-pink-100"
+        iconTextColor="text-pink-600"
+        headerBgColor="bg-pink-50/50"
+      >
+        {#snippet headerAction()}
+          {#if hasMultipleYears && populationGenderTrend.categories.length > 1}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 text-muted-foreground hover:text-foreground"
+              title="View historical trend"
+              onclick={() => (showGenderTrendModal = true)}
+            >
+              <ChartLine class="size-4" />
+            </Button>
+          {/if}
+        {/snippet}
+        <div class="flex flex-col items-center justify-around gap-8 md:flex-row">
+          <!-- Donut Chart -->
+          <div class="relative w-48 shrink-0 md:w-56">
+            <DonutChart
+              data={genderData}
+              centerLabel="Total"
+              centerValue={demographics.totalPopulation.toLocaleString()}
+              height={224}
+              showLegend={false}
+            />
           </div>
-        </Card.Header>
-        <Card.Content>
-          <div class="flex flex-col items-center justify-around gap-8 md:flex-row">
-            <!-- Donut Chart -->
-            <div class="relative w-48 shrink-0 md:w-56">
-              <DonutChart
-                data={genderData}
-                centerLabel="Total"
-                centerValue={demographics.totalPopulation.toLocaleString()}
-                height={224}
-                showLegend={false}
-              />
+
+          <!-- Gender Stats -->
+          <div class="flex w-full max-w-xs flex-col gap-4">
+            <!-- Male Stats -->
+            <div
+              class="rounded-xl border border-blue-100 bg-blue-50 p-4 transition-all hover:shadow-md dark:border-blue-900/20 dark:bg-blue-900/10"
+            >
+              <div class="mb-1 flex items-center justify-between">
+                <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                  Total Male
+                </span>
+                <span
+                  class="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-600 shadow-sm dark:bg-slate-800/80"
+                >
+                  {demographics.malePercent.toFixed(1)}%
+                </span>
+              </div>
+              <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                {demographics.totalMale.toLocaleString()}
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
             </div>
 
-            <!-- Gender Stats -->
-            <div class="flex w-full max-w-xs flex-col gap-4">
-              <!-- Male Stats -->
-              <div
-                class="rounded-xl border border-blue-100 bg-blue-50 p-4 transition-all hover:shadow-md dark:border-blue-900/20 dark:bg-blue-900/10"
-              >
-                <div class="mb-1 flex items-center justify-between">
-                  <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">
-                    Total Male
-                  </span>
-                  <span
-                    class="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-600 shadow-sm dark:bg-slate-800/80"
-                  >
-                    {demographics.malePercent.toFixed(1)}%
-                  </span>
-                </div>
-                <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                  {demographics.totalMale.toLocaleString()}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+            <!-- Female Stats -->
+            <div
+              class="rounded-xl border border-pink-100 bg-pink-50 p-4 transition-all hover:shadow-md dark:border-pink-900/20 dark:bg-pink-900/10"
+            >
+              <div class="mb-1 flex items-center justify-between">
+                <span class="text-sm font-semibold text-pink-900 dark:text-pink-200">
+                  Total Female
+                </span>
+                <span
+                  class="rounded bg-white px-2 py-0.5 text-xs font-bold text-pink-600 shadow-sm dark:bg-slate-800/80"
+                >
+                  {demographics.femalePercent.toFixed(1)}%
+                </span>
               </div>
-
-              <!-- Female Stats -->
-              <div
-                class="rounded-xl border border-pink-100 bg-pink-50 p-4 transition-all hover:shadow-md dark:border-pink-900/20 dark:bg-pink-900/10"
-              >
-                <div class="mb-1 flex items-center justify-between">
-                  <span class="text-sm font-semibold text-pink-900 dark:text-pink-200">
-                    Total Female
-                  </span>
-                  <span
-                    class="rounded bg-white px-2 py-0.5 text-xs font-bold text-pink-600 shadow-sm dark:bg-slate-800/80"
-                  >
-                    {demographics.femalePercent.toFixed(1)}%
-                  </span>
-                </div>
-                <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                  {demographics.totalFemale.toLocaleString()}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
-              </div>
+              <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                {demographics.totalFemale.toLocaleString()}
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
             </div>
           </div>
-        </Card.Content>
-      </Card.Root>
+        </div>
+      </InfoCard>
 
       <!-- Age Distribution Card -->
-      <Card.Root>
-        <Card.Header>
-          <div class="flex items-start justify-between">
-            <div>
-              <Card.Title class="flex items-center gap-2 text-base">
-                <PieChart class="size-5 text-teal-500" />
-                Population by Age Group
-              </Card.Title>
-              <Card.Description>Breakdown of population by age brackets</Card.Description>
-            </div>
-            {#if hasMultipleYears && ageGroupTrend.categories.length > 1}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-8 text-muted-foreground hover:text-foreground"
-                title="View historical trend"
-                onclick={() => (showAgeTrendModal = true)}
-              >
-                <ChartLine class="size-4" />
-              </Button>
-            {/if}
+      <InfoCard
+        title="Population by Age Group"
+        description="Breakdown of population by age brackets"
+        icon={PieChart}
+        iconBgColor="bg-teal-100"
+        iconTextColor="text-teal-600"
+        headerBgColor="bg-teal-50/50"
+      >
+        {#snippet headerAction()}
+          {#if hasMultipleYears && ageGroupTrend.categories.length > 1}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 text-muted-foreground hover:text-foreground"
+              title="View historical trend"
+              onclick={() => (showAgeTrendModal = true)}
+            >
+              <ChartLine class="size-4" />
+            </Button>
+          {/if}
+        {/snippet}
+        <div class="flex flex-col items-center justify-around gap-8 md:flex-row">
+          <!-- Donut Chart -->
+          <div class="relative w-48 shrink-0 md:w-56">
+            <DonutChart
+              data={ageData}
+              centerLabel="Total"
+              centerValue={demographics.totalPopulation.toLocaleString()}
+              height={224}
+              showLegend={false}
+            />
           </div>
-        </Card.Header>
-        <Card.Content>
-          <div class="flex flex-col items-center justify-around gap-8 md:flex-row">
-            <!-- Donut Chart -->
-            <div class="relative w-48 shrink-0 md:w-56">
-              <DonutChart
-                data={ageData}
-                centerLabel="Total"
-                centerValue={demographics.totalPopulation.toLocaleString()}
-                height={224}
-                showLegend={false}
-              />
+
+          <!-- Age Group Stats -->
+          <div class="flex w-full max-w-xs flex-col gap-4">
+            <!-- Youth Stats -->
+            <div
+              class="rounded-xl border border-orange-100 bg-orange-50 p-4 transition-all hover:shadow-md dark:border-orange-900/20 dark:bg-orange-900/10"
+            >
+              <div class="mb-1 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Baby class="size-4 text-orange-600 dark:text-orange-400" />
+                  <span class="text-sm font-semibold text-orange-900 dark:text-orange-200">
+                    Youth (0-14)
+                  </span>
+                </div>
+                <span
+                  class="rounded bg-white px-2 py-0.5 text-xs font-bold text-orange-600 shadow-sm dark:bg-slate-800/80"
+                >
+                  {demographics.youthPercent.toFixed(1)}%
+                </span>
+              </div>
+              <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                {demographics.youth.toLocaleString()}
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
             </div>
 
-            <!-- Age Group Stats -->
-            <div class="flex w-full max-w-xs flex-col gap-4">
-              <!-- Youth Stats -->
-              <div
-                class="rounded-xl border border-orange-100 bg-orange-50 p-4 transition-all hover:shadow-md dark:border-orange-900/20 dark:bg-orange-900/10"
-              >
-                <div class="mb-1 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <Baby class="size-4 text-orange-600 dark:text-orange-400" />
-                    <span class="text-sm font-semibold text-orange-900 dark:text-orange-200">
-                      Youth (0-14)
-                    </span>
-                  </div>
-                  <span
-                    class="rounded bg-white px-2 py-0.5 text-xs font-bold text-orange-600 shadow-sm dark:bg-slate-800/80"
-                  >
-                    {demographics.youthPercent.toFixed(1)}%
+            <!-- Working Age Stats -->
+            <div
+              class="rounded-xl border border-blue-100 bg-blue-50 p-4 transition-all hover:shadow-md dark:border-blue-900/20 dark:bg-blue-900/10"
+            >
+              <div class="mb-1 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Briefcase class="size-4 text-blue-600 dark:text-blue-400" />
+                  <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                    Working Age (15-64)
                   </span>
                 </div>
-                <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                  {demographics.youth.toLocaleString()}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+                <span
+                  class="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-600 shadow-sm dark:bg-slate-800/80"
+                >
+                  {demographics.workingAgePercent.toFixed(1)}%
+                </span>
               </div>
+              <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                {demographics.workingAge.toLocaleString()}
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+            </div>
 
-              <!-- Working Age Stats -->
-              <div
-                class="rounded-xl border border-blue-100 bg-blue-50 p-4 transition-all hover:shadow-md dark:border-blue-900/20 dark:bg-blue-900/10"
-              >
-                <div class="mb-1 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <Briefcase class="size-4 text-blue-600 dark:text-blue-400" />
-                    <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">
-                      Working Age (15-64)
-                    </span>
-                  </div>
-                  <span
-                    class="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-600 shadow-sm dark:bg-slate-800/80"
-                  >
-                    {demographics.workingAgePercent.toFixed(1)}%
+            <!-- Elderly Stats -->
+            <div
+              class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-800/30"
+            >
+              <div class="mb-1 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <UserRound class="size-4 text-slate-600 dark:text-slate-400" />
+                  <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Elderly (65+)
                   </span>
                 </div>
-                <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                  {demographics.workingAge.toLocaleString()}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
+                <span
+                  class="rounded bg-white px-2 py-0.5 text-xs font-bold text-slate-600 shadow-sm dark:bg-slate-700"
+                >
+                  {demographics.elderlyPercent.toFixed(1)}%
+                </span>
               </div>
-
-              <!-- Elderly Stats -->
-              <div
-                class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-800/30"
-              >
-                <div class="mb-1 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <UserRound class="size-4 text-slate-600 dark:text-slate-400" />
-                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      Elderly (65+)
-                    </span>
-                  </div>
-                  <span
-                    class="rounded bg-white px-2 py-0.5 text-xs font-bold text-slate-600 shadow-sm dark:bg-slate-700"
-                  >
-                    {demographics.elderlyPercent.toFixed(1)}%
-                  </span>
-                </div>
-                <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                  {demographics.elderly.toLocaleString()}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
-              </div>
+              <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                {demographics.elderly.toLocaleString()}
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Individuals</p>
             </div>
           </div>
-        </Card.Content>
-      </Card.Root>
+        </div>
+      </InfoCard>
 
       <!-- Labor & Employment Card -->
-      <Card.Root>
-        <Card.Header>
-          <div class="flex items-start justify-between">
-            <div>
-              <Card.Title class="flex items-center gap-2 text-base">
-                <Briefcase class="size-5 text-purple-500" />
-                Labor & Employment
-              </Card.Title>
-              <Card.Description>Workforce statistics and economic dependency</Card.Description>
-            </div>
-            {#if hasMultipleYears && laborForceTrend.categories.length > 1}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-8 text-muted-foreground hover:text-foreground"
-                title="View historical trend"
-                onclick={() => (showLaborTrendModal = true)}
-              >
-                <ChartLine class="size-4" />
-              </Button>
-            {/if}
-          </div>
-        </Card.Header>
-        <Card.Content class="space-y-6">
+      <InfoCard
+        title="Labor & Employment"
+        description="Workforce statistics and economic dependency"
+        icon={Briefcase}
+        iconBgColor="bg-purple-100"
+        iconTextColor="text-purple-600"
+        headerBgColor="bg-purple-50/50"
+        contentPadding="py-6"
+      >
+        {#snippet headerAction()}
+          {#if hasMultipleYears && laborForceTrend.categories.length > 1}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 text-muted-foreground hover:text-foreground"
+              title="View historical trend"
+              onclick={() => (showLaborTrendModal = true)}
+            >
+              <ChartLine class="size-4" />
+            </Button>
+          {/if}
+        {/snippet}
+        <div class="space-y-6">
           <!-- Top Stats Row -->
           <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
             <!-- Labor Force -->
@@ -936,373 +927,361 @@
               </div>
             </div>
           </div>
-        </Card.Content>
-      </Card.Root>
+        </div>
+      </InfoCard>
     </div>
 
     <!-- Right Column: Sidebar Stats (1/3 width) -->
     <div class="flex flex-col gap-6">
       <!-- Cultural & Demographic Groups -->
-      <Card.Root>
-        <Card.Header>
-          <div class="flex items-start justify-between">
-            <div>
-              <Card.Title class="flex items-center gap-2 text-base">
-                <Users class="size-5 text-indigo-500" />
-                Cultural & Demographic Groups
-              </Card.Title>
-              <Card.Description>Population composition across sitios</Card.Description>
+      <InfoCard
+        title="Cultural & Demographic Groups"
+        description="Population composition across sitios"
+        icon={Users}
+        iconBgColor="bg-indigo-100"
+        iconTextColor="text-indigo-600"
+        headerBgColor="bg-indigo-50/50"
+      >
+        {#snippet headerAction()}
+          {#if hasMultipleYears && culturalGroupsTrend.categories.length > 1}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 text-muted-foreground hover:text-foreground"
+              title="View historical trend"
+              onclick={() => (showCulturalTrendModal = true)}
+            >
+              <ChartLine class="size-4" />
+            </Button>
+          {/if}
+        {/snippet}
+        <div class="space-y-5">
+          <!-- School-Age Children -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <School class="size-4 text-blue-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >School-Age Children</span
+                >
+                <HelpTooltip content="Children ages 5-17 who are of school-going age" />
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalSchoolAgeChildren.toLocaleString()}
+              </span>
             </div>
-            {#if hasMultipleYears && culturalGroupsTrend.categories.length > 1}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-8 text-muted-foreground hover:text-foreground"
-                title="View historical trend"
-                onclick={() => (showCulturalTrendModal = true)}
-              >
-                <ChartLine class="size-4" />
-              </Button>
-            {/if}
-          </div>
-        </Card.Header>
-        <Card.Content>
-          <div class="space-y-5">
-            <!-- School-Age Children -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <School class="size-4 text-blue-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >School-Age Children</span
-                  >
-                  <HelpTooltip content="Children ages 5-17 who are of school-going age" />
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalSchoolAgeChildren.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-blue-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    (demographics.totalSchoolAgeChildren / demographics.totalPopulation) * 100,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {(
-                  (demographics.totalSchoolAgeChildren / demographics.totalPopulation) *
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-blue-500 transition-all duration-500"
+                style="width: {Math.min(
+                  (demographics.totalSchoolAgeChildren / demographics.totalPopulation) * 100,
                   100
-                ).toFixed(1)}% of Population
-              </p>
+                )}%"
+              ></div>
             </div>
-
-            <!-- Muslim Population -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <Landmark class="size-4 text-emerald-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Muslim</span>
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalMuslim.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-emerald-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    (demographics.totalMuslim / demographics.totalPopulation) * 100,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {((demographics.totalMuslim / demographics.totalPopulation) * 100).toFixed(1)}% of
-                Population
-              </p>
-            </div>
-
-            <!-- Indigenous People -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <Users class="size-4 text-indigo-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >Indigenous People</span
-                  >
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalIP.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-indigo-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    (demographics.totalIP / demographics.totalPopulation) * 100,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {((demographics.totalIP / demographics.totalPopulation) * 100).toFixed(1)}% of
-                Population
-              </p>
-            </div>
-
-            <!-- Registered Voters -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <Vote class="size-4 text-purple-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >Registered Voters</span
-                  >
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalVoters.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-purple-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    (demographics.totalVoters / demographics.totalPopulation) * 100,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {demographics.voterRegistrationPercent.toFixed(1)}% of Population
-              </p>
-            </div>
-          </div>
-        </Card.Content>
-      </Card.Root>
-
-      <!-- Vulnerable Sectors -->
-      <Card.Root>
-        <Card.Header>
-          <div class="flex items-start justify-between">
-            <div>
-              <Card.Title class="flex items-center gap-2 text-base">
-                <UserRound class="size-5 text-orange-500" />
-                Vulnerable Sectors
-              </Card.Title>
-              <Card.Description>Priority populations requiring attention</Card.Description>
-            </div>
-            {#if hasMultipleYears && vulnerableSectorsTrend.categories.length > 1}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-8 text-muted-foreground hover:text-foreground"
-                title="View historical trend"
-                onclick={() => (showVulnerableTrendModal = true)}
-              >
-                <ChartLine class="size-4" />
-              </Button>
-            {/if}
-          </div>
-        </Card.Header>
-        <Card.Content>
-          <div class="space-y-5">
-            <!-- Senior Citizens -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <UserCheck class="size-4 text-orange-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >Senior Citizens</span
-                  >
-                  <HelpTooltip content="Residents aged 60 years and above" />
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalSeniors.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-orange-500 transition-all duration-500"
-                  style="width: {Math.min(demographics.seniorPercent, 100)}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {demographics.seniorPercent.toFixed(1)}% of Population
-              </p>
-            </div>
-
-            <!-- Out of School Youth -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <School class="size-4 text-red-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >Out of School Youth</span
-                  >
-                  <HelpTooltip
-                    content="School-age children (5-17 years) not currently attending school"
-                  />
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalOSY.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-red-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    demographics.totalSchoolAgeChildren > 0
-                      ? (demographics.totalOSY / demographics.totalSchoolAgeChildren) * 100
-                      : 0,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {demographics.totalSchoolAgeChildren > 0
-                  ? ((demographics.totalOSY / demographics.totalSchoolAgeChildren) * 100).toFixed(1)
-                  : '0'}% of School-Age Children
-              </p>
-            </div>
-
-            <!-- No PhilSys ID -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <IdCard class="size-4 text-slate-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >No PhilSys ID</span
-                  >
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalNoNationalID.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-slate-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    (demographics.totalNoNationalID / demographics.totalPopulation) * 100,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {((demographics.totalNoNationalID / demographics.totalPopulation) * 100).toFixed(
-                  1
-                )}% of Population
-              </p>
-            </div>
-
-            <!-- No Birth Certificate -->
-            <div>
-              <div class="mb-2 flex items-end justify-between">
-                <div class="flex items-center gap-2">
-                  <CreditCard class="size-4 text-amber-500" />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >No Birth Certificate</span
-                  >
-                </div>
-                <span class="text-base font-bold text-slate-900 dark:text-white">
-                  {demographics.totalNoBirthCert.toLocaleString()}
-                </span>
-              </div>
-              <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                <div
-                  class="h-2 rounded-full bg-amber-500 transition-all duration-500"
-                  style="width: {Math.min(
-                    (demographics.totalNoBirthCert / demographics.totalPopulation) * 100,
-                    100
-                  )}%"
-                ></div>
-              </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">
-                {((demographics.totalNoBirthCert / demographics.totalPopulation) * 100).toFixed(1)}%
-                of Population
-              </p>
-            </div>
-          </div>
-        </Card.Content>
-      </Card.Root>
-
-      <!-- Sitio Classification Summary -->
-      <Card.Root>
-        <Card.Header>
-          <Card.Title class="flex items-center gap-2 text-base">
-            <UserCheck class="size-5 text-slate-500" />
-            Sitio Classifications
-          </Card.Title>
-          <Card.Description>Special area designations and vulnerability status</Card.Description>
-        </Card.Header>
-        <Card.Content>
-          <div class="space-y-3">
-            <div
-              class="rounded-lg border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-900/30 dark:bg-amber-900/20"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex items-start gap-2.5">
-                  <span class="mt-0.5 size-3 shrink-0 rounded-full bg-amber-500"></span>
-                  <div class="min-w-0 flex-1">
-                    <span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
-                      >GIDA Status</span
-                    >
-                    <p class="mt-0.5 text-xs text-muted-foreground/80">
-                      Geographically Isolated and Disadvantaged Area
-                    </p>
-                  </div>
-                </div>
-                <span class="text-lg font-bold text-slate-900 dark:text-white">
-                  {demographics.gidaCount}
-                </span>
-              </div>
-            </div>
-            <div
-              class="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 dark:border-emerald-900/30 dark:bg-emerald-900/20"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex items-start gap-2.5">
-                  <span class="mt-0.5 size-3 shrink-0 rounded-full bg-emerald-500"></span>
-                  <div class="min-w-0 flex-1">
-                    <span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
-                      >Indigenous Community</span
-                    >
-                    <p class="mt-0.5 text-xs text-muted-foreground/80">
-                      Indigenous Peoples (IP) Area
-                    </p>
-                  </div>
-                </div>
-                <span class="text-lg font-bold text-slate-900 dark:text-white">
-                  {demographics.indigenousCount}
-                </span>
-              </div>
-            </div>
-            <div
-              class="rounded-lg border border-red-200 bg-red-50 p-3.5 dark:border-red-900/30 dark:bg-red-900/20"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex items-start gap-2.5">
-                  <span class="mt-0.5 size-3 shrink-0 rounded-full bg-red-500"></span>
-                  <div class="min-w-0 flex-1">
-                    <span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
-                      >Conflict-Affected</span
-                    >
-                    <p class="mt-0.5 text-xs text-muted-foreground/80">Conflict-affected area</p>
-                  </div>
-                </div>
-                <span class="text-lg font-bold text-slate-900 dark:text-white">
-                  {demographics.conflictCount}
-                </span>
-              </div>
-            </div>
-            <p class="text-center text-xs text-muted-foreground">
-              Note: Sitios may have multiple classifications
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {((demographics.totalSchoolAgeChildren / demographics.totalPopulation) * 100).toFixed(
+                1
+              )}% of Population
             </p>
           </div>
-        </Card.Content>
-      </Card.Root>
+
+          <!-- Muslim Population -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Landmark class="size-4 text-emerald-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Muslim</span>
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalMuslim.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-emerald-500 transition-all duration-500"
+                style="width: {Math.min(
+                  (demographics.totalMuslim / demographics.totalPopulation) * 100,
+                  100
+                )}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {((demographics.totalMuslim / demographics.totalPopulation) * 100).toFixed(1)}% of
+              Population
+            </p>
+          </div>
+
+          <!-- Indigenous People -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Users class="size-4 text-indigo-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Indigenous People</span
+                >
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalIP.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-indigo-500 transition-all duration-500"
+                style="width: {Math.min(
+                  (demographics.totalIP / demographics.totalPopulation) * 100,
+                  100
+                )}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {((demographics.totalIP / demographics.totalPopulation) * 100).toFixed(1)}% of
+              Population
+            </p>
+          </div>
+
+          <!-- Registered Voters -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <Vote class="size-4 text-purple-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Registered Voters</span
+                >
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalVoters.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-purple-500 transition-all duration-500"
+                style="width: {Math.min(
+                  (demographics.totalVoters / demographics.totalPopulation) * 100,
+                  100
+                )}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {demographics.voterRegistrationPercent.toFixed(1)}% of Population
+            </p>
+          </div>
+        </div>
+      </InfoCard>
+
+      <!-- Vulnerable Sectors -->
+      <InfoCard
+        title="Vulnerable Sectors"
+        description="Priority populations requiring attention"
+        icon={UserRound}
+        iconBgColor="bg-orange-100"
+        iconTextColor="text-orange-600"
+        headerBgColor="bg-orange-50/50"
+      >
+        {#snippet headerAction()}
+          {#if hasMultipleYears && vulnerableSectorsTrend.categories.length > 1}
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 text-muted-foreground hover:text-foreground"
+              title="View historical trend"
+              onclick={() => (showVulnerableTrendModal = true)}
+            >
+              <ChartLine class="size-4" />
+            </Button>
+          {/if}
+        {/snippet}
+        <div class="space-y-5">
+          <!-- Senior Citizens -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <UserCheck class="size-4 text-orange-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Senior Citizens</span
+                >
+                <HelpTooltip content="Residents aged 60 years and above" />
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalSeniors.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-orange-500 transition-all duration-500"
+                style="width: {Math.min(demographics.seniorPercent, 100)}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {demographics.seniorPercent.toFixed(1)}% of Population
+            </p>
+          </div>
+
+          <!-- Out of School Youth -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <School class="size-4 text-red-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >Out of School Youth</span
+                >
+                <HelpTooltip
+                  content="School-age children (5-17 years) not currently attending school"
+                />
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalOSY.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-red-500 transition-all duration-500"
+                style="width: {Math.min(
+                  demographics.totalSchoolAgeChildren > 0
+                    ? (demographics.totalOSY / demographics.totalSchoolAgeChildren) * 100
+                    : 0,
+                  100
+                )}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {demographics.totalSchoolAgeChildren > 0
+                ? ((demographics.totalOSY / demographics.totalSchoolAgeChildren) * 100).toFixed(1)
+                : '0'}% of School-Age Children
+            </p>
+          </div>
+
+          <!-- No PhilSys ID -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <IdCard class="size-4 text-slate-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >No PhilSys ID</span
+                >
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalNoNationalID.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-slate-500 transition-all duration-500"
+                style="width: {Math.min(
+                  (demographics.totalNoNationalID / demographics.totalPopulation) * 100,
+                  100
+                )}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {((demographics.totalNoNationalID / demographics.totalPopulation) * 100).toFixed(1)}%
+              of Population
+            </p>
+          </div>
+
+          <!-- No Birth Certificate -->
+          <div>
+            <div class="mb-2 flex items-end justify-between">
+              <div class="flex items-center gap-2">
+                <CreditCard class="size-4 text-amber-500" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >No Birth Certificate</span
+                >
+              </div>
+              <span class="text-base font-bold text-slate-900 dark:text-white">
+                {demographics.totalNoBirthCert.toLocaleString()}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+              <div
+                class="h-2 rounded-full bg-amber-500 transition-all duration-500"
+                style="width: {Math.min(
+                  (demographics.totalNoBirthCert / demographics.totalPopulation) * 100,
+                  100
+                )}%"
+              ></div>
+            </div>
+            <p class="mt-1 text-right text-xs text-muted-foreground">
+              {((demographics.totalNoBirthCert / demographics.totalPopulation) * 100).toFixed(1)}%
+              of Population
+            </p>
+          </div>
+        </div>
+      </InfoCard>
+
+      <!-- Sitio Classification Summary -->
+      <InfoCard
+        title="Sitio Classifications"
+        description="Special area designations and vulnerability status"
+        icon={UserCheck}
+        iconBgColor="bg-slate-100"
+        iconTextColor="text-slate-600"
+        headerBgColor="bg-slate-50/50"
+      >
+        <div class="space-y-3">
+          <div
+            class="rounded-lg border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-900/30 dark:bg-amber-900/20"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2.5">
+                <span class="mt-0.5 size-3 shrink-0 rounded-full bg-amber-500"></span>
+                <div class="min-w-0 flex-1">
+                  <span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
+                    >GIDA Status</span
+                  >
+                  <p class="mt-0.5 text-xs text-muted-foreground/80">
+                    Geographically Isolated and Disadvantaged Area
+                  </p>
+                </div>
+              </div>
+              <span class="text-lg font-bold text-slate-900 dark:text-white">
+                {demographics.gidaCount}
+              </span>
+            </div>
+          </div>
+          <div
+            class="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 dark:border-emerald-900/30 dark:bg-emerald-900/20"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2.5">
+                <span class="mt-0.5 size-3 shrink-0 rounded-full bg-emerald-500"></span>
+                <div class="min-w-0 flex-1">
+                  <span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
+                    >Indigenous Community</span
+                  >
+                  <p class="mt-0.5 text-xs text-muted-foreground/80">
+                    Indigenous Peoples (IP) Area
+                  </p>
+                </div>
+              </div>
+              <span class="text-lg font-bold text-slate-900 dark:text-white">
+                {demographics.indigenousCount}
+              </span>
+            </div>
+          </div>
+          <div
+            class="rounded-lg border border-red-200 bg-red-50 p-3.5 dark:border-red-900/30 dark:bg-red-900/20"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2.5">
+                <span class="mt-0.5 size-3 shrink-0 rounded-full bg-red-500"></span>
+                <div class="min-w-0 flex-1">
+                  <span class="text-sm leading-tight font-semibold text-slate-900 dark:text-white"
+                    >Conflict-Affected</span
+                  >
+                  <p class="mt-0.5 text-xs text-muted-foreground/80">Conflict-affected area</p>
+                </div>
+              </div>
+              <span class="text-lg font-bold text-slate-900 dark:text-white">
+                {demographics.conflictCount}
+              </span>
+            </div>
+          </div>
+          <p class="text-center text-xs text-muted-foreground">
+            Note: Sitios may have multiple classifications
+          </p>
+        </div>
+      </InfoCard>
     </div>
   </div>
 </div>
