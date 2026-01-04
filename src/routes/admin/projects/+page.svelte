@@ -218,7 +218,7 @@
 <div class="space-y-6 p-6">
   <!-- Stats Cards -->
   <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <Card.Root>
+    <Card.Root class="py-0">
       <Card.Content class="p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -230,7 +230,7 @@
       </Card.Content>
     </Card.Root>
 
-    <Card.Root>
+    <Card.Root class="py-0">
       <Card.Content class="p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -242,7 +242,7 @@
       </Card.Content>
     </Card.Root>
 
-    <Card.Root>
+    <Card.Root class="py-0">
       <Card.Content class="p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -254,7 +254,7 @@
       </Card.Content>
     </Card.Root>
 
-    <Card.Root>
+    <Card.Root class="py-0">
       <Card.Content class="p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -268,7 +268,7 @@
   </div>
 
   <!-- Filters -->
-  <Card.Root>
+  <Card.Root class="py-0">
     <Card.Content class="p-4">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
         <!-- Search -->
@@ -323,7 +323,7 @@
   </Card.Root>
 
   <!-- Projects Table -->
-  <Card.Root>
+  <Card.Root class="p-4">
     <Card.Content class="p-0">
       {#if paginatedProjects.length === 0}
         <div class="flex flex-col items-center justify-center py-12 text-center">
@@ -344,7 +344,7 @@
           {/if}
         </div>
       {:else}
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-lg">
           <Table.Root>
             <Table.Header>
               <Table.Row>

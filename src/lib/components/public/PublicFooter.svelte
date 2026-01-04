@@ -26,11 +26,12 @@
         <h4 class="font-semibold">Quick Links</h4>
         <ul class="space-y-2 text-sm text-muted-foreground">
           <li>
-            <a href="/projects" class="transition-colors hover:text-foreground">View Projects</a>
-          </li>
-          <li>
             <a href="/sitios" class="transition-colors hover:text-foreground">Explore Sitios</a>
           </li>
+          <li>
+            <a href="/compare" class="transition-colors hover:text-foreground">Comapre</a>
+          </li>
+
           <li>
             <a href="/login" class="transition-colors hover:text-foreground">Admin Portal</a>
           </li>

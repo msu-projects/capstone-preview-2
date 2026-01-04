@@ -179,7 +179,8 @@ export const stats: Stats = {
     (sum, s) => sum + (s.population.totalMale + s.population.totalFemale),
     0
   ),
-  municipalities: [...new Set(sitios.map((s) => s.municipality))].length
+  municipalities: [...new Set(sitios.map((s) => s.municipality))].length,
+  total_projects: projects.length
 };
 
 // ===== CHART DATA =====
