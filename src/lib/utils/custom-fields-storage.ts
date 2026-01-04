@@ -17,6 +17,7 @@ import type {
 import {
   DEFAULT_AGGREGATION_TYPE,
   DEFAULT_VALIDATION_RULES,
+  DEFAULT_VISUALIZATION_CONFIG,
   generateFieldName
 } from '$lib/types/custom-fields';
 import { nanoid } from 'nanoid';
@@ -113,6 +114,7 @@ export function createCustomFieldDefinition(
       ...formData.validationRules
     },
     aggregationType: formData.aggregationType || DEFAULT_AGGREGATION_TYPE[formData.dataType],
+    visualizationConfig: formData.visualizationConfig ?? { ...DEFAULT_VISUALIZATION_CONFIG },
     displayOrder: maxOrder + 1,
     isActive: true,
     description: formData.description?.trim(),
@@ -197,6 +199,9 @@ export function updateCustomFieldDefinition(
       validationRules: { ...existing.validationRules, ...formData.validationRules }
     }),
     ...(formData.aggregationType && { aggregationType: formData.aggregationType }),
+    ...(formData.visualizationConfig && {
+      visualizationConfig: { ...DEFAULT_VISUALIZATION_CONFIG, ...formData.visualizationConfig }
+    }),
     ...(formData.description !== undefined && { description: formData.description?.trim() }),
     ...(formData.groupId !== undefined && { groupId: formData.groupId || undefined }),
     groupDisplayOrder,

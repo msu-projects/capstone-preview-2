@@ -22,6 +22,143 @@ export type CustomFieldDataType =
 export type CustomFieldAggregationType = 'sum' | 'average' | 'count' | 'min' | 'max';
 
 /**
+ * Chart types available for custom field visualization
+ */
+export type CustomFieldChartType =
+  | 'none'
+  | 'bar'
+  | 'donut'
+  | 'line'
+  | 'stacked-bar'
+  | 'radar'
+  | 'progress';
+
+/**
+ * Color scheme options for chart visualization
+ */
+export type CustomFieldColorScheme =
+  | 'default'
+  | 'categorical'
+  | 'sequential'
+  | 'success'
+  | 'warning'
+  | 'danger';
+
+/**
+ * Display mode for chart visualization
+ */
+export type CustomFieldDisplayMode = 'inline' | 'modal' | 'card';
+
+/**
+ * Visualization configuration for custom fields
+ */
+export interface CustomFieldVisualizationConfig {
+  /** Whether to show a chart for this field */
+  enableChart: boolean;
+  /** Chart type to use for visualization */
+  chartType: CustomFieldChartType;
+  /** Color scheme for the chart */
+  colorScheme: CustomFieldColorScheme;
+  /** Custom colors (overrides colorScheme) */
+  customColors?: string[];
+  /** For time-series: enable trend chart across years */
+  showTrend: boolean;
+  /** Number of years to include in trend chart */
+  trendYears: number;
+  /** Chart height in pixels */
+  chartHeight: number;
+  /** Display position: inline, modal, or card */
+  displayMode: CustomFieldDisplayMode;
+  /** Whether to show this field's chart on the admin dashboard */
+  showOnDashboard: boolean;
+}
+
+/**
+ * Chart types available for each data type
+ */
+export const CHART_TYPES_BY_DATA_TYPE: Record<CustomFieldDataType, CustomFieldChartType[]> = {
+  number: ['none', 'bar', 'line', 'progress', 'radar'],
+  boolean: ['none', 'donut', 'bar'],
+  radio: ['none', 'donut', 'bar'],
+  checkbox: ['none', 'bar', 'stacked-bar', 'donut'],
+  text: ['none', 'bar'], // For frequency/word count
+  date: ['none', 'bar', 'line'], // For temporal distribution
+  array: ['none', 'bar'] // For item frequency
+};
+
+/**
+ * Labels for chart types (for display in UI)
+ */
+export const CHART_TYPE_LABELS: Record<CustomFieldChartType, string> = {
+  none: 'No Chart',
+  bar: 'Bar Chart',
+  donut: 'Donut Chart',
+  line: 'Line Chart',
+  'stacked-bar': 'Stacked Bar Chart',
+  radar: 'Radar Chart',
+  progress: 'Progress Bar'
+};
+
+/**
+ * Labels for color schemes (for display in UI)
+ */
+export const COLOR_SCHEME_LABELS: Record<CustomFieldColorScheme, string> = {
+  default: 'Default',
+  categorical: 'Categorical',
+  sequential: 'Sequential',
+  success: 'Success (Green)',
+  warning: 'Warning (Amber)',
+  danger: 'Danger (Red)'
+};
+
+/**
+ * Labels for display modes (for display in UI)
+ */
+export const DISPLAY_MODE_LABELS: Record<CustomFieldDisplayMode, string> = {
+  inline: 'Inline',
+  modal: 'Modal (Click to expand)',
+  card: 'Standalone Card'
+};
+
+/**
+ * Default visualization configuration
+ */
+export const DEFAULT_VISUALIZATION_CONFIG: CustomFieldVisualizationConfig = {
+  enableChart: false,
+  chartType: 'none',
+  colorScheme: 'default',
+  showTrend: false,
+  trendYears: 5,
+  chartHeight: 200,
+  displayMode: 'inline',
+  showOnDashboard: false
+};
+
+/**
+ * Get default chart type for a data type
+ */
+export function getDefaultChartTypeForDataType(
+  dataType: CustomFieldDataType
+): CustomFieldChartType {
+  switch (dataType) {
+    case 'number':
+      return 'bar';
+    case 'boolean':
+    case 'radio':
+      return 'donut';
+    case 'checkbox':
+      return 'bar';
+    case 'text':
+    case 'array':
+      return 'bar';
+    case 'date':
+      return 'line';
+    default:
+      return 'none';
+  }
+}
+
+/**
  * Validation rules for custom fields
  */
 export interface CustomFieldValidationRules {
@@ -87,6 +224,8 @@ export interface CustomFieldDefinition {
   validationRules: CustomFieldValidationRules;
   /** Aggregation type for dashboard charts (applies to number fields) */
   aggregationType: CustomFieldAggregationType;
+  /** Visualization configuration for charts */
+  visualizationConfig?: CustomFieldVisualizationConfig;
   /** Display order in the custom fields section (lower = first) */
   displayOrder: number;
   /** Whether the field is active (false = archived/soft-deleted) */
@@ -122,6 +261,7 @@ export interface CustomFieldFormData {
   dataType: CustomFieldDataType;
   validationRules: CustomFieldValidationRules;
   aggregationType: CustomFieldAggregationType;
+  visualizationConfig: CustomFieldVisualizationConfig;
   description?: string;
   groupId?: string;
 }

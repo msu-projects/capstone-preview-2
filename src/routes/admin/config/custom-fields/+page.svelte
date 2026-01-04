@@ -2,9 +2,11 @@
   import { goto } from '$app/navigation';
   import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
   import ConfigResetDialog from '$lib/components/admin/config/ConfigResetDialog.svelte';
+  import CustomFieldChart from '$lib/components/charts/CustomFieldChart.svelte';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
+  import * as Collapsible from '$lib/components/ui/collapsible';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
@@ -16,20 +18,29 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import type {
     CustomFieldAggregationType,
+    CustomFieldChartType,
+    CustomFieldColorScheme,
     CustomFieldDataType,
     CustomFieldDefinition,
+    CustomFieldDisplayMode,
     CustomFieldFormData,
     CustomFieldGroup,
     CustomFieldGroupFormData
   } from '$lib/types';
   import {
     AGGREGATION_TYPE_LABELS,
+    CHART_TYPE_LABELS,
+    CHART_TYPES_BY_DATA_TYPE,
+    COLOR_SCHEME_LABELS,
     DATA_TYPE_LABELS,
     DEFAULT_AGGREGATION_TYPE,
     DEFAULT_GROUP_VALUES,
     DEFAULT_VALIDATION_RULES,
+    DEFAULT_VISUALIZATION_CONFIG,
+    DISPLAY_MODE_LABELS,
     generateFieldName,
     getApplicableAggregationTypes,
+    getDefaultChartTypeForDataType,
     GROUP_ICON_OPTIONS
   } from '$lib/types';
   import {
@@ -57,6 +68,7 @@
     ArrowLeft,
     ArrowUp,
     Award,
+    BarChart3,
     BookOpen,
     Briefcase,
     Building,
@@ -112,6 +124,7 @@
     dataType: 'text',
     validationRules: { ...DEFAULT_VALIDATION_RULES.text },
     aggregationType: 'count',
+    visualizationConfig: { ...DEFAULT_VISUALIZATION_CONFIG },
     description: '',
     groupId: undefined
   });
@@ -119,6 +132,9 @@
   let groupFormData = $state<CustomFieldGroupFormData>({
     ...DEFAULT_GROUP_VALUES
   });
+
+  // Visualization settings UI state
+  let showVisualizationSettings = $state(false);
 
   const canManageConfig = $derived(authStore.isSuperadmin);
   const currentUserId = $derived(authStore.currentUser?.id?.toString() ?? 'unknown');
@@ -193,10 +209,12 @@
       dataType: 'text',
       validationRules: { ...DEFAULT_VALIDATION_RULES.text },
       aggregationType: 'count',
+      visualizationConfig: { ...DEFAULT_VISUALIZATION_CONFIG },
       description: '',
       groupId: undefined
     };
     newChoiceInput = '';
+    showVisualizationSettings = false;
     isEditDialogOpen = true;
   }
 
@@ -208,10 +226,14 @@
       dataType: field.dataType,
       validationRules: { ...field.validationRules },
       aggregationType: field.aggregationType,
+      visualizationConfig: field.visualizationConfig
+        ? { ...field.visualizationConfig }
+        : { ...DEFAULT_VISUALIZATION_CONFIG },
       description: field.description ?? '',
       groupId: field.groupId
     };
     newChoiceInput = '';
+    showVisualizationSettings = !!field.visualizationConfig?.enableChart;
     isEditDialogOpen = true;
   }
 
@@ -220,6 +242,12 @@
     formData.dataType = value as CustomFieldDataType;
     formData.validationRules = { ...DEFAULT_VALIDATION_RULES[value as CustomFieldDataType] };
     formData.aggregationType = DEFAULT_AGGREGATION_TYPE[value as CustomFieldDataType];
+    // Update chart type based on new data type
+    const defaultChartType = getDefaultChartTypeForDataType(value as CustomFieldDataType);
+    formData.visualizationConfig = {
+      ...formData.visualizationConfig,
+      chartType: defaultChartType
+    };
     newChoiceInput = '';
   }
 
@@ -231,6 +259,56 @@
   function handleGroupChange(value: string) {
     formData.groupId = value === '__none__' ? undefined : value;
   }
+
+  // ===== Visualization Config Handlers =====
+
+  function handleChartTypeChange(value: string) {
+    if (!value) return;
+    formData.visualizationConfig = {
+      ...formData.visualizationConfig,
+      chartType: value as CustomFieldChartType,
+      enableChart: value !== 'none'
+    };
+  }
+
+  function handleColorSchemeChange(value: string) {
+    if (!value) return;
+    formData.visualizationConfig = {
+      ...formData.visualizationConfig,
+      colorScheme: value as CustomFieldColorScheme
+    };
+  }
+
+  function handleDisplayModeChange(value: string) {
+    if (!value) return;
+    formData.visualizationConfig = {
+      ...formData.visualizationConfig,
+      displayMode: value as CustomFieldDisplayMode
+    };
+  }
+
+  // Available chart types for current data type
+  const availableChartTypes = $derived(CHART_TYPES_BY_DATA_TYPE[formData.dataType] ?? ['none']);
+
+  // Check if trend chart is supported (only for number and boolean)
+  const supportsTrendChart = $derived(
+    formData.dataType === 'number' || formData.dataType === 'boolean'
+  );
+
+  // Create a preview field definition for the chart preview
+  const previewFieldDef = $derived<CustomFieldDefinition>({
+    id: 'preview',
+    fieldName: formData.fieldName || 'preview',
+    displayLabel: formData.displayLabel || 'Preview',
+    dataType: formData.dataType,
+    validationRules: formData.validationRules,
+    aggregationType: formData.aggregationType,
+    visualizationConfig: formData.visualizationConfig,
+    displayOrder: 0,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    createdBy: 'preview'
+  });
 
   function addChoice() {
     const trimmed = newChoiceInput.trim();
@@ -1218,6 +1296,215 @@
           {/if}
         </div>
       {/if}
+
+      <!-- Visualization Settings (Collapsible) -->
+      <Collapsible.Root bind:open={showVisualizationSettings} class="rounded-lg border">
+        <Collapsible.Trigger class="flex w-full items-center justify-between p-3 hover:bg-muted/50">
+          <div class="flex items-center gap-2">
+            <BarChart3 class="size-4 text-primary" />
+            <span class="font-medium">Visualization Settings</span>
+            {#if formData.visualizationConfig.enableChart}
+              <Badge variant="secondary" class="text-xs">Enabled</Badge>
+            {/if}
+          </div>
+          <ChevronDown
+            class="size-4 text-muted-foreground transition-transform duration-200 {showVisualizationSettings
+              ? 'rotate-180'
+              : ''}"
+          />
+        </Collapsible.Trigger>
+        <Collapsible.Content class="border-t px-3 pt-3 pb-4">
+          <div class="grid gap-4">
+            <!-- Enable Chart Toggle -->
+            <div class="flex items-center justify-between rounded-lg border p-3">
+              <div class="space-y-0.5">
+                <Label for="enableChart">Enable Chart</Label>
+                <p class="text-xs text-muted-foreground">
+                  Display a chart visualization for this field.
+                </p>
+              </div>
+              <Switch
+                id="enableChart"
+                checked={formData.visualizationConfig.enableChart}
+                onCheckedChange={(checked) => {
+                  formData.visualizationConfig = {
+                    ...formData.visualizationConfig,
+                    enableChart: checked,
+                    chartType: checked ? getDefaultChartTypeForDataType(formData.dataType) : 'none'
+                  };
+                }}
+              />
+            </div>
+
+            {#if formData.visualizationConfig.enableChart}
+              <!-- Chart Type -->
+              <div class="grid gap-2">
+                <Label for="chartType">Chart Type</Label>
+                <Select.Root
+                  type="single"
+                  value={formData.visualizationConfig.chartType}
+                  onValueChange={handleChartTypeChange}
+                >
+                  <Select.Trigger id="chartType" class="w-full">
+                    {CHART_TYPE_LABELS[formData.visualizationConfig.chartType]}
+                  </Select.Trigger>
+                  <Select.Content>
+                    {#each availableChartTypes as chartType}
+                      <Select.Item value={chartType}>{CHART_TYPE_LABELS[chartType]}</Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+                <p class="text-xs text-muted-foreground">
+                  Available chart types depend on the field's data type.
+                </p>
+              </div>
+
+              <!-- Color Scheme -->
+              <div class="grid gap-2">
+                <Label for="colorScheme">Color Scheme</Label>
+                <Select.Root
+                  type="single"
+                  value={formData.visualizationConfig.colorScheme}
+                  onValueChange={handleColorSchemeChange}
+                >
+                  <Select.Trigger id="colorScheme" class="w-full">
+                    {COLOR_SCHEME_LABELS[formData.visualizationConfig.colorScheme]}
+                  </Select.Trigger>
+                  <Select.Content>
+                    {#each Object.entries(COLOR_SCHEME_LABELS) as [value, label]}
+                      <Select.Item {value}>{label}</Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+              </div>
+
+              <!-- Display Mode -->
+              <div class="grid gap-2">
+                <Label for="displayMode">Display Mode</Label>
+                <Select.Root
+                  type="single"
+                  value={formData.visualizationConfig.displayMode}
+                  onValueChange={handleDisplayModeChange}
+                >
+                  <Select.Trigger id="displayMode" class="w-full">
+                    {DISPLAY_MODE_LABELS[formData.visualizationConfig.displayMode]}
+                  </Select.Trigger>
+                  <Select.Content>
+                    {#each Object.entries(DISPLAY_MODE_LABELS) as [value, label]}
+                      <Select.Item {value}>{label}</Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+                <p class="text-xs text-muted-foreground">
+                  How the chart is displayed in the sitio profile.
+                </p>
+              </div>
+
+              <!-- Chart Height -->
+              <div class="grid gap-2">
+                <Label for="chartHeight">Chart Height (px)</Label>
+                <Input
+                  id="chartHeight"
+                  type="number"
+                  min="100"
+                  max="500"
+                  step="50"
+                  value={formData.visualizationConfig.chartHeight}
+                  oninput={(e) => {
+                    const val = parseInt(e.currentTarget.value) || 200;
+                    formData.visualizationConfig = {
+                      ...formData.visualizationConfig,
+                      chartHeight: Math.min(500, Math.max(100, val))
+                    };
+                  }}
+                />
+              </div>
+
+              <!-- Trend Chart (for numeric/boolean fields) -->
+              {#if supportsTrendChart}
+                <div class="flex items-center justify-between rounded-lg border p-3">
+                  <div class="space-y-0.5">
+                    <Label for="showTrend">Enable Trend Chart</Label>
+                    <p class="text-xs text-muted-foreground">
+                      Show historical trends across years.
+                    </p>
+                  </div>
+                  <Switch
+                    id="showTrend"
+                    checked={formData.visualizationConfig.showTrend}
+                    onCheckedChange={(checked) => {
+                      formData.visualizationConfig = {
+                        ...formData.visualizationConfig,
+                        showTrend: checked
+                      };
+                    }}
+                  />
+                </div>
+
+                {#if formData.visualizationConfig.showTrend}
+                  <div class="grid gap-2">
+                    <Label for="trendYears">Trend Years</Label>
+                    <Input
+                      id="trendYears"
+                      type="number"
+                      min="2"
+                      max="10"
+                      value={formData.visualizationConfig.trendYears}
+                      oninput={(e) => {
+                        const val = parseInt(e.currentTarget.value) || 5;
+                        formData.visualizationConfig = {
+                          ...formData.visualizationConfig,
+                          trendYears: Math.min(10, Math.max(2, val))
+                        };
+                      }}
+                    />
+                    <p class="text-xs text-muted-foreground">
+                      Number of years to include in trend analysis (2-10).
+                    </p>
+                  </div>
+                {/if}
+              {/if}
+
+              <!-- Show on Dashboard -->
+              <div class="flex items-center justify-between rounded-lg border p-3">
+                <div class="space-y-0.5">
+                  <Label for="showOnDashboard">Show on Dashboard</Label>
+                  <p class="text-xs text-muted-foreground">
+                    Display aggregated data on the admin dashboard.
+                  </p>
+                </div>
+                <Switch
+                  id="showOnDashboard"
+                  checked={formData.visualizationConfig.showOnDashboard}
+                  onCheckedChange={(checked) => {
+                    formData.visualizationConfig = {
+                      ...formData.visualizationConfig,
+                      showOnDashboard: checked
+                    };
+                  }}
+                />
+              </div>
+
+              <!-- Chart Preview -->
+              {#if formData.visualizationConfig.chartType !== 'none'}
+                <div class="grid gap-2">
+                  <Label>Preview</Label>
+                  <div class="rounded-lg border bg-muted/30 p-4">
+                    <CustomFieldChart
+                      fieldDef={previewFieldDef}
+                      value={null}
+                      usePreviewData={true}
+                    />
+                  </div>
+                  <p class="text-xs text-muted-foreground">
+                    Sample data shown for preview purposes.
+                  </p>
+                </div>
+              {/if}
+            {/if}
+          </div>
+        </Collapsible.Content>
+      </Collapsible.Root>
 
       <!-- Description -->
       <div class="grid gap-2">

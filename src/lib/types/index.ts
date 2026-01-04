@@ -20,24 +20,34 @@ export type {
 // Custom Field Types (Dynamic Form Builder)
 export {
   AGGREGATION_TYPE_LABELS,
+  CHART_TYPES_BY_DATA_TYPE,
+  CHART_TYPE_LABELS,
+  COLOR_SCHEME_LABELS,
   DATA_TYPE_LABELS,
   DEFAULT_AGGREGATION_TYPE,
   DEFAULT_GROUP_VALUES,
   DEFAULT_VALIDATION_RULES,
+  DEFAULT_VISUALIZATION_CONFIG,
+  DISPLAY_MODE_LABELS,
   GROUP_ICON_OPTIONS,
   generateFieldName,
   getApplicableAggregationTypes,
+  getDefaultChartTypeForDataType,
   validateCustomFieldValue
 } from './custom-fields';
 export type {
   CustomFieldAggregationType,
+  CustomFieldChartType,
+  CustomFieldColorScheme,
   CustomFieldData,
   CustomFieldDataType,
   CustomFieldDefinition,
+  CustomFieldDisplayMode,
   CustomFieldFormData,
   CustomFieldGroup,
   CustomFieldGroupFormData,
-  CustomFieldValidationRules
+  CustomFieldValidationRules,
+  CustomFieldVisualizationConfig
 } from './custom-fields';
 
 // Sitio Storage & Multi-year Data

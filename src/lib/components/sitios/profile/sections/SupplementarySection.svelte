@@ -1,8 +1,14 @@
 <script lang="ts">
+  import CustomFieldChart from '$lib/components/charts/CustomFieldChart.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import * as Tooltip from '$lib/components/ui/tooltip';
-  import type { CustomFieldDefinition, CustomFieldGroup, SitioProfile } from '$lib/types';
+  import type {
+    CustomFieldDefinition,
+    CustomFieldGroup,
+    SitioProfile,
+    SitioRecord
+  } from '$lib/types';
   import { AGGREGATION_TYPE_LABELS } from '$lib/types';
   import { cn } from '$lib/utils';
   import {
@@ -48,10 +54,11 @@
 
   interface Props {
     sitio: SitioProfile;
+    sitioRecord?: SitioRecord;
     selectedYear?: number;
   }
 
-  const { sitio, selectedYear }: Props = $props();
+  const { sitio, sitioRecord, selectedYear }: Props = $props();
 
   let definitions = $state<CustomFieldDefinition[]>([]);
   let groups = $state<CustomFieldGroup[]>([]);
@@ -333,7 +340,7 @@
                     <!-- Boolean Field -->
                     <div
                       class={cn(
-                        'group relative flex items-center justify-between gap-3 rounded-lg border p-4 transition-all hover:shadow-md',
+                        'group relative flex flex-col gap-3 rounded-lg border p-4 transition-all hover:shadow-md',
                         value === true &&
                           'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30',
                         value === false &&
@@ -341,31 +348,39 @@
                         !hasVal && 'border-dashed border-muted-foreground/25 bg-muted/30'
                       )}
                     >
-                      <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-medium">{def.displayLabel}</p>
-                        {#if def.description}
-                          <p class="mt-0.5 truncate text-xs text-muted-foreground">
-                            {def.description}
-                          </p>
-                        {/if}
+                      <div class="flex items-center justify-between">
+                        <div class="min-w-0 flex-1">
+                          <p class="truncate text-sm font-medium">{def.displayLabel}</p>
+                          {#if def.description}
+                            <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                              {def.description}
+                            </p>
+                          {/if}
+                        </div>
+                        <div class="shrink-0">
+                          {#if value === true}
+                            <div
+                              class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"
+                            >
+                              <CheckCircle2 class="size-5" />
+                              <span class="font-semibold">Yes</span>
+                            </div>
+                          {:else if value === false}
+                            <div class="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                              <CircleDot class="size-5" />
+                              <span class="font-semibold">No</span>
+                            </div>
+                          {:else}
+                            <span class="text-sm text-muted-foreground italic">N/A</span>
+                          {/if}
+                        </div>
                       </div>
-                      <div class="shrink-0">
-                        {#if value === true}
-                          <div
-                            class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"
-                          >
-                            <CheckCircle2 class="size-5" />
-                            <span class="font-semibold">Yes</span>
-                          </div>
-                        {:else if value === false}
-                          <div class="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
-                            <CircleDot class="size-5" />
-                            <span class="font-semibold">No</span>
-                          </div>
-                        {:else}
-                          <span class="text-sm text-muted-foreground italic">N/A</span>
-                        {/if}
-                      </div>
+                      <!-- Chart visualization if enabled -->
+                      {#if def.visualizationConfig?.enableChart}
+                        <div class="border-t pt-3">
+                          <CustomFieldChart fieldDef={def} {value} {sitioRecord} {selectedYear} />
+                        </div>
+                      {/if}
                     </div>
                   {:else if def.dataType === 'number'}
                     <!-- Number Field -->
@@ -406,6 +421,12 @@
                           <p class="text-sm text-muted-foreground italic">Not recorded</p>
                         {/if}
                       </div>
+                      <!-- Chart visualization if enabled -->
+                      {#if def.visualizationConfig?.enableChart}
+                        <div class="mt-3 border-t pt-3">
+                          <CustomFieldChart fieldDef={def} {value} {sitioRecord} {selectedYear} />
+                        </div>
+                      {/if}
                     </div>
                   {:else if def.dataType === 'date'}
                     <!-- Date Field -->
@@ -481,6 +502,12 @@
                       {:else}
                         <p class="text-sm text-muted-foreground italic">None selected</p>
                       {/if}
+                      <!-- Chart visualization if enabled -->
+                      {#if def.visualizationConfig?.enableChart}
+                        <div class="mt-3 border-t pt-3">
+                          <CustomFieldChart fieldDef={def} {value} {sitioRecord} {selectedYear} />
+                        </div>
+                      {/if}
                     </div>
                   {:else if def.dataType === 'radio'}
                     <!-- Radio Field (Single Selection) -->
@@ -517,6 +544,12 @@
                           {/if}
                         </div>
                       </div>
+                      <!-- Chart visualization if enabled -->
+                      {#if def.visualizationConfig?.enableChart}
+                        <div class="mt-3 border-t pt-3">
+                          <CustomFieldChart fieldDef={def} {value} {sitioRecord} {selectedYear} />
+                        </div>
+                      {/if}
                     </div>
                   {:else if def.dataType === 'array'}
                     <!-- Array/List Field -->

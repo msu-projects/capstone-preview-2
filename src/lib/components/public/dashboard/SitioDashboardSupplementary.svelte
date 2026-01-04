@@ -8,7 +8,8 @@
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import type { CustomFieldDefinition, CustomFieldGroup, SitioRecord } from '$lib/types';
-  import { AGGREGATION_TYPE_LABELS } from '$lib/types';
+  import { AGGREGATION_TYPE_LABELS, DEFAULT_VISUALIZATION_CONFIG } from '$lib/types';
+  import { aggregateFieldAcrossSitios } from '$lib/utils/custom-field-visualization';
   import {
     getActiveCustomFieldDefinitions,
     getActiveCustomFieldGroups
@@ -17,6 +18,7 @@
   import {
     Activity,
     Award,
+    BarChart3,
     BookOpen,
     Briefcase,
     Building,
@@ -112,7 +114,7 @@
     const result: { group: CustomFieldGroup | null; fields: CustomFieldDefinition[] }[] = [];
 
     // Add groups with fields
-    for (const group of groups.sort((a, b) => a.displayOrder - b.displayOrder)) {
+    for (const group of groups.toSorted((a, b) => a.displayOrder - b.displayOrder)) {
       const fields = fieldsByGroup().get(group.id) ?? [];
       if (fields.length > 0 && hasGroupData(fields)) {
         result.push({ group, fields });
@@ -438,6 +440,18 @@
     }
   }
 
+  // Fields configured to show on dashboard via visualizationConfig
+  const dashboardEnabledFields = $derived(
+    definitions.filter(
+      (def) => def.visualizationConfig?.showOnDashboard && def.visualizationConfig?.enableChart
+    )
+  );
+
+  // Get aggregated chart data for a dashboard-enabled field
+  function getDashboardFieldChartData(def: CustomFieldDefinition) {
+    return aggregateFieldAcrossSitios(def, sitios, currentYear);
+  }
+
   // Statistics overview
   const statsOverview = $derived(() => {
     const totalFields = definitions.length;
@@ -450,7 +464,8 @@
       totalFields,
       sitiosWithData,
       coveragePercent: sitios.length > 0 ? Math.round((sitiosWithData / sitios.length) * 100) : 0,
-      groupCount: groups.length
+      groupCount: groups.length,
+      dashboardChartsCount: dashboardEnabledFields.length
     };
   });
 
@@ -568,6 +583,65 @@
         variant="primary"
       />
     </div>
+
+    <!-- Dashboard-Enabled Charts Section -->
+    {#if dashboardEnabledFields.length > 0}
+      <Card.Root>
+        <Card.Header>
+          <div class="flex items-center gap-3">
+            <div
+              class="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            >
+              <BarChart3 class="size-5" />
+            </div>
+            <div>
+              <Card.Title>Custom Field Visualizations</Card.Title>
+              <Card.Description>
+                Charts configured by administrators for dashboard display
+              </Card.Description>
+            </div>
+          </div>
+        </Card.Header>
+        <Card.Content>
+          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {#each dashboardEnabledFields as def (def.id)}
+              {@const chartData = getDashboardFieldChartData(def)}
+              {@const config = def.visualizationConfig ?? DEFAULT_VISUALIZATION_CONFIG}
+              <div class="rounded-lg border bg-card p-4">
+                <div class="mb-3 flex items-center justify-between">
+                  <h4 class="font-medium">{def.displayLabel}</h4>
+                  <Badge variant="secondary" class="text-xs">
+                    {AGGREGATION_TYPE_LABELS[def.aggregationType]}
+                  </Badge>
+                </div>
+                {#if def.description}
+                  <p class="mb-3 text-xs text-muted-foreground">{def.description}</p>
+                {/if}
+                {#if chartData.type === 'donut' && chartData.donutData}
+                  <DonutChart
+                    data={chartData.donutData}
+                    height={config.chartHeight}
+                    centerLabel="Total"
+                    centerValue={chartData.total?.toString() ?? '0'}
+                  />
+                {:else if chartData.type === 'bar' && chartData.barData}
+                  <BarChart data={chartData.barData} height={config.chartHeight} />
+                {:else if chartData.type === 'number' && chartData.barData}
+                  <div class="flex flex-col items-center justify-center py-6">
+                    <p class="text-3xl font-bold text-primary">
+                      {chartData.numericValue?.toLocaleString() ?? '0'}
+                    </p>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                      {AGGREGATION_TYPE_LABELS[def.aggregationType]} across {chartData.total} sitios
+                    </p>
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </Card.Content>
+      </Card.Root>
+    {/if}
 
     <!-- Groups with aggregated data -->
     {#if activeGroups().length === 0}

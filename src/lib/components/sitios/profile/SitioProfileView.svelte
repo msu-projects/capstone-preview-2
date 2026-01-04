@@ -131,7 +131,7 @@
 
         {#if hasActiveCustomFields}
           <Tabs.Content value="supplementary" class="">
-            <SupplementarySection {sitio} {selectedYear} />
+            <SupplementarySection {sitio} {sitioRecord} {selectedYear} />
           </Tabs.Content>
         {/if}
 
