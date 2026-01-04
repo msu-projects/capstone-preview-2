@@ -21,6 +21,7 @@
     Building2,
     Calendar,
     FileText,
+    Lightbulb,
     List,
     Map,
     MapPin,
@@ -214,15 +215,15 @@
             View Sitio List
           </Button>
 
-          <!-- <Button
-						variant="outline"
-						size="default"
-						href="/recommendations"
-						class="gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-800 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
-					>
-						<Lightbulb class="size-4" />
-						Find Recommended Sitios
-					</Button> -->
+          <Button
+            variant="outline"
+            size="default"
+            href="/compare"
+            class="gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-800 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+          >
+            <Lightbulb class="size-4" />
+            Compare Data
+          </Button>
         </div>
       </div>
     </div>
