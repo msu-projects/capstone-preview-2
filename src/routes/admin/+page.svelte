@@ -34,6 +34,7 @@
     X
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
 
   let sitios = $state<SitioRecord[]>([]);
   let isLoading = $state(true);
@@ -45,13 +46,28 @@
   let activeTab = $state('overview');
   let selectedYear = $state('latest');
 
-  // Recent activities from audit logs
-  const recentActivities = loadAuditLogs().reverse().slice(0, 10);
+  // Track which tabs have been visited for lazy loading
+  let visitedTabs = $state(new SvelteSet(['overview']));
+
+  // Recent activities - lazy loaded
+  let recentActivities = $state<any[]>([]);
 
   onMount(() => {
-    sitios = loadSitios();
-    hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
-    isLoading = false;
+    // Load sitios asynchronously
+    setTimeout(() => {
+      sitios = loadSitios();
+      hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
+      isLoading = false;
+    }, 0);
+
+    // Preload all tabs in the background after initial render
+    setTimeout(() => {
+      tabs.forEach((tab) => visitedTabs.add(tab.id));
+      // Also preload activity feed data
+      if (recentActivities.length === 0) {
+        recentActivities = loadAuditLogs().reverse().slice(0, 10);
+      }
+    }, 100);
   });
 
   // Get available years from sitios
@@ -109,6 +125,15 @@
 
   function handleTabChange(value: string) {
     activeTab = value;
+    // Mark tab as visited for lazy loading
+    visitedTabs.add(value);
+
+    // Lazy load activity feed when activity tab is visited
+    if (value === 'activity' && recentActivities.length === 0) {
+      setTimeout(() => {
+        recentActivities = loadAuditLogs().reverse().slice(0, 10);
+      }, 0);
+    }
   }
 
   function handleYearChange(value: string | undefined) {
@@ -267,51 +292,68 @@
         </div>
 
         <div class="mt-6">
-          <!-- Tab Contents -->
+          <!-- Tab Contents - Lazy loaded -->
           <Tabs.Content value="overview">
-            <SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            {#if visitedTabs.has('overview')}
+              <SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            {/if}
           </Tabs.Content>
 
           <Tabs.Content value="demographics">
-            <SitioDashboardDemographics
-              sitios={filteredSitios}
-              selectedYear={selectedYearNumber}
-              {selectedMunicipality}
-            />
+            {#if visitedTabs.has('demographics')}
+              <SitioDashboardDemographics
+                sitios={filteredSitios}
+                selectedYear={selectedYearNumber}
+                {selectedMunicipality}
+              />
+            {/if}
           </Tabs.Content>
 
           <Tabs.Content value="infrastructure">
-            <SitioDashboardInfrastructure
-              sitios={filteredSitios}
-              selectedYear={selectedYearNumber}
-            />
+            {#if visitedTabs.has('infrastructure')}
+              <SitioDashboardInfrastructure
+                sitios={filteredSitios}
+                selectedYear={selectedYearNumber}
+              />
+            {/if}
           </Tabs.Content>
 
           <Tabs.Content value="economic">
-            <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            {#if visitedTabs.has('economic')}
+              <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            {/if}
           </Tabs.Content>
 
           <Tabs.Content value="maps">
-            <SitioDashboardMaps
-              sitios={filteredSitios}
-              selectedYear={selectedYearNumber}
-              onSitioClick={handleSitioClick}
-            />
+            {#if visitedTabs.has('maps')}
+              <SitioDashboardMaps
+                sitios={filteredSitios}
+                selectedYear={selectedYearNumber}
+                onSitioClick={handleSitioClick}
+              />
+            {/if}
           </Tabs.Content>
 
           {#if hasActiveCustomFields}
             <Tabs.Content value="supplementary">
-              <SitioDashboardSupplementary
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-              />
+              {#if visitedTabs.has('supplementary')}
+                <SitioDashboardSupplementary
+                  sitios={filteredSitios}
+                  selectedYear={selectedYearNumber}
+                />
+              {/if}
             </Tabs.Content>
           {/if}
 
           <Tabs.Content value="activity">
-            <div class="grid gap-6 lg:grid-cols-1">
-              <ActivityFeed activities={recentActivities} isLoading={false} />
-            </div>
+            {#if visitedTabs.has('activity')}
+              <div class="grid gap-6 lg:grid-cols-1">
+                <ActivityFeed
+                  activities={recentActivities}
+                  isLoading={recentActivities.length === 0}
+                />
+              </div>
+            {/if}
           </Tabs.Content>
         </div>
       </Tabs.Root>

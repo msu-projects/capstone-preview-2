@@ -40,9 +40,9 @@ import {
  */
 export const SITIO_GENERATION_CONFIG = {
   /** Number of sitios to generate during initialization */
-  defaultCount: 50,
+  defaultCount: 100,
   /** Number of sitios to generate for initial/limited data (e.g., SSR) */
-  limitedCount: 50,
+  limitedCount: 100,
   /** Default seed for reproducible random generation */
   defaultSeed: 84,
   /** Start year for historical data */
