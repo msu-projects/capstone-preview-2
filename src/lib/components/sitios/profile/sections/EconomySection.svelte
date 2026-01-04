@@ -57,6 +57,7 @@
   let showIncomeTrendModal = $state(false);
   let showPovertyTrendModal = $state(false);
   let showAgricultureTrendModal = $state(false);
+  let showPetsTrendModal = $state(false);
 
   // Check if we have multiple years of data
   const hasMultipleYears = $derived(
@@ -151,6 +152,62 @@
           name: 'Farm Area (ha)',
           data: areaData,
           color: 'hsl(120, 60%, 50%)'
+        }
+      ]
+    };
+  });
+
+  // Time series data for pets trend
+  const petsTrendData = $derived.by(() => {
+    if (!hasMultipleYears || !sitioRecord) {
+      return { categories: [], series: [] };
+    }
+
+    const categories: string[] = [];
+    const dogsData: number[] = [];
+    const catsData: number[] = [];
+    const vaccinatedDogsData: number[] = [];
+    const vaccinatedCatsData: number[] = [];
+
+    sitioRecord.availableYears?.forEach((year) => {
+      const yearData = sitioRecord.yearlyData?.[year];
+      if (yearData) {
+        categories.push(year.toString());
+
+        const dogsCount = yearData.pets?.dogsCount ?? 0;
+        const catsCount = yearData.pets?.catsCount ?? 0;
+        const vaccinatedDogs = yearData.pets?.vaccinatedDogs ?? 0;
+        const vaccinatedCats = yearData.pets?.vaccinatedCats ?? 0;
+
+        dogsData.push(dogsCount);
+        catsData.push(catsCount);
+        vaccinatedDogsData.push(vaccinatedDogs);
+        vaccinatedCatsData.push(vaccinatedCats);
+      }
+    });
+
+    return {
+      categories,
+      series: [
+        {
+          name: 'Dogs',
+          data: dogsData,
+          color: 'hsl(38, 92%, 50%)'
+        },
+        {
+          name: 'Cats',
+          data: catsData,
+          color: 'hsl(24, 95%, 53%)'
+        },
+        {
+          name: 'Vaccinated Dogs',
+          data: vaccinatedDogsData,
+          color: 'hsl(142, 71%, 45%)'
+        },
+        {
+          name: 'Vaccinated Cats',
+          data: vaccinatedCatsData,
+          color: 'hsl(173, 80%, 40%)'
         }
       ]
     };
@@ -755,132 +812,56 @@
             </div>
           </div>
 
-          <!-- Pets & Backyard Gardens Grid -->
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <!-- Pets -->
-            <div
-              class="rounded-xl border border-violet-100 bg-linear-to-br from-violet-50/80 to-purple-50/50 p-4 dark:border-violet-800/30 dark:from-violet-900/15 dark:to-purple-900/10"
-            >
-              <div class="mb-3 flex items-center gap-2">
-                <div class="rounded-lg bg-violet-100 p-1.5 dark:bg-violet-800/40">
-                  <Dog class="size-4 text-violet-600 dark:text-violet-400" />
-                </div>
-                <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Pets</h4>
+          <!-- Backyard Gardens -->
+          <div
+            class="rounded-xl border border-teal-100 bg-linear-to-br from-teal-50/80 to-cyan-50/50 p-4 dark:border-teal-800/30 dark:from-teal-900/15 dark:to-cyan-900/10"
+          >
+            <div class="mb-3 flex items-center gap-2">
+              <div class="rounded-lg bg-teal-100 p-1.5 dark:bg-teal-800/40">
+                <TreeDeciduous class="size-4 text-teal-600 dark:text-teal-400" />
               </div>
-              {#if hasPets}
-                <div class="space-y-3">
-                  <!-- Dogs -->
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <Dog class="size-4 text-amber-600 dark:text-amber-400" />
-                      <span class="text-sm text-slate-700 dark:text-slate-300">Dogs</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-slate-900 dark:text-white">
-                        {sitio.pets?.dogsCount ?? 0}
-                      </span>
-                      {#if (sitio.pets?.dogsCount ?? 0) > 0}
-                        <Badge
-                          variant="outline"
-                          class="border-emerald-200 bg-emerald-50 text-xs text-emerald-700 dark:border-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-300"
-                        >
-                          <Syringe class="mr-1 size-3" />
-                          {dogVaccinationRate}% vaccinated
-                        </Badge>
-                      {/if}
-                    </div>
-                  </div>
-                  <!-- Cats -->
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <Cat class="size-4 text-orange-600 dark:text-orange-400" />
-                      <span class="text-sm text-slate-700 dark:text-slate-300">Cats</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-slate-900 dark:text-white">
-                        {sitio.pets?.catsCount ?? 0}
-                      </span>
-                      {#if (sitio.pets?.catsCount ?? 0) > 0}
-                        <Badge
-                          variant="outline"
-                          class="border-emerald-200 bg-emerald-50 text-xs text-emerald-700 dark:border-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-300"
-                        >
-                          <Syringe class="mr-1 size-3" />
-                          {catVaccinationRate}% vaccinated
-                        </Badge>
-                      {/if}
-                    </div>
-                  </div>
-                  <!-- Total -->
-                  <div class="mt-2 border-t border-violet-200/50 pt-2 dark:border-violet-700/30">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs text-muted-foreground">Total Pets</span>
-                      <span class="text-sm font-bold text-slate-900 dark:text-white">
-                        {totalPets}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              {:else}
-                <span class="text-sm text-muted-foreground italic">No pets reported</span>
-              {/if}
+              <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Backyard Gardens</h4>
             </div>
-
-            <!-- Backyard Gardens -->
-            <div
-              class="rounded-xl border border-teal-100 bg-linear-to-br from-teal-50/80 to-cyan-50/50 p-4 dark:border-teal-800/30 dark:from-teal-900/15 dark:to-cyan-900/10"
-            >
-              <div class="mb-3 flex items-center gap-2">
-                <div class="rounded-lg bg-teal-100 p-1.5 dark:bg-teal-800/40">
-                  <TreeDeciduous class="size-4 text-teal-600 dark:text-teal-400" />
-                </div>
-                <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
-                  Backyard Gardens
-                </h4>
-              </div>
-              {#if hasBackyardGardens}
-                <div class="space-y-3">
-                  <!-- Households with Gardens -->
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-slate-700 dark:text-slate-300">
-                      Households with Gardens
+            {#if hasBackyardGardens}
+              <div class="space-y-3">
+                <!-- Households with Gardens -->
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-700 dark:text-slate-300">
+                    Households with Gardens
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-slate-900 dark:text-white">
+                      {sitio.backyardGardens?.householdsWithGardens ?? 0}
                     </span>
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-slate-900 dark:text-white">
-                        {sitio.backyardGardens?.householdsWithGardens ?? 0}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        class="border-teal-200 bg-teal-50 text-xs text-teal-700 dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
-                      >
-                        {backyardGardenRate}%
-                      </Badge>
+                    <Badge
+                      variant="outline"
+                      class="border-teal-200 bg-teal-50 text-xs text-teal-700 dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
+                    >
+                      {backyardGardenRate}%
+                    </Badge>
+                  </div>
+                </div>
+                <!-- Common Crops -->
+                {#if sitio.backyardGardens?.commonCrops && sitio.backyardGardens.commonCrops.length > 0}
+                  <div class="mt-2 border-t border-teal-200/50 pt-2 dark:border-teal-700/30">
+                    <span class="text-xs text-muted-foreground">Crop Categories</span>
+                    <div class="mt-1.5 flex flex-wrap gap-1.5">
+                      {#each sitio.backyardGardens.commonCrops as crop}
+                        <Badge
+                          variant="outline"
+                          class="border-teal-200 bg-white/80 px-2 py-0.5 text-xs font-medium text-teal-700 shadow-sm dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
+                        >
+                          <Sprout class="mr-1 size-3" />
+                          {crop}
+                        </Badge>
+                      {/each}
                     </div>
                   </div>
-                  <!-- Common Crops -->
-                  {#if sitio.backyardGardens?.commonCrops && sitio.backyardGardens.commonCrops.length > 0}
-                    <div class="mt-2 border-t border-teal-200/50 pt-2 dark:border-teal-700/30">
-                      <span class="text-xs text-muted-foreground">Crop Categories</span>
-                      <div class="mt-1.5 flex flex-wrap gap-1.5">
-                        {#each sitio.backyardGardens.commonCrops as crop}
-                          <Badge
-                            variant="outline"
-                            class="border-teal-200 bg-white/80 px-2 py-0.5 text-xs font-medium text-teal-700 shadow-sm dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
-                          >
-                            <Sprout class="mr-1 size-3" />
-                            {crop}
-                          </Badge>
-                        {/each}
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              {:else}
-                <span class="text-sm text-muted-foreground italic"
-                  >No backyard gardens reported</span
-                >
-              {/if}
-            </div>
+                {/if}
+              </div>
+            {:else}
+              <span class="text-sm text-muted-foreground italic">No backyard gardens reported</span>
+            {/if}
           </div>
         </div>
       {/snippet}
@@ -972,6 +953,216 @@
             </div>
           {/each}
         </div>
+      {/snippet}
+    </InfoCard>
+
+    <!-- Pets & Vaccination Card -->
+    <InfoCard
+      title="Household Pets"
+      description="Pet population and vaccination coverage"
+      icon={Dog}
+      iconBgColor="bg-violet-50 dark:bg-violet-900/20"
+      iconTextColor="text-violet-500"
+    >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && petsTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical pets trend"
+            onclick={() => (showPetsTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
+      {#snippet children()}
+        {#if hasPets}
+          <div class="flex flex-col gap-4">
+            <!-- Total Pets Summary -->
+            <div
+              class="relative overflow-hidden rounded-2xl border border-violet-100 bg-linear-to-br from-violet-50 via-violet-50/80 to-purple-50/50 p-5 dark:border-violet-800/30 dark:from-violet-900/20 dark:via-violet-900/15 dark:to-purple-900/10"
+            >
+              <div
+                class="absolute -top-6 -right-6 size-32 rounded-full bg-violet-200/30 blur-2xl dark:bg-violet-500/10"
+              ></div>
+              <div class="relative flex items-center justify-between">
+                <div>
+                  <span
+                    class="text-xs font-semibold tracking-wide text-violet-700 uppercase dark:text-violet-300"
+                  >
+                    Total Pets
+                  </span>
+                  <p class="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
+                    {totalPets.toLocaleString()}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div
+                    class="flex size-12 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-800/30"
+                  >
+                    <Dog class="size-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div
+                    class="flex size-12 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-800/30"
+                  >
+                    <Cat class="size-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dogs Section -->
+            {#if sitio.pets && sitio.pets.dogsCount > 0}
+              <div
+                class="rounded-xl border border-amber-100 bg-linear-to-br from-amber-50/80 to-yellow-50/50 p-4 dark:border-amber-800/30 dark:from-amber-900/15 dark:to-yellow-900/10"
+              >
+                <div class="mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="rounded-lg bg-amber-100 p-1.5 dark:bg-amber-800/40">
+                      <Dog class="size-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Dogs</h4>
+                      <p class="text-xs text-muted-foreground">
+                        {sitio.pets.dogsCount.toLocaleString()} total
+                      </p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div
+                      class="text-2xl font-bold {dogVaccinationRate >= 70
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : dogVaccinationRate >= 40
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-red-600 dark:text-red-400'}"
+                    >
+                      {dogVaccinationRate}%
+                    </div>
+                    <p class="text-xs text-muted-foreground">vaccinated</p>
+                  </div>
+                </div>
+                <div
+                  class="relative h-3 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-900/30"
+                >
+                  <div
+                    class="h-full rounded-full transition-all {dogVaccinationRate >= 70
+                      ? 'bg-emerald-500'
+                      : dogVaccinationRate >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-red-500'}"
+                    style="width: {dogVaccinationRate}%"
+                  ></div>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-xs">
+                  <span class="text-muted-foreground">
+                    {sitio.pets.vaccinatedDogs.toLocaleString()} vaccinated
+                  </span>
+                  <span class="text-muted-foreground">
+                    {(sitio.pets.dogsCount - sitio.pets.vaccinatedDogs).toLocaleString()} unvaccinated
+                  </span>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Cats Section -->
+            {#if sitio.pets && sitio.pets.catsCount > 0}
+              <div
+                class="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50/80 to-red-50/50 p-4 dark:border-orange-800/30 dark:from-orange-900/15 dark:to-red-900/10"
+              >
+                <div class="mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="rounded-lg bg-orange-100 p-1.5 dark:bg-orange-800/40">
+                      <Cat class="size-5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Cats</h4>
+                      <p class="text-xs text-muted-foreground">
+                        {sitio.pets.catsCount.toLocaleString()} total
+                      </p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div
+                      class="text-2xl font-bold {catVaccinationRate >= 70
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : catVaccinationRate >= 40
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-red-600 dark:text-red-400'}"
+                    >
+                      {catVaccinationRate}%
+                    </div>
+                    <p class="text-xs text-muted-foreground">vaccinated</p>
+                  </div>
+                </div>
+                <div
+                  class="relative h-3 overflow-hidden rounded-full bg-orange-100 dark:bg-orange-900/30"
+                >
+                  <div
+                    class="h-full rounded-full transition-all {catVaccinationRate >= 70
+                      ? 'bg-emerald-500'
+                      : catVaccinationRate >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-red-500'}"
+                    style="width: {catVaccinationRate}%"
+                  ></div>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-xs">
+                  <span class="text-muted-foreground">
+                    {sitio.pets.vaccinatedCats.toLocaleString()} vaccinated
+                  </span>
+                  <span class="text-muted-foreground">
+                    {(sitio.pets.catsCount - sitio.pets.vaccinatedCats).toLocaleString()} unvaccinated
+                  </span>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Vaccination Status Summary -->
+            <div
+              class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/80"
+            >
+              <div class="flex items-center gap-2">
+                <Syringe class="size-4 text-emerald-600 dark:text-emerald-400" />
+                <span class="text-xs font-semibold text-slate-700 uppercase dark:text-slate-300">
+                  Vaccination Summary
+                </span>
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {(
+                      (sitio.pets?.vaccinatedDogs ?? 0) + (sitio.pets?.vaccinatedCats ?? 0)
+                    ).toLocaleString()}
+                  </div>
+                  <div class="text-xs text-muted-foreground">Vaccinated</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-slate-600 dark:text-slate-400">
+                    {(
+                      totalPets -
+                      ((sitio.pets?.vaccinatedDogs ?? 0) + (sitio.pets?.vaccinatedCats ?? 0))
+                    ).toLocaleString()}
+                  </div>
+                  <div class="text-xs text-muted-foreground">Unvaccinated</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {:else}
+          <div
+            class="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 py-8 text-center dark:border-slate-700/50 dark:bg-slate-800/30"
+          >
+            <div class="rounded-full bg-slate-100 p-3 dark:bg-slate-700/50">
+              <Dog class="size-6 text-slate-400 dark:text-slate-500" />
+            </div>
+            <p class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-400">
+              No Pets Reported
+            </p>
+            <p class="mt-1 text-xs text-muted-foreground">No household pet data available</p>
+          </div>
+        {/if}
       {/snippet}
     </InfoCard>
 
@@ -1137,6 +1328,34 @@
       <LineChart
         series={agricultureTrendData.series}
         categories={agricultureTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => val.toLocaleString()}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Pets Trend Modal -->
+<Dialog.Root bind:open={showPetsTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-violet-50 p-2 dark:bg-violet-900/20">
+          <Dog class="size-5 text-violet-600 dark:text-violet-400" />
+        </div>
+        Household Pets - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year pet population and vaccination rates for {sitio.sitioName} across {petsTrendData
+          .categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={petsTrendData.series}
+        categories={petsTrendData.categories}
         height={300}
         curve="smooth"
         showLegend={true}
