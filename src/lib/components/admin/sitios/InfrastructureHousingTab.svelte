@@ -4,9 +4,20 @@
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import { Label } from '$lib/components/ui/label';
   import { NumberInput } from '$lib/components/ui/number-input';
+  import * as RadioGroup from '$lib/components/ui/radio-group';
   import * as Select from '$lib/components/ui/select';
   import { cn } from '$lib/utils';
-  import { Building, Droplets, Radio, Route, Wifi, Zap } from '@lucide/svelte';
+  import {
+    Building,
+    Car,
+    Droplets,
+    Footprints,
+    Radio,
+    Route,
+    Sailboat,
+    Wifi,
+    Zap
+  } from '@lucide/svelte';
 
   // Helper types for facilities and infrastructure
   type FacilityDetails = {
@@ -30,6 +41,9 @@
 
   // Props matching SitioProfile Sections C, D, E, F, G
   let {
+    // Main Access
+    mainAccess = $bindable(''),
+
     // Section C - Basic Utilities & Connectivity
     householdsWithToilet = $bindable(0),
     householdsWithElectricity = $bindable(0),
@@ -139,9 +153,11 @@
       communityCR: boolean;
       openDefecation: boolean;
     };
+    mainAccess: string;
   } = $props();
 
   // Section completion checks
+  const hasAccess = $derived(mainAccess !== '');
   const isUtilitiesComplete = $derived(householdsWithElectricity > 0 || householdsWithToilet > 0);
   const isConnectivityComplete = $derived(mobileSignal !== 'none' || householdsWithInternet > 0);
   const hasWaterSources = $derived(
@@ -189,6 +205,94 @@
 </script>
 
 <div class="space-y-6">
+  <!-- Main Access Section -->
+  <FormSection
+    title="Main Access"
+    description="Primary means of accessing the sitio"
+    icon={Route}
+    variant="success"
+    isComplete={hasAccess}
+  >
+    <RadioGroup.Root bind:value={mainAccess} class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <Label
+        for="pavedRoad"
+        class={cn(
+          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
+          mainAccess === 'pavedRoad' &&
+            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
+        )}
+      >
+        <Car
+          class={cn(
+            'size-6 text-muted-foreground transition-colors',
+            mainAccess === 'pavedRoad' && 'text-emerald-600'
+          )}
+        />
+        <div class="flex items-center gap-2">
+          <RadioGroup.Item id="pavedRoad" value="pavedRoad" />
+          <span class="text-sm font-medium">Paved Road</span>
+        </div>
+      </Label>
+      <Label
+        for="unpavedRoad"
+        class={cn(
+          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
+          mainAccess === 'unpavedRoad' &&
+            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
+        )}
+      >
+        <Route
+          class={cn(
+            'size-6 text-muted-foreground transition-colors',
+            mainAccess === 'unpavedRoad' && 'text-emerald-600'
+          )}
+        />
+        <div class="flex items-center gap-2">
+          <RadioGroup.Item id="unpavedRoad" value="unpavedRoad" />
+          <span class="text-sm font-medium">Unpaved Road</span>
+        </div>
+      </Label>
+      <Label
+        for="footpath"
+        class={cn(
+          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
+          mainAccess === 'footpath' &&
+            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
+        )}
+      >
+        <Footprints
+          class={cn(
+            'size-6 text-muted-foreground transition-colors',
+            mainAccess === 'footpath' && 'text-emerald-600'
+          )}
+        />
+        <div class="flex items-center gap-2">
+          <RadioGroup.Item id="footpath" value="footpath" />
+          <span class="text-sm font-medium">Footpath</span>
+        </div>
+      </Label>
+      <Label
+        for="boat"
+        class={cn(
+          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
+          mainAccess === 'boat' &&
+            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
+        )}
+      >
+        <Sailboat
+          class={cn(
+            'size-6 text-muted-foreground transition-colors',
+            mainAccess === 'boat' && 'text-emerald-600'
+          )}
+        />
+        <div class="flex items-center gap-2">
+          <RadioGroup.Item id="boat" value="boat" />
+          <span class="text-sm font-medium">Boat</span>
+        </div>
+      </Label>
+    </RadioGroup.Root>
+  </FormSection>
+
   <!-- Basic Utilities Section -->
   <FormSection
     title="Basic Utilities"

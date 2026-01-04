@@ -97,6 +97,8 @@
   const canEditCore = $derived(authStore.canEditCoreIdentifiers());
   const canDeleteYear = $derived(authStore.canDeleteYearlyData());
 
+  let mainAccess = $state('');
+
   // ===== Section B: Population & Demographics =====
   let totalPopulation = $state(0);
   let totalHouseholds = $state(0);
@@ -371,6 +373,7 @@
     if (!yearData) return;
 
     // Load year-specific data
+    mainAccess = Object.entries(yearData.mainAccess).find(([_, v]) => v)?.[0] || '';
     totalPopulation = yearData.totalPopulation || 0;
     totalHouseholds = yearData.totalHouseholds || 0;
     registeredVoters = yearData.registeredVoters || 0;
@@ -509,6 +512,7 @@
     const newYearData = latestData
       ? JSON.parse(JSON.stringify(latestData))
       : {
+          mainAccess: '',
           totalPopulation: 0,
           totalHouseholds: 0,
           registeredVoters: 0,
@@ -706,9 +710,6 @@
 
     isSaving = true;
 
-    // Get existing year data to preserve core identifiers
-    const existingYearData = sitio.yearlyData[selectedYear];
-
     // Build the updated year data - include core identifiers from sitio record for type compatibility
     const updatedYearData = {
       // Core identifiers (from sitio record, not editable in normal mode)
@@ -719,11 +720,11 @@
       latitude: sitio.latitude,
       longitude: sitio.longitude,
       sitioClassification: { ...sitio.sitioClassification },
-      mainAccess: existingYearData?.mainAccess || {
-        pavedRoad: false,
-        unpavedRoad: false,
-        footpath: false,
-        boat: false
+      mainAccess: {
+        pavedRoad: mainAccess === 'pavedRoad',
+        unpavedRoad: mainAccess === 'unpavedRoad',
+        footpath: mainAccess === 'footpath',
+        boat: mainAccess === 'boat'
       },
       // Yearly data fields
       totalPopulation,
@@ -1045,6 +1046,7 @@
                       bind:studentsPerRoom
                       bind:waterSources
                       bind:sanitationTypes
+                      bind:mainAccess
                     />
                   {:else if activeStep === 'needs-assessment'}
                     <NeedsAssessmentTab bind:hazards bind:foodSecurity bind:priorities />

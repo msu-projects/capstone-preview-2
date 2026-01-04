@@ -86,8 +86,8 @@
       latitude,
       longitude,
       sitioClassification: { ...sitioClassification },
-      mainAccess: mainAccessObj,
       // Yearly data fields
+      mainAccess: mainAccessObj,
       totalPopulation: 0,
       totalHouseholds: 0,
       registeredVoters: 0,
@@ -363,7 +363,6 @@
               bind:latitude
               bind:longitude
               bind:sitioClassification
-              bind:mainAccess
             />
           </Card.Content>
         </Card.Root>

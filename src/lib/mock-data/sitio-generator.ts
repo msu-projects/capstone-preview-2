@@ -11,9 +11,10 @@ import type {
   SitioProfile,
   SitioRecord
 } from '$lib/types';
-import type { CustomFieldDefinition } from '$lib/types/custom-fields';
+import type { CustomFieldDefinition, CustomFieldGroup } from '$lib/types/custom-fields';
 import {
   CUSTOM_FIELDS_STORAGE_KEY,
+  CUSTOM_FIELD_GROUPS_STORAGE_KEY,
   getCustomFieldDefinitions
 } from '$lib/utils/custom-fields-storage';
 import { clearSitios, loadSitios, saveSitios } from '$lib/utils/storage';
@@ -403,6 +404,65 @@ export function initializeCustomFieldDefinitions(): void {
   const now = new Date().toISOString();
   const systemUser = 'system';
 
+  // Create groups first
+  const mockGroups: CustomFieldGroup[] = [
+    {
+      id: 'cfg_programs',
+      name: 'Program Metrics',
+      description: 'Data related to program implementation and participation',
+      icon: 'Users',
+      displayOrder: 1,
+      isCollapsible: true,
+      isActive: true,
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cfg_community',
+      name: 'Community Development',
+      description: 'Community organization and development indicators',
+      icon: 'Building2',
+      displayOrder: 2,
+      isCollapsible: true,
+      isActive: true,
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cfg_projects',
+      name: 'Project Tracking',
+      description: 'Project implementation status and details',
+      icon: 'Boxes',
+      displayOrder: 3,
+      isCollapsible: true,
+      isActive: true,
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cfg_special',
+      name: 'Special Considerations',
+      description: 'Indigenous peoples and conflict-affected area specifics',
+      icon: 'Shield',
+      displayOrder: 4,
+      isCollapsible: true,
+      isActive: true,
+      createdAt: now,
+      createdBy: systemUser
+    },
+    {
+      id: 'cfg_general',
+      name: 'General Information',
+      description: 'General notes and observations',
+      icon: 'FileText',
+      displayOrder: 5,
+      isCollapsible: true,
+      isActive: true,
+      createdAt: now,
+      createdBy: systemUser
+    }
+  ];
+
   const mockDefinitions: CustomFieldDefinition[] = [
     {
       id: 'cf_beneficiaries',
@@ -414,6 +474,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 1,
       isActive: true,
       description: 'Total count of program beneficiaries in the sitio',
+      groupId: 'cfg_programs',
+      groupDisplayOrder: 1,
       createdAt: now,
       createdBy: systemUser
     },
@@ -427,6 +489,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 2,
       isActive: true,
       description: 'Number of residents who attended training sessions',
+      groupId: 'cfg_programs',
+      groupDisplayOrder: 2,
       createdAt: now,
       createdBy: systemUser
     },
@@ -440,6 +504,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 3,
       isActive: true,
       description: 'Number of seedlings distributed for agricultural support',
+      groupId: 'cfg_programs',
+      groupDisplayOrder: 3,
       createdAt: now,
       createdBy: systemUser
     },
@@ -453,6 +519,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 4,
       isActive: true,
       description: 'Total budget allocated for community projects (in PHP)',
+      groupId: 'cfg_projects',
+      groupDisplayOrder: 1,
       createdAt: now,
       createdBy: systemUser
     },
@@ -466,6 +534,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 5,
       isActive: true,
       description: 'Whether the sitio has a disaster preparedness plan in place',
+      groupId: 'cfg_community',
+      groupDisplayOrder: 4,
       createdAt: now,
       createdBy: systemUser
     },
@@ -479,6 +549,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 6,
       isActive: true,
       description: 'Whether the sitio has an active community organization',
+      groupId: 'cfg_community',
+      groupDisplayOrder: 1,
       createdAt: now,
       createdBy: systemUser
     },
@@ -492,6 +564,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 7,
       isActive: true,
       description: 'Whether community members participated in recent training programs',
+      groupId: 'cfg_programs',
+      groupDisplayOrder: 5,
       createdAt: now,
       createdBy: systemUser
     },
@@ -505,6 +579,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 8,
       isActive: true,
       description: 'Description of the most recent project implemented in the sitio',
+      groupId: 'cfg_projects',
+      groupDisplayOrder: 2,
       createdAt: now,
       createdBy: systemUser
     },
@@ -518,6 +594,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 9,
       isActive: true,
       description: 'General observations or remarks about the sitio',
+      groupId: 'cfg_general',
+      groupDisplayOrder: 1,
       createdAt: now,
       createdBy: systemUser
     },
@@ -531,6 +609,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 10,
       isActive: true,
       description: 'Date of the most recent community assembly',
+      groupId: 'cfg_community',
+      groupDisplayOrder: 2,
       createdAt: now,
       createdBy: systemUser
     },
@@ -544,6 +624,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 11,
       isActive: true,
       description: 'List of activities completed in the sitio',
+      groupId: 'cfg_projects',
+      groupDisplayOrder: 5,
       createdAt: now,
       createdBy: systemUser
     },
@@ -566,6 +648,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 12,
       isActive: true,
       description: 'Services available in or near the sitio',
+      groupId: 'cfg_community',
+      groupDisplayOrder: 5,
       createdAt: now,
       createdBy: systemUser
     },
@@ -582,6 +666,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 13,
       isActive: true,
       description: 'Overall priority level for interventions in this sitio',
+      groupId: 'cfg_projects',
+      groupDisplayOrder: 4,
       createdAt: now,
       createdBy: systemUser
     },
@@ -598,6 +684,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 14,
       isActive: true,
       description: 'Current status of project implementation',
+      groupId: 'cfg_projects',
+      groupDisplayOrder: 3,
       createdAt: now,
       createdBy: systemUser
     },
@@ -611,6 +699,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 15,
       isActive: true,
       description: 'Percentage of community participation in programs (0.0 to 1.0)',
+      groupId: 'cfg_programs',
+      groupDisplayOrder: 4,
       createdAt: now,
       createdBy: systemUser
     },
@@ -624,6 +714,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 16,
       isActive: true,
       description: 'Total community contribution amount in PHP',
+      groupId: 'cfg_community',
+      groupDisplayOrder: 3,
       createdAt: now,
       createdBy: systemUser
     },
@@ -637,6 +729,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 17,
       isActive: true,
       description: 'Number of indigenous leaders in the community (for IP communities)',
+      groupId: 'cfg_special',
+      groupDisplayOrder: 1,
       createdAt: now,
       createdBy: systemUser
     },
@@ -650,6 +744,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 18,
       isActive: true,
       description: 'Number of cultural activities held per year (for IP communities)',
+      groupId: 'cfg_special',
+      groupDisplayOrder: 2,
       createdAt: now,
       createdBy: systemUser
     },
@@ -663,6 +759,8 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 19,
       isActive: true,
       description: 'Number of peace dialogues conducted (for conflict-affected areas)',
+      groupId: 'cfg_special',
+      groupDisplayOrder: 3,
       createdAt: now,
       createdBy: systemUser
     },
@@ -676,12 +774,22 @@ export function initializeCustomFieldDefinitions(): void {
       displayOrder: 20,
       isActive: true,
       description: 'Number of security incidents in the past year (for conflict-affected areas)',
+      groupId: 'cfg_special',
+      groupDisplayOrder: 4,
       createdAt: now,
       createdBy: systemUser
     }
   ];
 
-  // Save to localStorage
+  // Save groups to localStorage
+  try {
+    localStorage.setItem(CUSTOM_FIELD_GROUPS_STORAGE_KEY, JSON.stringify(mockGroups));
+    console.log(`Initialized ${mockGroups.length} custom field groups`);
+  } catch (error) {
+    console.error('Failed to initialize custom field groups:', error);
+  }
+
+  // Save field definitions to localStorage
   try {
     localStorage.setItem(CUSTOM_FIELDS_STORAGE_KEY, JSON.stringify(mockDefinitions));
     console.log(`Initialized ${mockDefinitions.length} custom field definitions`);

@@ -307,7 +307,7 @@
     <div class="flex-1 p-4 md:p-6 lg:p-8">
       <div class="mx-auto max-w-4xl">
         <!-- Form Content -->
-        <Card.Root class="overflow-hidden border-0 shadow-xl">
+        <Card.Root class="gap-0 overflow-hidden border-0 py-0 shadow-xl">
           <Card.Header class="border-b bg-muted/30">
             <div class="flex items-center gap-3">
               <div
@@ -332,7 +332,6 @@
               bind:latitude
               bind:longitude
               bind:sitioClassification
-              bind:mainAccess
             />
           </Card.Content>
         </Card.Root>

@@ -6,21 +6,10 @@
   import { Label } from '$lib/components/ui/label';
   import { LocationPicker } from '$lib/components/ui/location-picker';
   import * as Popover from '$lib/components/ui/popover';
-  import * as RadioGroup from '$lib/components/ui/radio-group';
   import { MUNICIPALITIES, getBarangaysForMunicipality } from '$lib/config/location-data';
   import { cn } from '$lib/utils';
   import toTitleCase from '$lib/utils/common';
-  import {
-    Car,
-    Check,
-    ChevronsUpDown,
-    Footprints,
-    Home,
-    MapPin,
-    Route,
-    Sailboat,
-    Tag
-  } from '@lucide/svelte';
+  import { Check, ChevronsUpDown, Home, MapPin, Tag } from '@lucide/svelte';
 
   // Props matching SitioProfile Section A
   let {
@@ -30,8 +19,7 @@
     sitioCode = $bindable(''),
     latitude = $bindable(0),
     longitude = $bindable(0),
-    sitioClassification = $bindable({ gida: false, indigenous: false, conflict: false }),
-    mainAccess = $bindable('')
+    sitioClassification = $bindable({ gida: false, indigenous: false, conflict: false })
   }: {
     municipality: string;
     barangay: string;
@@ -44,7 +32,6 @@
       indigenous: boolean;
       conflict: boolean;
     };
-    mainAccess: string;
   } = $props();
 
   // Section completion checks
@@ -55,7 +42,6 @@
   const hasClassification = $derived(
     sitioClassification.gida || sitioClassification.indigenous || sitioClassification.conflict
   );
-  const hasAccess = $derived(mainAccess !== '');
 
   let municipalityPopoverOpen = $state(false);
   let barangayPopoverOpen = $state(false);
@@ -326,94 +312,6 @@
         </div>
       </Label>
     </div>
-  </FormSection>
-
-  <!-- Main Access -->
-  <FormSection
-    title="Main Access"
-    description="Primary means of accessing the sitio"
-    icon={Route}
-    accent="green"
-    isComplete={hasAccess}
-  >
-    <RadioGroup.Root bind:value={mainAccess} class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <Label
-        for="pavedRoad"
-        class={cn(
-          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
-          mainAccess === 'pavedRoad' &&
-            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
-        )}
-      >
-        <Car
-          class={cn(
-            'size-6 text-muted-foreground transition-colors',
-            mainAccess === 'pavedRoad' && 'text-emerald-600'
-          )}
-        />
-        <div class="flex items-center gap-2">
-          <RadioGroup.Item id="pavedRoad" value="pavedRoad" />
-          <span class="text-sm font-medium">Paved Road</span>
-        </div>
-      </Label>
-      <Label
-        for="unpavedRoad"
-        class={cn(
-          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
-          mainAccess === 'unpavedRoad' &&
-            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
-        )}
-      >
-        <Route
-          class={cn(
-            'size-6 text-muted-foreground transition-colors',
-            mainAccess === 'unpavedRoad' && 'text-emerald-600'
-          )}
-        />
-        <div class="flex items-center gap-2">
-          <RadioGroup.Item id="unpavedRoad" value="unpavedRoad" />
-          <span class="text-sm font-medium">Unpaved Road</span>
-        </div>
-      </Label>
-      <Label
-        for="footpath"
-        class={cn(
-          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
-          mainAccess === 'footpath' &&
-            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
-        )}
-      >
-        <Footprints
-          class={cn(
-            'size-6 text-muted-foreground transition-colors',
-            mainAccess === 'footpath' && 'text-emerald-600'
-          )}
-        />
-        <div class="flex items-center gap-2">
-          <RadioGroup.Item id="footpath" value="footpath" />
-          <span class="text-sm font-medium">Footpath</span>
-        </div>
-      </Label>
-      <Label
-        for="boat"
-        class={cn(
-          'group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-4 text-center transition-all hover:bg-muted/50 hover:shadow-sm',
-          mainAccess === 'boat' &&
-            'border-emerald-500/50 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/20'
-        )}
-      >
-        <Sailboat
-          class={cn(
-            'size-6 text-muted-foreground transition-colors',
-            mainAccess === 'boat' && 'text-emerald-600'
-          )}
-        />
-        <div class="flex items-center gap-2">
-          <RadioGroup.Item id="boat" value="boat" />
-          <span class="text-sm font-medium">Boat</span>
-        </div>
-      </Label>
-    </RadioGroup.Root>
   </FormSection>
 
   <!-- Coordinates Section -->
