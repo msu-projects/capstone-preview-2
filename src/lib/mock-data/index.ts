@@ -19,24 +19,28 @@ import {
 } from './project-generator';
 import {
   generateSitios,
+  getSitioGenerationParams,
   initializeMockDataIfNeeded,
   isMockDataInitialized,
   MOCK_DATA_INITIALIZED_KEY,
-  resetMockData
+  resetMockData,
+  SITIO_GENERATION_CONFIG
 } from './sitio-generator';
 
-// Re-export generator functions for external use
+// Re-export generator functions and configuration for external use
 export {
   generateProjects,
   generateSitios,
   getProjectStats,
+  getSitioGenerationParams,
   initializeProjectsIfNeeded,
   isMockDataInitialized,
   isProjectsInitialized,
   MOCK_DATA_INITIALIZED_KEY,
   PROJECTS_INITIALIZED_KEY,
   resetMockData,
-  resetProjectMockData
+  resetProjectMockData,
+  SITIO_GENERATION_CONFIG
 };
 
 // ===== SITIOS DATA =====
@@ -47,8 +51,14 @@ let sitioRecords: SitioRecord[] = [];
 // Initialize LocalStorage with generated mock data if empty (runs only in browser)
 function initializeSitios(): SitioProfile[] {
   if (typeof window === 'undefined') {
-    // Server-side: generate fresh data for SSR with 9 years (2018-2026)
-    sitioRecords = generateSitios(50, 42, 2018, 9);
+    // Server-side: generate fresh data for SSR with configured parameters
+    const params = getSitioGenerationParams({ count: SITIO_GENERATION_CONFIG.limitedCount });
+    sitioRecords = generateSitios(
+      params.count,
+      params.seed,
+      params.startYear,
+      params.yearsToGenerate
+    );
     return convertRecordsToProfiles(sitioRecords);
   }
 
@@ -59,7 +69,13 @@ function initializeSitios(): SitioProfile[] {
     return convertRecordsToProfiles(generatedSitios);
   } catch (error) {
     console.error('Failed to initialize sitios from storage:', error);
-    sitioRecords = generateSitios(50, 42, 2018, 9);
+    const params = getSitioGenerationParams();
+    sitioRecords = generateSitios(
+      params.count,
+      params.seed,
+      params.startYear,
+      params.yearsToGenerate
+    );
     return convertRecordsToProfiles(sitioRecords);
   }
 }
@@ -84,11 +100,27 @@ export const sitios: SitioProfile[] = initializeSitios();
 // Export function to refresh sitios from storage (useful after imports)
 export function refreshSitios(): SitioProfile[] {
   if (typeof window === 'undefined') {
-    const records = generateSitios(50, 42, 2018, 9);
+    const params = getSitioGenerationParams();
+    const records = generateSitios(
+      params.count,
+      params.seed,
+      params.startYear,
+      params.yearsToGenerate
+    );
     return convertRecordsToProfiles(records);
   }
   const records = loadSitios();
-  sitioRecords = records.length > 0 ? records : generateSitios(50, 42, 2018, 9);
+  if (records.length === 0) {
+    const params = getSitioGenerationParams();
+    sitioRecords = generateSitios(
+      params.count,
+      params.seed,
+      params.startYear,
+      params.yearsToGenerate
+    );
+  } else {
+    sitioRecords = records;
+  }
   return convertRecordsToProfiles(sitioRecords);
 }
 

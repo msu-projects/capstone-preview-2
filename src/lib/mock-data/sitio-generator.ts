@@ -32,6 +32,42 @@ import {
   selectLivestock
 } from './sitio-generator-helpers';
 
+// ===== SITIO GENERATION CONFIGURATION =====
+
+/**
+ * Configuration for sitio generation
+ * Modify these values to change the default generation parameters
+ */
+export const SITIO_GENERATION_CONFIG = {
+  /** Number of sitios to generate during initialization */
+  defaultCount: 50,
+  /** Number of sitios to generate for initial/limited data (e.g., SSR) */
+  limitedCount: 50,
+  /** Default seed for reproducible random generation */
+  defaultSeed: 84,
+  /** Start year for historical data */
+  startYear: 2024,
+  /** Number of years of data to generate (e.g., 9 = 2018-2026) */
+  yearsToGenerate: 3
+} as const;
+
+/**
+ * Helper function to get sitio generation parameters with optional overrides
+ */
+export function getSitioGenerationParams(overrides?: {
+  count?: number;
+  seed?: number;
+  startYear?: number;
+  yearsToGenerate?: number;
+}) {
+  return {
+    count: overrides?.count ?? SITIO_GENERATION_CONFIG.defaultCount,
+    seed: overrides?.seed ?? SITIO_GENERATION_CONFIG.defaultSeed,
+    startYear: overrides?.startYear ?? SITIO_GENERATION_CONFIG.startYear,
+    yearsToGenerate: overrides?.yearsToGenerate ?? SITIO_GENERATION_CONFIG.yearsToGenerate
+  };
+}
+
 // ===== STORAGE KEYS =====
 export const STORAGE_VERSION = 11; // Increment to clear outdated data (added pets and backyard gardens)
 export const STORAGE_VERSION_KEY = 'sccdp_storage_version';
@@ -75,9 +111,16 @@ export function markMockDataInitialized(): void {
 }
 
 export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
+  const params = getSitioGenerationParams();
+
   if (typeof window === 'undefined') {
     // Server-side: generate fresh data for SSR with 9 years (2018-2026)
-    const sitios = generateSitios(10, 42, 2018, 9);
+    const sitios = generateSitios(
+      params.count,
+      params.seed,
+      params.startYear,
+      params.yearsToGenerate
+    );
     return { sitios };
   }
 
@@ -94,7 +137,12 @@ export function initializeMockDataIfNeeded(): { sitios: SitioRecord[] } {
   }
 
   // Generate and save mock data with 9 years (2018-2026)
-  const sitios = generateSitios(10, 42, 2018, 9);
+  const sitios = generateSitios(
+    params.count,
+    params.seed,
+    params.startYear,
+    params.yearsToGenerate
+  );
 
   // Initialize custom field definitions
   initializeCustomFieldDefinitions();
@@ -117,9 +165,10 @@ export function resetMockData(): { sitios: SitioRecord[] } {
   localStorage.removeItem(MOCK_DATA_INITIALIZED_KEY);
   clearSitios();
 
-  // Regenerate with new seed based on current time and 9 years of data (2018-2026)
+  // Regenerate with new seed based on current time and configured parameters
   const seed = Date.now() % 1000000;
-  const sitios = generateSitios(50, seed, 2018, 9);
+  const params = getSitioGenerationParams({ seed });
+  const sitios = generateSitios(params.count, seed, params.startYear, params.yearsToGenerate);
 
   // Reinitialize custom field definitions
   initializeCustomFieldDefinitions();
@@ -1078,23 +1127,57 @@ function generateYearProfile(
 
   // ========== A. BASIC SITIO INFORMATION ==========
   // Access improves over time based on road development
+  // Each sitio has exactly ONE main access mode
   const roadDevFactor = state.roadDevelopment;
-  const mainAccess = {
-    pavedRoad: rng.boolean(roadDevFactor * 0.6 + yearOffset * 0.02),
-    unpavedRoad: rng.boolean(0.4 + roadDevFactor * 0.4),
-    footpath: rng.boolean(isGida ? 0.7 - yearOffset * 0.03 : 0.3),
-    boat: rng.boolean(municipalityProfile.name === 'LAKE SEBU' ? 0.3 : 0.05)
-  };
 
-  // Ensure at least one access method
-  if (
-    !mainAccess.pavedRoad &&
-    !mainAccess.unpavedRoad &&
-    !mainAccess.footpath &&
-    !mainAccess.boat
-  ) {
-    mainAccess.footpath = true;
+  // Determine probabilities for each access type based on development level
+  type AccessMode = 'pavedRoad' | 'unpavedRoad' | 'footpath' | 'boat';
+  const accessModes: AccessMode[] = ['pavedRoad', 'unpavedRoad', 'footpath', 'boat'];
+
+  let accessWeights: number[];
+  if (municipalityProfile.name === 'LAKE SEBU') {
+    // Lake Sebu has boat access possibility
+    accessWeights = [
+      roadDevFactor * 0.3 + yearOffset * 0.02, // pavedRoad
+      roadDevFactor * 0.4 + 0.2, // unpavedRoad
+      isGida ? 0.3 - yearOffset * 0.02 : 0.15, // footpath
+      0.15 // boat
+    ];
+  } else if (isGida) {
+    // GIDA areas - mostly footpath initially, improves over time
+    accessWeights = [
+      roadDevFactor * 0.2 + yearOffset * 0.03, // pavedRoad
+      roadDevFactor * 0.3 + 0.15, // unpavedRoad
+      0.6 - yearOffset * 0.04, // footpath
+      0.01 // boat (minimal)
+    ];
+  } else if (municipalityProfile.type === 'urban') {
+    // Urban areas - mostly paved or unpaved roads
+    accessWeights = [
+      0.6 + yearOffset * 0.02, // pavedRoad
+      0.3, // unpavedRoad
+      0.08, // footpath
+      0.02 // boat (minimal)
+    ];
+  } else {
+    // Rural/highland - mixed, improves over time
+    accessWeights = [
+      roadDevFactor * 0.4 + yearOffset * 0.02, // pavedRoad
+      0.35 + roadDevFactor * 0.2, // unpavedRoad
+      0.25 - yearOffset * 0.02, // footpath
+      0.02 // boat (minimal)
+    ];
   }
+
+  // Select exactly one access mode
+  const selectedAccessMode = rng.pickWeighted(accessModes, accessWeights);
+
+  const mainAccess = {
+    pavedRoad: selectedAccessMode === 'pavedRoad',
+    unpavedRoad: selectedAccessMode === 'unpavedRoad',
+    footpath: selectedAccessMode === 'footpath',
+    boat: selectedAccessMode === 'boat'
+  };
 
   // ========== B. POPULATION & DEMOGRAPHICS ==========
   // Use progression state values with slight yearly variance

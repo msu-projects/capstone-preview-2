@@ -1640,3 +1640,321 @@ export function aggregateRecommendations(
     sitiosWithMostRecommendations: topSitios
   };
 }
+
+// ==========================================
+// ENTITY COMPARISON UTILITIES
+// ==========================================
+
+/**
+ * Comparison level based on current filter state
+ */
+export type ComparisonLevel = 'municipality' | 'barangay' | 'sitio';
+
+/**
+ * Entity for comparison selection
+ */
+export interface ComparisonEntity {
+  id: string;
+  name: string;
+  sitioCount: number;
+}
+
+/**
+ * Determine comparison level based on filter state
+ */
+export function getComparisonLevel(
+  selectedMunicipality: string,
+  selectedBarangay: string
+): ComparisonLevel {
+  if (selectedBarangay !== 'all') return 'sitio';
+  if (selectedMunicipality !== 'all') return 'barangay';
+  return 'municipality';
+}
+
+/**
+ * Get available entities for comparison based on level
+ */
+export function getComparisonEntities(
+  sitios: SitioRecord[],
+  level: ComparisonLevel
+): ComparisonEntity[] {
+  const entityMap = new Map<string, number>();
+
+  for (const sitio of sitios) {
+    let key: string;
+    switch (level) {
+      case 'municipality':
+        key = sitio.municipality;
+        break;
+      case 'barangay':
+        key = sitio.barangay;
+        break;
+      case 'sitio':
+        key = `${sitio.id}:${sitio.sitioName}`;
+        break;
+    }
+    entityMap.set(key, (entityMap.get(key) || 0) + 1);
+  }
+
+  return Array.from(entityMap.entries())
+    .map(([key, count]) => {
+      if (level === 'sitio') {
+        const [id, name] = key.split(':');
+        return { id, name, sitioCount: count };
+      }
+      return { id: key, name: key, sitioCount: count };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Filter sitios by entity based on comparison level
+ */
+function filterSitiosByEntity(
+  sitios: SitioRecord[],
+  entityId: string,
+  level: ComparisonLevel
+): SitioRecord[] {
+  switch (level) {
+    case 'municipality':
+      return sitios.filter((s) => s.municipality === entityId);
+    case 'barangay':
+      return sitios.filter((s) => s.barangay === entityId);
+    case 'sitio':
+      return sitios.filter((s) => s.id.toString() === entityId);
+  }
+}
+
+/**
+ * Prepare comparison time series data for selected entities
+ * Returns multi-series data where each series is one entity
+ */
+export function prepareComparisonTimeSeriesData(
+  sitios: SitioRecord[],
+  selectedEntityIds: string[],
+  level: ComparisonLevel,
+  metrics: (keyof YearlyMetrics)[],
+  entityNames: Map<string, string>
+): { categories: string[]; series: MultiSeriesTimeData[] } {
+  // Get all available years across all sitios
+  const allYears = getAllAvailableYears(sitios);
+  const categories = allYears.map((y) => y.toString());
+
+  // Color palette for comparison lines
+  const comparisonColors = [
+    'hsl(217, 91%, 60%)', // Blue
+    'hsl(142, 71%, 45%)', // Green
+    'hsl(330, 81%, 60%)', // Pink
+    'hsl(25, 95%, 53%)', // Orange
+    'hsl(263, 70%, 50%)' // Purple
+  ];
+
+  const series: MultiSeriesTimeData[] = [];
+
+  selectedEntityIds.forEach((entityId, index) => {
+    const entitySitios = filterSitiosByEntity(sitios, entityId, level);
+    const entityName = entityNames.get(entityId) || entityId;
+
+    // For each year, aggregate the metrics for this entity's sitios
+    const data: number[] = allYears.map((year) => {
+      const yearMetrics = aggregateMetricsForYear(entitySitios, year);
+
+      // Sum the requested metrics
+      let total = 0;
+      for (const metric of metrics) {
+        const value = yearMetrics[metric];
+        if (typeof value === 'number') {
+          total += value;
+        }
+      }
+      return Math.round(total * 10) / 10;
+    });
+
+    series.push({
+      name: entityName,
+      data,
+      color: comparisonColors[index % comparisonColors.length]
+    });
+  });
+
+  return { categories, series };
+}
+
+/**
+ * Prepare comparison data for a single metric (more detailed view)
+ */
+export function prepareComparisonMetricData(
+  sitios: SitioRecord[],
+  selectedEntityIds: string[],
+  level: ComparisonLevel,
+  metric: keyof YearlyMetrics,
+  entityNames: Map<string, string>
+): { categories: string[]; series: MultiSeriesTimeData[] } {
+  return prepareComparisonTimeSeriesData(sitios, selectedEntityIds, level, [metric], entityNames);
+}
+
+/**
+ * Prepare comparison data for multiple metrics as separate series per entity-metric combination
+ */
+export function prepareMultiMetricComparisonData(
+  sitios: SitioRecord[],
+  selectedEntityIds: string[],
+  level: ComparisonLevel,
+  metrics: (keyof YearlyMetrics)[],
+  entityNames: Map<string, string>,
+  metricLabels: Record<string, string>
+): { categories: string[]; series: MultiSeriesTimeData[] } {
+  const allYears = getAllAvailableYears(sitios);
+  const categories = allYears.map((y) => y.toString());
+
+  const comparisonColors = [
+    'hsl(217, 91%, 60%)',
+    'hsl(142, 71%, 45%)',
+    'hsl(330, 81%, 60%)',
+    'hsl(25, 95%, 53%)',
+    'hsl(263, 70%, 50%)'
+  ];
+
+  const series: MultiSeriesTimeData[] = [];
+
+  selectedEntityIds.forEach((entityId, entityIndex) => {
+    const entitySitios = filterSitiosByEntity(sitios, entityId, level);
+    const entityName = entityNames.get(entityId) || entityId;
+
+    metrics.forEach((metric, metricIndex) => {
+      const data: number[] = allYears.map((year) => {
+        const yearMetrics = aggregateMetricsForYear(entitySitios, year);
+        const value = yearMetrics[metric];
+        return typeof value === 'number' ? Math.round(value * 10) / 10 : 0;
+      });
+
+      // Generate unique color by combining entity and metric index
+      const colorIndex = (entityIndex * metrics.length + metricIndex) % comparisonColors.length;
+
+      series.push({
+        name: `${entityName} - ${metricLabels[metric] || metric}`,
+        data,
+        color: comparisonColors[colorIndex]
+      });
+    });
+  });
+
+  return { categories, series };
+}
+
+/**
+ * Grouped bar chart data for single-year comparison
+ */
+export interface GroupedBarChartData {
+  /** Categories are the entity names (e.g., municipality/barangay/sitio names) */
+  categories: string[];
+  /** Each series represents one metric with data for each entity */
+  series: Array<{
+    name: string;
+    data: number[];
+    color?: string;
+  }>;
+}
+
+/**
+ * Metric display configuration
+ */
+export interface MetricDisplayConfig {
+  key: keyof YearlyMetrics;
+  label: string;
+  color: string;
+}
+
+/**
+ * Default metric labels for display
+ */
+export const METRIC_LABELS: Partial<Record<keyof YearlyMetrics, string>> = {
+  totalPopulation: 'Total Population',
+  totalMale: 'Male',
+  totalFemale: 'Female',
+  totalHouseholds: 'Households',
+  totalLaborWorkforce: 'Labor Workforce',
+  totalUnemployed: 'Unemployed',
+  employmentRate: 'Employment Rate',
+  participationRate: 'Participation Rate',
+  averageDailyIncome: 'Avg Daily Income',
+  electricityPercent: 'Electricity %',
+  toiletPercent: 'Toilet %',
+  internetPercent: 'Internet %',
+  youth: 'Youth (0-14)',
+  workingAge: 'Working Age (15-64)',
+  elderly: 'Elderly (65+)',
+  totalSchoolAgeChildren: 'School-Age Children',
+  totalMuslim: 'Muslim Population',
+  totalIP: 'Indigenous People',
+  totalVoters: 'Registered Voters',
+  totalSeniors: 'Senior Citizens',
+  totalOSY: 'Out of School Youth',
+  totalNoBirthCert: 'No Birth Certificate',
+  totalNoNationalID: 'No PhilSys ID'
+};
+
+/**
+ * Get a color palette for metrics
+ */
+export const METRIC_COLORS: Partial<Record<keyof YearlyMetrics, string>> = {
+  totalPopulation: 'hsl(217, 91%, 60%)',
+  totalMale: 'hsl(217, 91%, 60%)',
+  totalFemale: 'hsl(330, 81%, 60%)',
+  totalHouseholds: 'hsl(142, 71%, 45%)',
+  totalLaborWorkforce: 'hsl(263, 70%, 50%)',
+  totalUnemployed: 'hsl(0, 84%, 60%)',
+  employmentRate: 'hsl(142, 71%, 45%)',
+  participationRate: 'hsl(200, 70%, 50%)',
+  averageDailyIncome: 'hsl(45, 93%, 47%)',
+  electricityPercent: 'hsl(45, 93%, 47%)',
+  toiletPercent: 'hsl(200, 70%, 50%)',
+  internetPercent: 'hsl(280, 65%, 60%)',
+  youth: 'hsl(25, 95%, 53%)',
+  workingAge: 'hsl(217, 91%, 60%)',
+  elderly: 'hsl(200, 18%, 46%)',
+  totalSchoolAgeChildren: 'hsl(217, 91%, 60%)',
+  totalMuslim: 'hsl(142, 71%, 45%)',
+  totalIP: 'hsl(263, 70%, 50%)',
+  totalVoters: 'hsl(280, 65%, 60%)',
+  totalSeniors: 'hsl(25, 95%, 53%)',
+  totalOSY: 'hsl(0, 84%, 60%)',
+  totalNoBirthCert: 'hsl(45, 93%, 47%)',
+  totalNoNationalID: 'hsl(200, 18%, 46%)'
+};
+
+/**
+ * Prepare grouped bar chart data for comparing entities within a single year
+ * Each metric becomes a series, and entities are the categories on x-axis
+ */
+export function prepareEntityComparisonBarData(
+  sitios: SitioRecord[],
+  selectedEntityIds: string[],
+  level: ComparisonLevel,
+  metrics: (keyof YearlyMetrics)[],
+  entityNames: Map<string, string>,
+  year: number
+): GroupedBarChartData {
+  // Categories are the entity names
+  const categories: string[] = selectedEntityIds.map(
+    (entityId) => entityNames.get(entityId) || entityId
+  );
+
+  // Each metric becomes a series
+  const series = metrics.map((metric) => {
+    const data: number[] = selectedEntityIds.map((entityId) => {
+      const entitySitios = filterSitiosByEntity(sitios, entityId, level);
+      const yearMetrics = aggregateMetricsForYear(entitySitios, year);
+      const value = yearMetrics[metric];
+      return typeof value === 'number' ? Math.round(value * 10) / 10 : 0;
+    });
+
+    return {
+      name: METRIC_LABELS[metric] || metric,
+      data,
+      color: METRIC_COLORS[metric] || 'hsl(217, 91%, 60%)'
+    };
+  });
+
+  return { categories, series };
+}

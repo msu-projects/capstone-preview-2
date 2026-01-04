@@ -1,8 +1,6 @@
 <script lang="ts">
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
-  import LineChart from '$lib/components/charts/LineChart.svelte';
   import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import {
@@ -44,6 +42,7 @@
     Vote
   } from '@lucide/svelte';
   import DashboardStatCard from './DashboardStatCard.svelte';
+  import TrendComparisonModal from './TrendComparisonModal.svelte';
 
   // Modal states for trend modals
   let showGenderTrendModal = $state(false);
@@ -57,9 +56,16 @@
   interface Props {
     sitios: SitioRecord[];
     selectedYear?: number;
+    selectedMunicipality?: string;
+    selectedBarangay?: string;
   }
 
-  let { sitios, selectedYear }: Props = $props();
+  let {
+    sitios,
+    selectedYear,
+    selectedMunicipality = 'all',
+    selectedBarangay = 'all'
+  }: Props = $props();
 
   // Get labor employment averages with config overrides
   const LABOR_EMPLOYMENT_AVERAGES = $derived(getLaborEmploymentAverages());
@@ -1392,283 +1398,127 @@
 </div>
 
 <!-- Gender Trend Modal -->
-<Dialog.Root bind:open={showGenderTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-pink-50 p-2 dark:bg-pink-900/20">
-          <PersonStanding class="size-5 text-pink-600 dark:text-pink-400" />
-        </div>
-        Gender Distribution - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year population trends by gender across {populationGenderTrend.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={populationGenderTrend.series}
-        categories={populationGenderTrend.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showGenderTrendModal}
+  title="Gender Distribution - Historical Trend"
+  description="Year-over-year population trends by gender across {populationGenderTrend.categories
+    .length} years"
+  icon={PersonStanding}
+  iconBgColor="bg-pink-50"
+  iconTextColor="text-pink-600"
+  trendSeries={populationGenderTrend.series}
+  trendCategories={populationGenderTrend.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalMale', 'totalFemale']}
+/>
 
 <!-- Age Distribution Trend Modal -->
-<Dialog.Root bind:open={showAgeTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-teal-50 p-2 dark:bg-teal-900/20">
-          <PieChart class="size-5 text-teal-600 dark:text-teal-400" />
-        </div>
-        Age Distribution - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year population trends by age group across {ageGroupTrend.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={ageGroupTrend.series}
-        categories={ageGroupTrend.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showAgeTrendModal}
+  title="Age Distribution - Historical Trend"
+  description="Year-over-year population trends by age group across {ageGroupTrend.categories
+    .length} years"
+  icon={PieChart}
+  iconBgColor="bg-teal-50"
+  iconTextColor="text-teal-600"
+  trendSeries={ageGroupTrend.series}
+  trendCategories={ageGroupTrend.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['youth', 'workingAge', 'elderly']}
+/>
 
 <!-- Labor & Employment Trend Modal -->
-<Dialog.Root bind:open={showLaborTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-purple-50 p-2 dark:bg-purple-900/20">
-          <Briefcase class="size-5 text-purple-600 dark:text-purple-400" />
-        </div>
-        Labor & Employment - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year labor force and unemployment trends across {laborForceTrend.categories
-          .length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={laborForceTrend.series}
-        categories={laborForceTrend.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showLaborTrendModal}
+  title="Labor & Employment - Historical Trend"
+  description="Year-over-year labor force and unemployment trends across {laborForceTrend.categories
+    .length} years"
+  icon={Briefcase}
+  iconBgColor="bg-purple-50"
+  iconTextColor="text-purple-600"
+  trendSeries={laborForceTrend.series}
+  trendCategories={laborForceTrend.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalLaborWorkforce', 'totalUnemployed']}
+/>
 
 <!-- Cultural & Demographic Groups Trend Modal -->
-<Dialog.Root bind:open={showCulturalTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
-          <Users class="size-5 text-indigo-600 dark:text-indigo-400" />
-        </div>
-        Cultural & Demographic Groups - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year trends for cultural and demographic groups across {culturalGroupsTrend
-          .categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={culturalGroupsTrend.series}
-        categories={culturalGroupsTrend.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showCulturalTrendModal}
+  title="Cultural & Demographic Groups - Historical Trend"
+  description="Year-over-year trends for cultural and demographic groups across {culturalGroupsTrend
+    .categories.length} years"
+  icon={Users}
+  iconBgColor="bg-indigo-50"
+  iconTextColor="text-indigo-600"
+  trendSeries={culturalGroupsTrend.series}
+  trendCategories={culturalGroupsTrend.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalSchoolAgeChildren', 'totalMuslim', 'totalIP', 'totalVoters']}
+/>
 
 <!-- Vulnerable Sectors Trend Modal -->
-<Dialog.Root bind:open={showVulnerableTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-orange-50 p-2 dark:bg-orange-900/20">
-          <UserRound class="size-5 text-orange-600 dark:text-orange-400" />
-        </div>
-        Vulnerable Sectors - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year trends for vulnerable populations across {vulnerableSectorsTrend.categories
-          .length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={vulnerableSectorsTrend.series}
-        categories={vulnerableSectorsTrend.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showVulnerableTrendModal}
+  title="Vulnerable Sectors - Historical Trend"
+  description="Year-over-year trends for vulnerable populations across {vulnerableSectorsTrend
+    .categories.length} years"
+  icon={UserRound}
+  iconBgColor="bg-orange-50"
+  iconTextColor="text-orange-600"
+  trendSeries={vulnerableSectorsTrend.series}
+  trendCategories={vulnerableSectorsTrend.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalSeniors', 'totalOSY', 'totalNoBirthCert', 'totalNoNationalID']}
+/>
 
 <!-- Household & Population Trend Modal -->
-<Dialog.Root bind:open={showHouseholdTrendModal}>
-  <Dialog.Content class="max-w-4xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-cyan-50 p-2 dark:bg-cyan-900/20">
-          <Users class="size-5 text-cyan-600 dark:text-cyan-400" />
-        </div>
-        Households & Population - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year trends across {householdsTrend.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="space-y-6 py-4">
-      <!-- Households Chart -->
-      <div>
-        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Total Households
-        </h4>
-        <LineChart
-          categories={householdsTrend.categories}
-          series={householdsTrend.series}
-          height={250}
-          curve="smooth"
-          showLegend={true}
-          yAxisFormatter={(val) => val.toLocaleString()}
-        />
-      </div>
-
-      <!-- Population Chart -->
-      <div>
-        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Total Population
-        </h4>
-        <LineChart
-          categories={populationTrend.categories}
-          series={populationTrend.series}
-          height={250}
-          curve="smooth"
-          showLegend={true}
-          yAxisFormatter={(val) => val.toLocaleString()}
-        />
-      </div>
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showHouseholdTrendModal}
+  title="Households & Population - Historical Trend"
+  description="Year-over-year trends across {householdsTrend.categories.length} years"
+  icon={Users}
+  iconBgColor="bg-cyan-50"
+  iconTextColor="text-cyan-600"
+  trendSeries={[...householdsTrend.series, ...populationTrend.series]}
+  trendCategories={householdsTrend.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalHouseholds', 'totalPopulation']}
+/>
 
 <!-- Dependency Ratio Trend Modal -->
-<Dialog.Root bind:open={showDependencyTrendModal}>
-  <Dialog.Content class="max-w-4xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
-          <Scale class="size-5 text-amber-600 dark:text-amber-400" />
-        </div>
-        Economic Dependency - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year dependency metrics across {dependencyRatioTrend().categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="space-y-6 py-4">
-      <!-- Dependency Ratio Chart -->
-      <div>
-        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dependency Ratio (per 100 workers)
-        </h4>
-        <LineChart
-          categories={dependencyRatioTrend().categories}
-          series={dependencyRatioTrend().ratioSeries}
-          height={250}
-          curve="smooth"
-          showLegend={false}
-          yAxisFormatter={(val) => val.toFixed(1)}
-        />
-      </div>
-
-      <!-- Dependent Population Chart -->
-      <div>
-        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dependent Population (non-working residents)
-        </h4>
-        <LineChart
-          categories={dependencyRatioTrend().categories}
-          series={dependencyRatioTrend().populationSeries}
-          height={250}
-          curve="smooth"
-          showLegend={false}
-          yAxisFormatter={(val) => val.toLocaleString()}
-        />
-      </div>
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
-
-<!-- Dependency Ratio Trend Modal -->
-<Dialog.Root bind:open={showDependencyTrendModal}>
-  <Dialog.Content class="max-w-4xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
-          <Scale class="size-5 text-amber-600 dark:text-amber-400" />
-        </div>
-        Economic Dependency - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year dependency metrics across {dependencyRatioTrend().categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="space-y-6 py-4">
-      <!-- Dependency Ratio Chart -->
-      <div>
-        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dependency Ratio (per 100 workers)
-        </h4>
-        <LineChart
-          categories={dependencyRatioTrend().categories}
-          series={dependencyRatioTrend().ratioSeries}
-          height={250}
-          curve="smooth"
-          showLegend={false}
-          yAxisFormatter={(val) => val.toFixed(1)}
-        />
-      </div>
-
-      <!-- Dependent Population Chart -->
-      <div>
-        <h4 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dependent Population (non-working residents)
-        </h4>
-        <LineChart
-          categories={dependencyRatioTrend().categories}
-          series={dependencyRatioTrend().populationSeries}
-          height={250}
-          curve="smooth"
-          showLegend={false}
-          yAxisFormatter={(val) => val.toLocaleString()}
-        />
-      </div>
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showDependencyTrendModal}
+  title="Economic Dependency - Historical Trend"
+  description="Year-over-year dependency metrics across {dependencyRatioTrend().categories
+    .length} years"
+  icon={Scale}
+  iconBgColor="bg-amber-50"
+  iconTextColor="text-amber-600"
+  trendSeries={[...dependencyRatioTrend().ratioSeries, ...dependencyRatioTrend().populationSeries]}
+  trendCategories={dependencyRatioTrend().categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalLaborWorkforce', 'totalPopulation']}
+  yAxisFormatter={(val) => val.toLocaleString()}
+/>

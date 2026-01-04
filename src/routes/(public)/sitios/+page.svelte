@@ -335,7 +335,12 @@
           </Tabs.Content>
 
           <Tabs.Content value="demographics">
-            <SitioDashboardDemographics sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            <SitioDashboardDemographics
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+              {selectedMunicipality}
+              {selectedBarangay}
+            />
           </Tabs.Content>
 
           <Tabs.Content value="infrastructure">
