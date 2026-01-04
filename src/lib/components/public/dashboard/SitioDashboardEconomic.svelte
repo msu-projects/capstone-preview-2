@@ -572,7 +572,8 @@
                       Average Daily Income
                     </span>
                     <HelpTooltip>
-                      Average daily income across {livelihood.sitiosWithIncome} sitios with income data
+                      Average hosehold daily income across {livelihood.sitiosWithIncome} sitios with income
+                      data
                     </HelpTooltip>
                   </div>
                   <p

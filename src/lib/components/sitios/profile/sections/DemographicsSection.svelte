@@ -858,7 +858,7 @@
               <div class="flex-1">
                 <div class="flex items-center gap-2">
                   <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    Labor & Employment Analytics
+                    Labor & Employment
                   </h4>
                   <HelpTooltip
                     content="Comparison of local labor metrics against Philippine national averages and targets. Values marked with 'Target' compare against government targets rather than current averages."
