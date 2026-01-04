@@ -1324,7 +1324,8 @@ export function generateSingleMetricChartData(
     const metric = metrics.find((m) => m.key === metricKey);
 
     if (metric) {
-      metricLabel = metric.label;
+      // Include unit in the label if available
+      metricLabel = metric.unit ? `${metric.label} (${metric.unit})` : metric.label;
       for (const value of metric.values) {
         labels.push(value.subjectLabel);
         values.push(typeof value.value === 'number' ? value.value : 0);
