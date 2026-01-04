@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ComboboxMultiSelect } from '$lib/components/ui/combobox';
+  import CurrencyInput from '$lib/components/ui/currency-input/currency-input.svelte';
   import FormSection from '$lib/components/ui/form-section/form-section.svelte';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import { Label } from '$lib/components/ui/label';
@@ -178,12 +179,12 @@
         />
       </div>
     </div>
-    {#if totalWorkers > 0}
+    <!-- {#if totalWorkers > 0}
       <div class="mt-4 rounded-lg border bg-muted/30 px-3 py-2 text-center text-sm">
         <span class="text-muted-foreground">Total Workers: </span>
         <span class="font-semibold">{totalWorkers.toLocaleString()}</span>
       </div>
-    {/if}
+    {/if} -->
   </FormSection>
 
   <!-- Average Daily Income Section -->
@@ -199,12 +200,11 @@
         Average Daily Income (₱)
         <HelpTooltip content="Average household income per day in Philippine Pesos" />
       </Label>
-      <NumberInput
+      <CurrencyInput
         id="averageDailyIncome"
         bind:value={averageDailyIncome}
         placeholder="0"
         min={0}
-        step={10}
         class={cn(averageDailyIncome > 0 && 'border-primary/30 bg-primary/5')}
       />
     </div>
@@ -267,7 +267,7 @@
         addLabel="Add Crop"
         emptyMessage="No crops selected"
         allowCustom
-        variant="tags"
+        variant="list"
       />
     </div>
   </FormSection>

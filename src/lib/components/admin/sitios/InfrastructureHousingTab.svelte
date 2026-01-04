@@ -489,9 +489,19 @@
         <thead>
           <tr class="border-b bg-muted/30">
             <th class="px-3 py-2 text-left font-medium">Facility</th>
-            <th class="w-24 px-3 py-2 text-center font-medium">Exists</th>
+            <th class="w-24 px-3 py-2 text-center font-medium">
+              <div class="flex items-center gap-2">
+                <span>Exists</span>
+                <HelpTooltip content="If this facility exists in the sitio." />
+              </div>
+            </th>
             <th class="w-24 px-3 py-2 text-center font-medium">Count</th>
-            <th class="w-32 px-3 py-2 text-center font-medium">Distance (km)</th>
+            <th class="w-40 px-3 py-2 text-center font-medium">
+              <div class="flex items-center gap-2">
+                <span>Distance (km)</span>
+                <HelpTooltip content="Distance to the nearest facility outside the sitio." />
+              </div>
+            </th>
             <th class="w-28 px-3 py-2 text-center font-medium">
               <div class="flex items-center justify-center gap-1.5">
                 Condition

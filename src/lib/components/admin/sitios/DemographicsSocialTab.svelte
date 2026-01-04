@@ -364,8 +364,8 @@
       </div>
       <div class="space-y-2">
         <Label for="laborForce60to64Count" class="flex items-center gap-1.5 text-sm font-medium">
-          Labor Force (60-64)
-          <HelpTooltip content="Working seniors aged 60-64 years" />
+          Seniors in labor force (60-64)
+          <HelpTooltip content="Seniors aged 60-64 years" />
         </Label>
         <NumberInput
           id="laborForce60to64Count"
