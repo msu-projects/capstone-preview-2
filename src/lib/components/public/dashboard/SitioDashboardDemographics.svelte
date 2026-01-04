@@ -108,14 +108,10 @@
   );
 
   // Time series data for households
-  const householdsTrend = $derived(
-    prepareTimeSeriesData(sitios, ['totalHouseholds'])
-  );
+  const householdsTrend = $derived(prepareTimeSeriesData(sitios, ['totalHouseholds']));
 
   // Time series data for total population
-  const populationTrend = $derived(
-    prepareTimeSeriesData(sitios, ['totalPopulation'])
-  );
+  const populationTrend = $derived(prepareTimeSeriesData(sitios, ['totalPopulation']));
 
   // Time series data for dependency ratio (calculated from aggregated metrics)
   const dependencyRatioTrend = $derived(() => {
@@ -986,7 +982,10 @@
             <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
               <div
                 class="h-2 rounded-full bg-linear-to-r from-cyan-500 to-blue-500 transition-all"
-                style="width: {Math.min((demographics.totalHouseholds / (demographics.totalHouseholds * 1.2)) * 100, 100)}%"
+                style="width: {Math.min(
+                  (demographics.totalHouseholds / (demographics.totalHouseholds * 1.2)) * 100,
+                  100
+                )}%"
               ></div>
             </div>
             <p class="mt-1 text-right text-xs text-muted-foreground">Family units</p>
@@ -1008,7 +1007,10 @@
             <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700">
               <div
                 class="h-2 rounded-full bg-linear-to-r from-blue-500 to-indigo-500 transition-all"
-                style="width: {Math.min((demographics.totalPopulation / (demographics.totalPopulation * 1.2)) * 100, 100)}%"
+                style="width: {Math.min(
+                  (demographics.totalPopulation / (demographics.totalPopulation * 1.2)) * 100,
+                  100
+                )}%"
               ></div>
             </div>
             <p class="mt-1 text-right text-xs text-muted-foreground">Total individuals</p>
