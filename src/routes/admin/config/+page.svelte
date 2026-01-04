@@ -5,9 +5,11 @@
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
   import { hasLocationsOverride } from '$lib/config/location-data';
+  import { hasNationalAveragesOverride } from '$lib/config/national-averages';
+  import { hasPovertyThresholdsOverride } from '$lib/config/poverty-thresholds';
   import { authStore } from '$lib/stores/auth.svelte';
   import { hasCustomFieldsOverride } from '$lib/utils/custom-fields-storage';
-  import { ChevronRight, Layers, MapPin } from '@lucide/svelte';
+  import { Banknote, ChevronRight, Layers, MapPin, TrendingUp } from '@lucide/svelte';
 
   interface ConfigSection {
     id: string;
@@ -37,6 +39,24 @@
       href: '/admin/config/custom-fields',
       hasOverride: hasCustomFieldsOverride,
       items: ['Text', 'Number', 'Yes/No', 'Date', 'etc']
+    },
+    {
+      id: 'national-averages',
+      title: 'National Averages',
+      description: 'Philippine benchmark data for infrastructure and demographics',
+      icon: TrendingUp,
+      href: '/admin/config/national-averages',
+      hasOverride: hasNationalAveragesOverride,
+      items: ['Infrastructure', 'Labor', 'Employment']
+    },
+    {
+      id: 'poverty-thresholds',
+      title: 'Poverty Thresholds',
+      description: 'Income classification thresholds and poverty line definitions',
+      icon: Banknote,
+      href: '/admin/config/poverty-thresholds',
+      hasOverride: hasPovertyThresholdsOverride,
+      items: ['Monthly Threshold', 'Income Clusters']
     }
   ];
 

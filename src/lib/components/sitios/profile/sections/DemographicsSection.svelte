@@ -6,8 +6,8 @@
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import {
-    LABOR_EMPLOYMENT_AVERAGES,
-    getLaborComparisonStatus
+    getLaborComparisonStatus,
+    getLaborEmploymentAverages
   } from '$lib/config/national-averages';
   import type { SitioProfile, SitioRecord } from '$lib/types';
   import { prepareTimeSeriesData } from '$lib/utils/sitio-chart-aggregation';
@@ -43,6 +43,9 @@
   }
 
   const { sitio, sitioRecord, selectedYear }: Props = $props();
+
+  // Get labor employment averages with config overrides
+  const LABOR_EMPLOYMENT_AVERAGES = $derived(getLaborEmploymentAverages());
 
   // Modal states for trend modals
   let showGenderTrendModal = $state(false);
@@ -317,8 +320,7 @@
     const unemploymentRate = metrics.laborForce > 0 ? 100 - metrics.employmentRate : 0;
 
     // Helper to check if a metric is a target
-    const isTarget = (metric: Record<string, unknown>) =>
-      'target' in metric && metric.target === true;
+    const isTarget = (metric: { target?: boolean }) => 'target' in metric && metric.target === true;
 
     // Get comparison statuses - pass isTarget flag based on the data
     const unemploymentComparison = getLaborComparisonStatus(

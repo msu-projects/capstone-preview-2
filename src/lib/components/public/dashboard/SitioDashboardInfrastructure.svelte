@@ -6,7 +6,7 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
-  import { NATIONAL_AVERAGES } from '$lib/config/national-averages';
+  import { getNationalAverages } from '$lib/config/national-averages';
   import type { SitioRecord } from '$lib/types';
   import {
     aggregateAccessModes,
@@ -52,6 +52,9 @@
   }
 
   let { sitios, selectedYear }: Props = $props();
+
+  // Get national averages with config overrides
+  const NATIONAL_AVERAGES = $derived(getNationalAverages());
 
   // Total sitios for percentage calculations
   const totalSitios = $derived(sitios.length);

@@ -1,37 +1,105 @@
+import {
+  CONFIG_STORAGE_KEYS,
+  getConfigWithOverrides,
+  hasConfigOverride,
+  resetConfigToDefault,
+  saveConfigOverride,
+  type PovertyThresholdsConfig
+} from '$lib/utils/config-storage';
+
 /**
- * Poverty Line Thresholds Configuration
+ * Poverty Line Thresholds Configuration - Default Values
  *
  * These thresholds are used to determine poverty status based on average daily income.
  * Values are based on official poverty thresholds and may be updated periodically.
  */
 
-export const POVERTY_THRESHOLDS = {
-  /**
-   * Daily poverty threshold in Philippine Pesos (₱)
-   * Based on 2025 DEPDev poverty threshold for a family of 5
-   */
-  DAILY_THRESHOLD: 668,
-
+const DEFAULT_POVERTY_THRESHOLDS_CONFIG: PovertyThresholdsConfig = {
   /**
    * Monthly poverty threshold in Philippine Pesos (₱)
-   * Calculated as: DAILY_THRESHOLD × 30 days
+   * Based on 2025 DEPDev poverty threshold for a family of 5
    */
-  MONTHLY_THRESHOLD: 20000,
+  monthlyThreshold: 20000,
 
   /**
    * Reference year for the current threshold
    */
-  REFERENCE_YEAR: 2025,
+  referenceYear: 2025,
 
   /**
    * Source of the threshold data
    */
-  SOURCE: 'DEPDev',
+  source: 'DEPDev',
 
   /**
    * Description of the poverty line
    */
-  DESCRIPTION: 'Poverty threshold for a family of 5'
+  description: 'Poverty threshold for a family of 5'
+} as const;
+
+/**
+ * Get poverty thresholds configuration with overrides
+ */
+export function getPovertyThresholds(): PovertyThresholdsConfig {
+  return getConfigWithOverrides(
+    CONFIG_STORAGE_KEYS.POVERTY_THRESHOLDS,
+    DEFAULT_POVERTY_THRESHOLDS_CONFIG
+  );
+}
+
+/**
+ * Get current poverty thresholds with calculated daily threshold
+ */
+export function getPovertyThresholdsWithDaily() {
+  const config = getPovertyThresholds();
+  return {
+    dailyThreshold: config.monthlyThreshold / 30,
+    monthlyThreshold: config.monthlyThreshold,
+    referenceYear: config.referenceYear,
+    source: config.source,
+    description: config.description
+  };
+}
+
+/**
+ * Save poverty thresholds configuration
+ */
+export function savePovertyThresholdsConfig(
+  config: PovertyThresholdsConfig,
+  changeDescription?: string
+): boolean {
+  return saveConfigOverride(
+    CONFIG_STORAGE_KEYS.POVERTY_THRESHOLDS,
+    config,
+    'povertyThresholds',
+    changeDescription || 'Updated poverty thresholds configuration'
+  );
+}
+
+/**
+ * Reset poverty thresholds to default values
+ */
+export function resetPovertyThresholdsConfig(): boolean {
+  return resetConfigToDefault(CONFIG_STORAGE_KEYS.POVERTY_THRESHOLDS, 'povertyThresholds');
+}
+
+/**
+ * Check if poverty thresholds has custom overrides
+ */
+export function hasPovertyThresholdsOverride(): boolean {
+  return hasConfigOverride(CONFIG_STORAGE_KEYS.POVERTY_THRESHOLDS);
+}
+
+/**
+ * Legacy export for backward compatibility
+ * @deprecated Use getPovertyThresholdsWithDaily() instead
+ */
+export const POVERTY_THRESHOLDS = {
+  dailyThreshold: DEFAULT_POVERTY_THRESHOLDS_CONFIG.monthlyThreshold / 30,
+  monthlyThreshold: DEFAULT_POVERTY_THRESHOLDS_CONFIG.monthlyThreshold,
+  referenceYear: DEFAULT_POVERTY_THRESHOLDS_CONFIG.referenceYear,
+  source: DEFAULT_POVERTY_THRESHOLDS_CONFIG.source,
+  description: DEFAULT_POVERTY_THRESHOLDS_CONFIG.description
 } as const;
 
 /**
@@ -69,9 +137,9 @@ export const INCOME_CLUSTER_MULTIPLIERS = {
 } as const;
 
 /**
- * Income cluster configuration with labels, colors (red→green gradient), and icons
+ * Get income cluster configuration with dynamic descriptions based on current threshold
  */
-export const INCOME_CLUSTER_CONFIG: Record<
+export function getIncomeClusterConfigMap(): Record<
   IncomeCluster,
   {
     label: string;
@@ -82,77 +150,87 @@ export const INCOME_CLUSTER_CONFIG: Record<
     bgLight: string;
     description: string;
   }
-> = {
-  poor: {
-    label: 'Poor',
-    shortLabel: 'Poor',
-    color: 'hsl(0, 84%, 60%)', // Red
-    bgColor: 'bg-red-500',
-    textColor: 'text-red-600 dark:text-red-400',
-    bgLight: 'bg-red-100 dark:bg-red-900/40',
-    description: `Less than official poverty threshold (<₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD}/day)`
-  },
-  low_income: {
-    label: 'Low-Income (Not Poor)',
-    shortLabel: 'Low-Income',
-    color: 'hsl(25, 95%, 53%)', // Orange
-    bgColor: 'bg-orange-500',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    bgLight: 'bg-orange-100 dark:bg-orange-900/40',
-    description: `Between poverty line and twice the poverty line (₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD}–₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 2}/day)`
-  },
-  lower_middle: {
-    label: 'Lower Middle-Income',
-    shortLabel: 'Lower Middle',
-    color: 'hsl(38, 92%, 50%)', // Amber
-    bgColor: 'bg-amber-500',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    bgLight: 'bg-amber-100 dark:bg-amber-900/40',
-    description: `Between two and four times the poverty line (₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 2}–₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 4}/day)`
-  },
-  middle_middle: {
-    label: 'Middle Middle-Income',
-    shortLabel: 'Middle',
-    color: 'hsl(60, 70%, 45%)', // Yellow-green
-    bgColor: 'bg-lime-500',
-    textColor: 'text-lime-600 dark:text-lime-400',
-    bgLight: 'bg-lime-100 dark:bg-lime-900/40',
-    description: `Between four and seven times the poverty line (₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 4}–₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 7}/day)`
-  },
-  upper_middle: {
-    label: 'Upper Middle-Income',
-    shortLabel: 'Upper Middle',
-    color: 'hsl(142, 71%, 45%)', // Green
-    bgColor: 'bg-green-500',
-    textColor: 'text-green-600 dark:text-green-400',
-    bgLight: 'bg-green-100 dark:bg-green-900/40',
-    description: `Between seven and twelve times the poverty line (₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 7}–₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 12}/day)`
-  },
-  upper_income: {
-    label: 'Upper-Income (Not Rich)',
-    shortLabel: 'Upper-Income',
-    color: 'hsl(173, 80%, 40%)', // Teal
-    bgColor: 'bg-teal-500',
-    textColor: 'text-teal-600 dark:text-teal-400',
-    bgLight: 'bg-teal-100 dark:bg-teal-900/40',
-    description: `Between twelve and twenty times the poverty line (₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 12}–₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 20}/day)`
-  },
-  rich: {
-    label: 'Rich',
-    shortLabel: 'Rich',
-    color: 'hsl(217, 91%, 60%)', // Blue
-    bgColor: 'bg-blue-500',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    bgLight: 'bg-blue-100 dark:bg-blue-900/40',
-    description: `At least twenty times the poverty line (≥₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD * 20}/day)`
-  }
-} as const;
+> {
+  const dailyThreshold = getPovertyThresholdsWithDaily().dailyThreshold;
+
+  return {
+    poor: {
+      label: 'Poor',
+      shortLabel: 'Poor',
+      color: 'hsl(0, 84%, 60%)', // Red
+      bgColor: 'bg-red-500',
+      textColor: 'text-red-600 dark:text-red-400',
+      bgLight: 'bg-red-100 dark:bg-red-900/40',
+      description: `Less than official poverty threshold (<₱${dailyThreshold.toFixed(2)}/day)`
+    },
+    low_income: {
+      label: 'Low-Income (Not Poor)',
+      shortLabel: 'Low-Income',
+      color: 'hsl(25, 95%, 53%)', // Orange
+      bgColor: 'bg-orange-500',
+      textColor: 'text-orange-600 dark:text-orange-400',
+      bgLight: 'bg-orange-100 dark:bg-orange-900/40',
+      description: `Between poverty line and twice the poverty line (₱${dailyThreshold.toFixed(2)}–₱${(dailyThreshold * 2).toFixed(2)}/day)`
+    },
+    lower_middle: {
+      label: 'Lower Middle-Income',
+      shortLabel: 'Lower Middle',
+      color: 'hsl(38, 92%, 50%)', // Amber
+      bgColor: 'bg-amber-500',
+      textColor: 'text-amber-600 dark:text-amber-400',
+      bgLight: 'bg-amber-100 dark:bg-amber-900/40',
+      description: `Between two and four times the poverty line (₱${(dailyThreshold * 2).toFixed(2)}–₱${(dailyThreshold * 4).toFixed(2)}/day)`
+    },
+    middle_middle: {
+      label: 'Middle Middle-Income',
+      shortLabel: 'Middle',
+      color: 'hsl(60, 70%, 45%)', // Yellow-green
+      bgColor: 'bg-lime-500',
+      textColor: 'text-lime-600 dark:text-lime-400',
+      bgLight: 'bg-lime-100 dark:bg-lime-900/40',
+      description: `Between four and seven times the poverty line (₱${(dailyThreshold * 4).toFixed(2)}–₱${(dailyThreshold * 7).toFixed(2)}/day)`
+    },
+    upper_middle: {
+      label: 'Upper Middle-Income',
+      shortLabel: 'Upper Middle',
+      color: 'hsl(142, 71%, 45%)', // Green
+      bgColor: 'bg-green-500',
+      textColor: 'text-green-600 dark:text-green-400',
+      bgLight: 'bg-green-100 dark:bg-green-900/40',
+      description: `Between seven and twelve times the poverty line (₱${(dailyThreshold * 7).toFixed(2)}–₱${(dailyThreshold * 12).toFixed(2)}/day)`
+    },
+    upper_income: {
+      label: 'Upper-Income (Not Rich)',
+      shortLabel: 'Upper-Income',
+      color: 'hsl(173, 80%, 40%)', // Teal
+      bgColor: 'bg-teal-500',
+      textColor: 'text-teal-600 dark:text-teal-400',
+      bgLight: 'bg-teal-100 dark:bg-teal-900/40',
+      description: `Between twelve and twenty times the poverty line (₱${(dailyThreshold * 12).toFixed(2)}–₱${(dailyThreshold * 20).toFixed(2)}/day)`
+    },
+    rich: {
+      label: 'Rich',
+      shortLabel: 'Rich',
+      color: 'hsl(217, 91%, 60%)', // Blue
+      bgColor: 'bg-blue-500',
+      textColor: 'text-blue-600 dark:text-blue-400',
+      bgLight: 'bg-blue-100 dark:bg-blue-900/40',
+      description: `At least twenty times the poverty line (≥₱${(dailyThreshold * 20).toFixed(2)}/day)`
+    }
+  };
+}
+
+/**
+ * Income cluster configuration with labels, colors (red→green gradient), and icons
+ * @deprecated Use getIncomeClusterConfigMap() for dynamic descriptions
+ */
+export const INCOME_CLUSTER_CONFIG = getIncomeClusterConfigMap();
 
 /**
  * Get income cluster based on daily income
  */
 export function getIncomeCluster(dailyIncome: number): IncomeCluster {
-  const threshold = POVERTY_THRESHOLDS.DAILY_THRESHOLD;
+  const threshold = getPovertyThresholdsWithDaily().dailyThreshold;
   const ratio = dailyIncome / threshold;
 
   if (ratio < 1) return 'poor';
@@ -168,28 +246,28 @@ export function getIncomeCluster(dailyIncome: number): IncomeCluster {
  * Get income cluster label for display
  */
 export function getIncomeClusterLabel(cluster: IncomeCluster): string {
-  return INCOME_CLUSTER_CONFIG[cluster].label;
+  return getIncomeClusterConfigMap()[cluster].label;
 }
 
 /**
  * Get short income cluster label for compact display
  */
 export function getIncomeClusterShortLabel(cluster: IncomeCluster): string {
-  return INCOME_CLUSTER_CONFIG[cluster].shortLabel;
+  return getIncomeClusterConfigMap()[cluster].shortLabel;
 }
 
 /**
  * Get income cluster color (HSL string)
  */
 export function getIncomeClusterColor(cluster: IncomeCluster): string {
-  return INCOME_CLUSTER_CONFIG[cluster].color;
+  return getIncomeClusterConfigMap()[cluster].color;
 }
 
 /**
  * Get income cluster configuration
  */
 export function getIncomeClusterConfig(cluster: IncomeCluster) {
-  return INCOME_CLUSTER_CONFIG[cluster];
+  return getIncomeClusterConfigMap()[cluster];
 }
 
 /**
@@ -237,21 +315,23 @@ export function createEmptyIncomeClusterCounts(): IncomeClusterCounts {
  * Get formatted poverty threshold text for display
  */
 export function getPovertyThresholdLabel(): string {
-  return `₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD.toLocaleString()}/day`;
+  const dailyThreshold = getPovertyThresholdsWithDaily().dailyThreshold;
+  return `₱${dailyThreshold.toFixed(2)}/day`;
 }
 
 /**
  * Get full poverty threshold description
  */
 export function getPovertyThresholdDescription(): string {
-  return `Based on ${POVERTY_THRESHOLDS.REFERENCE_YEAR} ${POVERTY_THRESHOLDS.SOURCE} poverty threshold of ₱${POVERTY_THRESHOLDS.DAILY_THRESHOLD}/day (₱${POVERTY_THRESHOLDS.MONTHLY_THRESHOLD.toLocaleString()}/month) for a ${POVERTY_THRESHOLDS.DESCRIPTION.toLowerCase()}`;
+  const config = getPovertyThresholdsWithDaily();
+  return `Based on ${config.referenceYear} ${config.source} poverty threshold of ₱${config.dailyThreshold.toFixed(2)}/day (₱${config.monthlyThreshold.toLocaleString()}/month) for a ${config.description.toLowerCase()}`;
 }
 
 /**
  * Get daily income range for a given income cluster
  */
 export function getIncomeClusterRange(cluster: IncomeCluster): { min: number; max: number | null } {
-  const threshold = POVERTY_THRESHOLDS.DAILY_THRESHOLD;
+  const threshold = getPovertyThresholdsWithDaily().dailyThreshold;
   const multipliers = INCOME_CLUSTER_MULTIPLIERS[cluster];
 
   return {

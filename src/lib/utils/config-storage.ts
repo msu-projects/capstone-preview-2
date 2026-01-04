@@ -13,23 +13,34 @@ import { logAuditAction } from './audit';
 
 export const CONFIG_STORAGE_KEYS = {
   LOCATIONS: 'sccdp_config_locations',
-  COMPARISON_LIMITS: 'sccdp_config_comparison_limits'
+  COMPARISON_LIMITS: 'sccdp_config_comparison_limits',
+  NATIONAL_AVERAGES: 'sccdp_config_national_averages',
+  POVERTY_THRESHOLDS: 'sccdp_config_poverty_thresholds'
 } as const;
 
 export type ConfigStorageKey = (typeof CONFIG_STORAGE_KEYS)[keyof typeof CONFIG_STORAGE_KEYS];
 
 // ===== CONFIG SECTION TYPES =====
 
-export type ConfigSection = 'locations' | 'comparisonLimits';
+export type ConfigSection =
+  | 'locations'
+  | 'comparisonLimits'
+  | 'nationalAverages'
+  | 'povertyThresholds';
 
 export const CONFIG_SECTION_LABELS: Record<ConfigSection, string> = {
   locations: 'Municipalities & Barangays',
-  comparisonLimits: 'Comparison Limits'
+  comparisonLimits: 'Comparison Limits',
+  nationalAverages: 'National Averages',
+  povertyThresholds: 'Poverty Thresholds'
 };
 
 export const CONFIG_SECTION_DESCRIPTIONS: Record<ConfigSection, string> = {
   locations: 'Manage the list of municipalities and their barangays in South Cotabato.',
-  comparisonLimits: 'Configure maximum sitios and years allowed for data comparisons.'
+  comparisonLimits: 'Configure maximum sitios and years allowed for data comparisons.',
+  nationalAverages:
+    'Philippine benchmark data for infrastructure, utilities, and labor statistics.',
+  povertyThresholds: 'Income classification thresholds and poverty line definitions.'
 };
 
 // ===== GENERIC CONFIG STORAGE FUNCTIONS =====
@@ -119,6 +130,41 @@ export function hasConfigOverride(key: ConfigStorageKey): boolean {
 export function getConfigWithOverrides<T>(key: ConfigStorageKey, defaults: T): T {
   const override = loadConfigOverride<T>(key);
   return override !== null ? override : defaults;
+}
+
+// ===== NATIONAL AVERAGES CONFIG =====
+
+export interface AverageMetric {
+  percent: number;
+  source: string;
+  url: string;
+  description?: string;
+  target?: boolean;
+}
+
+export interface NationalAveragesConfig {
+  electricity: AverageMetric;
+  sanitaryToilet: AverageMetric;
+  internet: AverageMetric;
+  pavedRoads: AverageMetric;
+  unpavedRoads: AverageMetric;
+}
+
+export interface LaborEmploymentAveragesConfig {
+  unemploymentRate: AverageMetric;
+  ageDependencyRatio: AverageMetric;
+  youthDependencyRatio: AverageMetric;
+  oldAgeDependencyRatio: AverageMetric;
+  workingAgePercent: AverageMetric;
+}
+
+// ===== POVERTY THRESHOLDS CONFIG =====
+
+export interface PovertyThresholdsConfig {
+  monthlyThreshold: number;
+  referenceYear: number;
+  source: string;
+  description: string;
 }
 
 // ===== LOCATIONS CONFIG =====

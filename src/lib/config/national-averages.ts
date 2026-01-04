@@ -1,11 +1,21 @@
+import {
+  CONFIG_STORAGE_KEYS,
+  getConfigWithOverrides,
+  hasConfigOverride,
+  resetConfigToDefault,
+  saveConfigOverride,
+  type LaborEmploymentAveragesConfig,
+  type NationalAveragesConfig
+} from '$lib/utils/config-storage';
+
 /**
- * Philippine National Averages
+ * Philippine National Averages - Default Values
  *
  * Reference data for utility access and infrastructure benchmarks
  * Used for comparison analytics across sitio profiles and dashboards
  */
 
-export const NATIONAL_AVERAGES = {
+const DEFAULT_NATIONAL_AVERAGES: NationalAveragesConfig = {
   electricity: {
     percent: 93.12,
     source: 'Department of Energy (DOE), 2024',
@@ -34,7 +44,7 @@ export const NATIONAL_AVERAGES = {
 } as const;
 
 /**
- * Philippine Labor & Employment Averages
+ * Philippine Labor & Employment Averages - Default Values
  *
  * Reference data for labor force participation, employment, and dependency metrics
  * Used for comparison analytics across sitio profiles and dashboards
@@ -44,7 +54,7 @@ export const NATIONAL_AVERAGES = {
  * - World Bank Age Dependency Ratio Data
  * - Trading Economics Philippines Economic Indicators
  */
-export const LABOR_EMPLOYMENT_AVERAGES = {
+const DEFAULT_LABOR_EMPLOYMENT_AVERAGES: LaborEmploymentAveragesConfig = {
   /**
    * Unemployment Rate
    * Note: This is a target value, not an average
@@ -103,6 +113,63 @@ export const LABOR_EMPLOYMENT_AVERAGES = {
     description: 'Percentage of population aged 15-64'
   }
 } as const;
+
+/**
+ * Get national averages configuration with overrides
+ */
+export function getNationalAverages(): NationalAveragesConfig {
+  return getConfigWithOverrides(CONFIG_STORAGE_KEYS.NATIONAL_AVERAGES, DEFAULT_NATIONAL_AVERAGES);
+}
+
+/**
+ * Get labor employment averages configuration with overrides
+ */
+export function getLaborEmploymentAverages(): LaborEmploymentAveragesConfig {
+  return getConfigWithOverrides(
+    CONFIG_STORAGE_KEYS.NATIONAL_AVERAGES,
+    DEFAULT_LABOR_EMPLOYMENT_AVERAGES
+  );
+}
+
+/**
+ * Save national averages configuration (both infrastructure and labor)
+ */
+export function saveNationalAveragesConfig(
+  config: NationalAveragesConfig & LaborEmploymentAveragesConfig,
+  changeDescription?: string
+): boolean {
+  return saveConfigOverride(
+    CONFIG_STORAGE_KEYS.NATIONAL_AVERAGES,
+    config,
+    'nationalAverages',
+    changeDescription || 'Updated national averages configuration'
+  );
+}
+
+/**
+ * Reset national averages to default values
+ */
+export function resetNationalAveragesConfig(): boolean {
+  return resetConfigToDefault(CONFIG_STORAGE_KEYS.NATIONAL_AVERAGES, 'nationalAverages');
+}
+
+/**
+ * Check if national averages has custom overrides
+ */
+export function hasNationalAveragesOverride(): boolean {
+  return hasConfigOverride(CONFIG_STORAGE_KEYS.NATIONAL_AVERAGES);
+}
+
+/**
+ * Legacy exports for backward compatibility
+ * @deprecated Use getNationalAverages() instead
+ */
+export const NATIONAL_AVERAGES = DEFAULT_NATIONAL_AVERAGES;
+
+/**
+ * @deprecated Use getLaborEmploymentAverages() instead
+ */
+export const LABOR_EMPLOYMENT_AVERAGES = DEFAULT_LABOR_EMPLOYMENT_AVERAGES;
 
 /**
  * Helper function to get labor analytics comparison status

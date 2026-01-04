@@ -5,7 +5,7 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
-  import { NATIONAL_AVERAGES } from '$lib/config/national-averages';
+  import { getNationalAverages } from '$lib/config/national-averages';
   import type { SitioProfile, SitioRecord } from '$lib/types';
   import {
     Building2,
@@ -31,6 +31,9 @@
   }
 
   const { sitio, sitioRecord, selectedYear }: Props = $props();
+
+  // Get national averages with config overrides
+  const NATIONAL_AVERAGES = $derived(getNationalAverages());
 
   // Modal states for trend modals
   let showUtilityTrendModal = $state(false);
