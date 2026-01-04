@@ -8,6 +8,14 @@
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import * as Popover from '$lib/components/ui/popover';
+  import {
+    INCOME_CLUSTERS_ORDERED,
+    INCOME_CLUSTER_CONFIG,
+    getIncomeCluster,
+    getIncomeClusterLabel,
+    getIncomeClusterRangeLabel,
+    type IncomeCluster
+  } from '$lib/config/poverty-thresholds';
   import type { SitioRecord } from '$lib/types';
   import {
     aggregateLivelihood,
@@ -42,8 +50,6 @@
     Syringe,
     Tractor,
     TreeDeciduous,
-    TrendingDown,
-    TrendingUp,
     UserCheck,
     Users,
     Waves,
@@ -81,40 +87,40 @@
   // Time series data for income trend
   const incomeTrendData = $derived(prepareTimeSeriesData(sitios, ['averageDailyIncome']));
 
-  // Time series data for poverty trend (both below and above poverty)
-  const povertyTrendData = $derived.by(() => {
+  // Time series data for income cluster trend (all 7 tiers)
+  const incomeClusterTrendData = $derived.by(() => {
     const yearlyMetrics = getMultiYearMetrics(sitios);
     const categories = yearlyMetrics.map((m) => m.year.toString());
 
-    // Calculate both below and above poverty counts for each year
-    const belowPovertyData: number[] = [];
-    const abovePovertyData: number[] = [];
+    // Initialize data arrays for each income cluster
+    const clusterData: Record<IncomeCluster, number[]> = {
+      poor: [],
+      low_income: [],
+      lower_middle: [],
+      middle_middle: [],
+      upper_middle: [],
+      upper_income: [],
+      rich: []
+    };
 
     yearlyMetrics.forEach((yearMetric) => {
       const yearNum = yearMetric.year;
       const yearLivelihood = aggregateLivelihood(sitios, yearNum);
-      const belowCount = yearLivelihood.povertyCount;
-      const aboveCount = Math.max(0, yearLivelihood.sitiosWithIncome - yearLivelihood.povertyCount);
 
-      belowPovertyData.push(belowCount);
-      abovePovertyData.push(aboveCount);
+      // Populate each cluster's data for this year
+      INCOME_CLUSTERS_ORDERED.forEach((cluster) => {
+        clusterData[cluster].push(yearLivelihood.incomeClusterCounts[cluster]);
+      });
     });
 
-    return {
-      categories,
-      series: [
-        {
-          name: 'Below Poverty Line',
-          data: belowPovertyData,
-          color: 'hsl(0, 84%, 60%)'
-        },
-        {
-          name: 'Above Poverty Line',
-          data: abovePovertyData,
-          color: 'hsl(142, 71%, 45%)'
-        }
-      ]
-    };
+    // Create series for each income cluster
+    const series = INCOME_CLUSTERS_ORDERED.map((cluster) => ({
+      name: getIncomeClusterLabel(cluster),
+      data: clusterData[cluster],
+      color: INCOME_CLUSTER_CONFIG[cluster].color
+    }));
+
+    return { categories, series };
   });
 
   // Time series data for agriculture trend
@@ -296,62 +302,41 @@
     }))
   );
 
-  // Income class distribution (poverty levels)
-  // Based on 2025 DEPDev poverty threshold: ₱668/day for a family of 5
-  const incomeClassData = $derived([
-    {
-      label: 'Below Poverty',
-      fullLabel: 'Below Poverty Line (<₱668/day)',
-      value: livelihood.povertyCount,
-      color: 'hsl(0, 84%, 60%)',
-      icon: TrendingDown,
-      description:
-        'Sitios with average daily income below ₱668/day (2025 DEPDev poverty threshold for a family of 5).'
-    },
-    {
-      label: 'Above Poverty',
-      fullLabel: 'Above Poverty Line (≥₱668/day)',
-      value: Math.max(0, livelihood.sitiosWithIncome - livelihood.povertyCount),
-      color: 'hsl(142, 71%, 45%)',
-      icon: TrendingUp,
-      description:
-        'Sitios with average daily income at or above ₱668/day (2025 DEPDev poverty threshold for a family of 5).'
-    }
-  ]);
+  // Income class distribution (7-tier income clusters)
+  const incomeClassData = $derived(
+    INCOME_CLUSTERS_ORDERED.map((cluster) => ({
+      label: INCOME_CLUSTER_CONFIG[cluster].shortLabel,
+      fullLabel: `${getIncomeClusterLabel(cluster)} (${getIncomeClusterRangeLabel(cluster)})`,
+      value: livelihood.incomeClusterCounts[cluster],
+      color: INCOME_CLUSTER_CONFIG[cluster].color,
+      description: INCOME_CLUSTER_CONFIG[cluster].description
+    }))
+  );
 
-  // Income level indicator (2025 DEPDev threshold: ₱668/day)
+  // Income level indicator based on overall average daily income
   const incomeLevel = $derived(() => {
     const daily = livelihood.averageDailyIncomeOverall;
-    if (daily >= 668)
-      return {
-        label: 'Above Poverty Line',
-        color: 'text-emerald-600 dark:text-emerald-400',
-        bg: 'bg-emerald-500',
-        bgLight: 'bg-emerald-100 dark:bg-emerald-900/40',
-        icon: TrendingUp,
-        trend: 'up'
-      };
+    const cluster = getIncomeCluster(daily);
+    const config = INCOME_CLUSTER_CONFIG[cluster];
+
     return {
-      label: 'Below Poverty Line',
-      color: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-500',
-      bgLight: 'bg-red-100 dark:bg-red-900/40',
-      icon: TrendingDown,
-      trend: 'critical'
+      label: config.label,
+      color: config.textColor,
+      bg: config.bgColor,
+      bgLight: config.bgLight,
+      cluster
     };
   });
 
-  // Poverty rate
+  // Poverty rate (sitios classified as 'poor')
   const povertyRate = $derived(
     livelihood.sitiosWithIncome > 0
-      ? (livelihood.povertyCount / livelihood.sitiosWithIncome) * 100
+      ? (livelihood.incomeClusterCounts.poor / livelihood.sitiosWithIncome) * 100
       : 0
   );
 
-  // Above threshold count
-  const aboveThresholdCount = $derived(
-    Math.max(0, livelihood.sitiosWithIncome - livelihood.povertyCount)
-  );
+  // Total sitios with income data
+  const totalSitiosWithIncome = $derived(livelihood.sitiosWithIncome);
 
   // Top crops
   const topCrops = $derived(() => {
@@ -584,7 +569,6 @@
                 </div>
                 <div class="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
                   <div class="flex items-center gap-1.5 rounded-full px-3 py-1.5 {level.bgLight}">
-                    <level.icon class="size-4 {level.color}" />
                     <span class="text-sm font-semibold {level.color}">
                       {level.label}
                     </span>
@@ -612,67 +596,64 @@
             </div>
           </div>
 
-          <!-- Income Distribution Stats -->
-          <div class="grid grid-cols-2 gap-3">
-            <div
-              class="group relative overflow-hidden rounded-xl border border-red-100 bg-white p-4 transition-all hover:shadow-md dark:border-red-800/30 dark:bg-slate-800/50"
-            >
-              <div
-                class="absolute inset-0 bg-linear-to-br from-red-50/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100 dark:from-red-900/20"
-              ></div>
-              <div class="relative flex items-center gap-3">
-                <div class="rounded-xl bg-red-100 p-2.5 dark:bg-red-800/40">
-                  <TrendingDown class="size-5 text-red-600 dark:text-red-400" />
-                </div>
-                <div>
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="text-[10px] font-semibold tracking-wide text-red-700 uppercase dark:text-red-300"
-                    >
-                      Below Poverty
-                    </span>
-                    <HelpTooltip side="top">
-                      Based on 2025 DEPDev poverty threshold of ₱668/day (₱20,000/month) for a
-                      family of 5
-                    </HelpTooltip>
+          <!-- Income Cluster Distribution Stats -->
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {#each incomeClassData as cluster}
+              <Popover.Root>
+                <Popover.Trigger class="h-full">
+                  <div
+                    class="group relative h-full cursor-pointer overflow-hidden rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-slate-800/50"
+                    style="border-color: {cluster.color}30"
+                  >
+                    <div
+                      class="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
+                      style="background: linear-gradient(to bottom right, {cluster.color}10, transparent)"
+                    ></div>
+                    <div class="relative">
+                      <div class="flex items-center gap-1">
+                        <div
+                          class="size-2 rounded-full"
+                          style="background-color: {cluster.color}"
+                        ></div>
+                        <span
+                          class="text-[9px] font-semibold tracking-wide uppercase"
+                          style="color: {cluster.color}"
+                        >
+                          {cluster.label}
+                        </span>
+                        <Info
+                          class="ml-auto size-3 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100"
+                        />
+                      </div>
+                      <p class="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+                        {cluster.value}
+                      </p>
+                    </div>
                   </div>
-                  <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                    {livelihood.povertyCount}
-                  </p>
-                  <p class="text-[10px] text-muted-foreground">&lt;₱668/day</p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              class="group relative overflow-hidden rounded-xl border border-emerald-100 bg-white p-4 transition-all hover:shadow-md dark:border-emerald-800/30 dark:bg-slate-800/50"
-            >
-              <div
-                class="absolute inset-0 bg-linear-to-br from-emerald-50/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100 dark:from-emerald-900/20"
-              ></div>
-              <div class="relative flex items-center gap-3">
-                <div class="rounded-xl bg-emerald-100 p-2.5 dark:bg-emerald-800/40">
-                  <TrendingUp class="size-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
-                    >
-                      Above Poverty
-                    </span>
-                    <HelpTooltip side="top">
-                      Based on 2025 DEPDev poverty threshold of ₱668/day (₱20,000/month) for a
-                      family of 5
-                    </HelpTooltip>
+                </Popover.Trigger>
+                <Popover.Content class="w-72" side="top">
+                  <div class="flex flex-col gap-3">
+                    <div class="flex items-center gap-2">
+                      <div class="rounded-lg p-1.5" style="background-color: {cluster.color}20">
+                        <Banknote class="size-4" style="color: {cluster.color}" />
+                      </div>
+                      <div>
+                        <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
+                          {cluster.fullLabel}
+                        </h4>
+                        <p class="text-xs text-muted-foreground">
+                          {cluster.value.toLocaleString()}
+                          {cluster.value === 1 ? 'sitio' : 'sitios'}
+                        </p>
+                      </div>
+                    </div>
+                    <p class="text-xs leading-relaxed text-muted-foreground">
+                      {cluster.description}
+                    </p>
                   </div>
-                  <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                    {aboveThresholdCount}
-                  </p>
-                  <p class="text-[10px] text-muted-foreground">≥₱668/day</p>
-                </div>
-              </div>
-            </div>
+                </Popover.Content>
+              </Popover.Root>
+            {/each}
           </div>
 
           <!-- Worker Classification Section -->
@@ -940,19 +921,19 @@
     <!-- Income Distribution Card -->
     <InfoCard
       title="Income Distribution"
-      description="Sitios by income threshold"
+      description="Sitios by income cluster"
       icon={Banknote}
       iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
       iconTextColor="text-indigo-500"
       class="hidden"
     >
       {#snippet headerAction()}
-        {#if hasMultipleYears && povertyTrendData.categories.length > 1}
+        {#if hasMultipleYears && incomeClusterTrendData.categories.length > 1}
           <Button
             variant="ghost"
             size="icon"
             class="size-8 text-muted-foreground hover:text-foreground"
-            title="View historical poverty trend"
+            title="View historical income cluster trend"
             onclick={() => (showPovertyTrendModal = true)}
           >
             <ChartLine class="size-4" />
@@ -977,7 +958,6 @@
           <!-- Legend -->
           <div class="flex flex-col gap-2">
             {#each incomeClassData as income}
-              {@const IncomeIcon = income.icon}
               <Popover.Root>
                 <Popover.Trigger>
                   <div
@@ -1006,7 +986,7 @@
                   <div class="flex flex-col gap-2">
                     <div class="flex items-center gap-2">
                       <div class="rounded-lg p-1.5" style="background-color: {income.color}20">
-                        <IncomeIcon class="size-4" style="color: {income.color}" />
+                        <Banknote class="size-4" style="color: {income.color}" />
                       </div>
                       <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
                         {income.fullLabel}
@@ -1427,38 +1407,55 @@
         Year-over-year income trends across {incomeTrendData.categories.length} years
       </Dialog.Description>
     </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={incomeTrendData.series}
-        categories={incomeTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
-      />
+    <div class="space-y-6 py-4">
+      <div>
+        <LineChart
+          series={incomeTrendData.series}
+          categories={incomeTrendData.categories}
+          height={300}
+          curve="smooth"
+          showLegend={true}
+          yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
+        />
+      </div>
+
+      <!-- Income Cluster Distribution Line Chart -->
+      <div>
+        <h3 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+          Income Cluster Distribution - Historical Trend
+        </h3>
+        <LineChart
+          series={incomeClusterTrendData.series}
+          categories={incomeClusterTrendData.categories}
+          height={300}
+          curve="smooth"
+          showLegend={true}
+          yAxisFormatter={(val) => val.toLocaleString()}
+        />
+      </div>
     </div>
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Poverty Distribution Trend Modal -->
+<!-- Income Cluster Distribution Trend Modal -->
 <Dialog.Root bind:open={showPovertyTrendModal}>
   <Dialog.Content class="max-w-3xl!">
     <Dialog.Header>
       <Dialog.Title class="flex items-center gap-2">
         <div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
-          <TrendingDown class="size-5 text-indigo-600 dark:text-indigo-400" />
+          <Banknote class="size-5 text-indigo-600 dark:text-indigo-400" />
         </div>
-        Income Distribution - Historical Trend
+        Income Cluster Distribution - Historical Trend
       </Dialog.Title>
       <Dialog.Description>
-        Year-over-year distribution of sitios by poverty threshold across {povertyTrendData
+        Year-over-year distribution of sitios by income cluster across {incomeClusterTrendData
           .categories.length} years
       </Dialog.Description>
     </Dialog.Header>
     <div class="py-4">
       <LineChart
-        series={povertyTrendData.series}
-        categories={povertyTrendData.categories}
+        series={incomeClusterTrendData.series}
+        categories={incomeClusterTrendData.categories}
         height={300}
         curve="smooth"
         showLegend={true}

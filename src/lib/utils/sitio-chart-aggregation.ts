@@ -5,6 +5,11 @@
  * Updated to match new SitioProfile interface
  */
 
+import {
+  type IncomeClusterCounts,
+  createEmptyIncomeClusterCounts,
+  getIncomeCluster
+} from '$lib/config/poverty-thresholds';
 import type { SitioProfile, SitioRecord } from '$lib/types';
 
 // ==========================================
@@ -117,7 +122,7 @@ export interface YearlyMetrics {
   roadAsphalt: number;
   roadGravel: number;
   roadNatural: number;
-  povertyCount: number;
+  incomeClusterCounts: IncomeClusterCounts;
   sitioCount: number;
   // Age groups
   youth: number;
@@ -155,7 +160,7 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
   let roadAsphalt = 0;
   let roadGravel = 0;
   let roadNatural = 0;
-  let povertyCount = 0;
+  const incomeClusterCounts = createEmptyIncomeClusterCounts();
   let sitioCount = 0;
   // Cultural & demographic groups
   let totalSchoolAgeChildren = 0;
@@ -214,8 +219,9 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
       totalDailyIncome += profile.averageDailyIncome;
       sitiosWithIncome++;
 
-      // Poverty classification (2025 DEPDev threshold: ₱668/day)
-      if (profile.averageDailyIncome < 668) povertyCount++;
+      // Income cluster classification (7-tier system)
+      const cluster = getIncomeCluster(profile.averageDailyIncome);
+      incomeClusterCounts[cluster]++;
     }
   }
 
@@ -253,7 +259,7 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
     roadAsphalt,
     roadGravel,
     roadNatural,
-    povertyCount,
+    incomeClusterCounts,
     sitioCount,
     // Age groups
     youth,
@@ -297,7 +303,7 @@ export interface YearComparison {
     toiletAccess: YoYTrend | null;
     internetAccess: YoYTrend | null;
     roadLength: YoYTrend | null;
-    povertyCount: YoYTrend | null;
+    poorCount: YoYTrend | null;
   };
 }
 
@@ -344,11 +350,14 @@ export function getYearComparison(sitios: SitioRecord[], currentYear: number): Y
       roadLength: previous
         ? calculateYoYChange(current.totalRoadLength, previous.totalRoadLength)
         : null,
-      povertyCount: previous
+      poorCount: previous
         ? {
-            ...calculateYoYChange(current.povertyCount, previous.povertyCount)!,
+            ...calculateYoYChange(
+              current.incomeClusterCounts.poor,
+              previous.incomeClusterCounts.poor
+            )!,
             // For poverty, decrease is positive
-            isPositive: current.povertyCount <= previous.povertyCount
+            isPositive: current.incomeClusterCounts.poor <= previous.incomeClusterCounts.poor
           }
         : null
     }
@@ -845,8 +854,8 @@ export interface LivelihoodAggregation {
   cropCounts: Map<string, number>;
   livestockCounts: Map<string, number>;
 
-  // Poverty estimate (based on daily income thresholds)
-  povertyCount: number; // Below 668 PHP/day (2025 DEPDev threshold)
+  // Income cluster distribution (7-tier system)
+  incomeClusterCounts: IncomeClusterCounts;
 
   // Pets data
   totalCats: number;
@@ -876,7 +885,7 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
   let workerEmployer = 0;
   let workerOFW = 0;
 
-  let povertyCount = 0;
+  const incomeClusterCounts = createEmptyIncomeClusterCounts();
 
   const cropCounts = new Map<string, number>();
   const livestockCounts = new Map<string, number>();
@@ -906,8 +915,9 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
       averageDailyIncomeTotal += profile.averageDailyIncome;
       sitiosWithIncome++;
 
-      // Poverty classification (2025 DEPDev threshold)
-      if (profile.averageDailyIncome < 668) povertyCount++;
+      // Income cluster classification (7-tier system)
+      const cluster = getIncomeCluster(profile.averageDailyIncome);
+      incomeClusterCounts[cluster]++;
     }
 
     // Worker class
@@ -965,7 +975,7 @@ export function aggregateLivelihood(sitios: SitioRecord[], year?: number): Livel
     cropCounts,
     livestockCounts,
 
-    povertyCount,
+    incomeClusterCounts,
 
     // Pets
     totalCats,

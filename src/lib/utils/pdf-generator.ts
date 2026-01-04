@@ -750,10 +750,10 @@ function buildLivelihoodSection(
       : '';
 
   const povertyTrend =
-    config.includeTrends && yearComparison?.trends.povertyCount
+    config.includeTrends && yearComparison?.trends.poorCount
       ? formatTrend(
-          yearComparison.trends.povertyCount.value,
-          yearComparison.trends.povertyCount.isPositive
+          yearComparison.trends.poorCount.value,
+          yearComparison.trends.poorCount.isPositive
         )
       : '';
 
@@ -765,8 +765,8 @@ function buildLivelihoodSection(
   );
   content.push(
     createKeyValue(
-      'Below Poverty Line (₱668/day)',
-      `${livelihood.povertyCount} sitios${povertyTrend}`
+      'Poor (Below Poverty Line)',
+      `${livelihood.incomeClusterCounts.poor} sitios${povertyTrend}`
     )
   );
 

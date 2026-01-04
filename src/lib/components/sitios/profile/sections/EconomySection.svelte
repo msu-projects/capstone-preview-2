@@ -7,6 +7,12 @@
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import * as Popover from '$lib/components/ui/popover';
+  import {
+    INCOME_CLUSTER_CONFIG,
+    getIncomeCluster,
+    getIncomeClusterLabel,
+    getIncomeClusterRangeLabel
+  } from '$lib/config/poverty-thresholds';
   import type { SitioProfile, SitioRecord } from '$lib/types';
   import { formatCurrency } from '$lib/utils/formatters';
   import {
@@ -38,8 +44,6 @@
     Syringe,
     Tractor,
     TreeDeciduous,
-    TrendingDown,
-    TrendingUp,
     UserCheck,
     Users,
     Utensils,
@@ -75,39 +79,29 @@
       : { categories: [], series: [] }
   );
 
-  // Time series data for poverty trend (both below and above poverty)
-  const povertyTrendData = $derived.by(() => {
+  // Time series data for income cluster trend (single sitio - shows income class changes over time)
+  const incomeClusterTrendData = $derived.by(() => {
     if (!hasMultipleYears || !sitioRecord) {
       return { categories: [], series: [] };
     }
 
-    const yearlyMetrics = getMultiYearMetrics(sitioArray);
-    const categories = yearlyMetrics.map((m) => m.year.toString());
+    const categories: string[] = [];
+    const incomeData: number[] = [];
 
-    const belowPovertyData: number[] = [];
-    const abovePovertyData: number[] = [];
-
-    yearlyMetrics.forEach((yearMetric) => {
-      const yearNum = yearMetric.year;
-      const yearLivelihood = aggregateLivelihood(sitioArray, yearNum);
-      const belowCount = yearLivelihood.povertyCount;
-      const aboveCount = Math.max(0, yearLivelihood.sitiosWithIncome - yearLivelihood.povertyCount);
-
-      belowPovertyData.push(belowCount);
-      abovePovertyData.push(aboveCount);
+    sitioRecord.availableYears?.forEach((year) => {
+      const yearData = sitioRecord.yearlyData?.[year];
+      if (yearData) {
+        categories.push(year.toString());
+        incomeData.push(yearData.averageDailyIncome || 0);
+      }
     });
 
     return {
       categories,
       series: [
         {
-          name: 'Below Poverty Line',
-          data: belowPovertyData,
-          color: 'hsl(0, 84%, 60%)'
-        },
-        {
-          name: 'Above Poverty Line',
-          data: abovePovertyData,
+          name: 'Average Daily Income',
+          data: incomeData,
           color: 'hsl(142, 71%, 45%)'
         }
       ]
@@ -290,25 +284,19 @@
     }))
   );
 
-  // Income level indicator (2025 DEPDev threshold: ₱668/day)
+  // Income level indicator based on 7-tier income clusters
   const incomeLevel = $derived(() => {
     const daily = sitio.averageDailyIncome;
-    if (daily >= 668)
-      return {
-        label: 'Above Poverty Line',
-        color: 'text-emerald-600 dark:text-emerald-400',
-        bg: 'bg-emerald-500',
-        bgLight: 'bg-emerald-100 dark:bg-emerald-900/40',
-        icon: TrendingUp,
-        trend: 'up'
-      };
+    const cluster = getIncomeCluster(daily);
+    const config = INCOME_CLUSTER_CONFIG[cluster];
+
     return {
-      label: 'Below Poverty Line',
-      color: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-500',
-      bgLight: 'bg-red-100 dark:bg-red-900/40',
-      icon: TrendingDown,
-      trend: 'critical'
+      label: config.label,
+      color: config.textColor,
+      bg: config.bgColor,
+      bgLight: config.bgLight,
+      cluster,
+      rangeLabel: getIncomeClusterRangeLabel(cluster)
     };
   });
 
@@ -317,10 +305,8 @@
     sitio.laborForceCount > 0 ? Math.round((totalWorkers / sitio.laborForceCount) * 100) : 0
   );
 
-  // Poverty status (2025 DEPDev threshold)
-  const povertyStatus = $derived(
-    sitio.averageDailyIncome < 668 ? 'Below Poverty' : 'Above Poverty'
-  );
+  // Income cluster for this sitio
+  const incomeCluster = $derived(getIncomeCluster(sitio.averageDailyIncome));
 
   // Food security configuration
   const foodSecurityConfig = $derived(() => {
@@ -496,7 +482,6 @@
                 </div>
                 <div class="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
                   <div class="flex items-center gap-1.5 rounded-full px-3 py-1.5 {level.bgLight}">
-                    <level.icon class="size-4 {level.color}" />
                     <span class="text-sm font-semibold {level.color}">
                       {level.label}
                     </span>
@@ -524,52 +509,41 @@
             </div>
           </div>
 
-          <!-- Poverty Classification Card -->
-          <div
-            class="rounded-2xl border p-4 {povertyStatus === 'Below Poverty'
-              ? 'border-red-100 bg-linear-to-br from-red-50 to-red-100/50 dark:border-red-800/40 dark:from-red-900/20 dark:to-red-950/10'
-              : 'border-emerald-100 bg-linear-to-br from-emerald-50 to-emerald-100/50 dark:border-emerald-800/40 dark:from-emerald-900/20 dark:to-emerald-950/10'}"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                {#if povertyStatus === 'Below Poverty'}
-                  <div class="rounded-lg bg-red-100 p-1.5 dark:bg-red-800/40">
-                    <TrendingDown class="size-4 text-red-600 dark:text-red-400" />
+          <!-- Income Cluster Classification Card -->
+          {#if incomeCluster}
+            {@const clusterConfig = INCOME_CLUSTER_CONFIG[incomeCluster]}
+            <div
+              class="rounded-2xl border p-4"
+              style="border-color: {clusterConfig.color}30; background: linear-gradient(to bottom right, {clusterConfig.color}10, {clusterConfig.color}05)"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="rounded-lg p-1.5" style="background-color: {clusterConfig.color}20">
+                    <Banknote class="size-4" style="color: {clusterConfig.color}" />
                   </div>
-                {:else}
-                  <div class="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-800/40">
-                    <TrendingUp class="size-4 text-emerald-600 dark:text-emerald-400" />
+                  <div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-xs font-semibold" style="color: {clusterConfig.color}">
+                        {getIncomeClusterLabel(incomeCluster)}
+                      </span>
+                      <HelpTooltip side="top">
+                        {clusterConfig.description}
+                      </HelpTooltip>
+                    </div>
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                      {getIncomeClusterRangeLabel(incomeCluster)}
+                    </p>
                   </div>
-                {/if}
-                <div>
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="text-xs font-semibold {povertyStatus === 'Below Poverty'
-                        ? 'text-red-700 dark:text-red-300'
-                        : 'text-emerald-700 dark:text-emerald-300'}"
-                    >
-                      {povertyStatus} Line
-                    </span>
-                    <HelpTooltip side="top">
-                      Based on 2025 DEPDev poverty threshold of ₱668/day (₱20,000/month) for a
-                      family of 5
-                    </HelpTooltip>
-                  </div>
-                  <p class="mt-0.5 text-xs text-muted-foreground">
-                    {povertyStatus === 'Below Poverty' ? '<' : '≥'}₱668/day
-                  </p>
+                </div>
+                <div
+                  class="rounded-full px-3 py-1.5 text-xs font-semibold"
+                  style="background-color: {clusterConfig.color}20; color: {clusterConfig.color}"
+                >
+                  {formatCurrency(sitio.averageDailyIncome)}/day
                 </div>
               </div>
-              <div
-                class="rounded-full px-3 py-1.5 text-xs font-semibold {povertyStatus ===
-                'Below Poverty'
-                  ? 'bg-red-100 text-red-700 dark:bg-red-800/40 dark:text-red-300'
-                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-800/40 dark:text-emerald-300'}"
-              >
-                {formatCurrency(sitio.averageDailyIncome)}/day
-              </div>
             </div>
-          </div>
+          {/if}
 
           <!-- Labor Force Stats -->
           <div class="grid grid-cols-2 gap-3">
@@ -1282,29 +1256,29 @@
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Poverty Classification Trend Modal -->
+<!-- Income Cluster Trend Modal -->
 <Dialog.Root bind:open={showPovertyTrendModal}>
   <Dialog.Content class="max-w-3xl!">
     <Dialog.Header>
       <Dialog.Title class="flex items-center gap-2">
         <div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
-          <TrendingDown class="size-5 text-indigo-600 dark:text-indigo-400" />
+          <Banknote class="size-5 text-indigo-600 dark:text-indigo-400" />
         </div>
-        Poverty Classification - Historical Trend
+        Income Trend - Historical
       </Dialog.Title>
       <Dialog.Description>
-        Year-over-year poverty status for {sitio.sitioName} across {povertyTrendData.categories
-          .length} years
+        Year-over-year average daily income for {sitio.sitioName} across {incomeClusterTrendData
+          .categories.length} years
       </Dialog.Description>
     </Dialog.Header>
     <div class="py-4">
       <LineChart
-        series={povertyTrendData.series}
-        categories={povertyTrendData.categories}
+        series={incomeClusterTrendData.series}
+        categories={incomeClusterTrendData.categories}
         height={300}
         curve="smooth"
         showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
+        yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
       />
     </div>
   </Dialog.Content>
