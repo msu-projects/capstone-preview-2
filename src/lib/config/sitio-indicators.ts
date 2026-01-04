@@ -181,6 +181,26 @@ const foodSecurityToNumber = (security: SitioProfile['foodSecurity']): number =>
   return map[security] ?? 0;
 };
 
+// Main access to numeric (for sorting, 4 = best, 1 = worst)
+const mainAccessToNumber = (profile: SitioProfile): number => {
+  const access = profile.mainAccess;
+  if (access.pavedRoad) return 4;
+  if (access.unpavedRoad) return 3;
+  if (access.footpath) return 2;
+  if (access.boat) return 1;
+  return 0;
+};
+
+// Main access to label
+const mainAccessToLabel = (profile: SitioProfile): string => {
+  const access = profile.mainAccess;
+  if (access.pavedRoad) return 'Paved Road';
+  if (access.unpavedRoad) return 'Unpaved Road';
+  if (access.footpath) return 'Footpath';
+  if (access.boat) return 'Boat';
+  return 'Unknown';
+};
+
 // Get priority rating by name
 // const getPriorityRating = (profile: SitioProfile, name: string): number => {
 //   const priority = profile.priorities.find((p) => p.name === name);
@@ -443,6 +463,17 @@ export const SITIO_INDICATORS: SitioIndicator[] = [
     format: formatPercent,
     description: 'Percentage of roads that are paved (asphalt/concrete)',
     isPercentage: true,
+    higherIsBetter: true
+  },
+  {
+    key: 'mainAccess',
+    label: 'Main Access Type',
+    shortLabel: 'Main Access',
+    category: 'infrastructure',
+    accessor: mainAccessToNumber,
+    defaultOrder: 'desc',
+    format: (_, p) => (p ? mainAccessToLabel(p) : 'Unknown'),
+    description: 'Primary mode of access to the sitio',
     higherIsBetter: true
   },
 
