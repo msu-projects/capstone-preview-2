@@ -25,8 +25,10 @@
     Bird,
     Briefcase,
     Building2,
+    Cat,
     ChartLine,
     CheckCircle2,
+    Dog,
     Droplets,
     Globe,
     HandCoins,
@@ -37,7 +39,9 @@
     Mountain,
     ShieldAlert,
     Sprout,
+    Syringe,
     Tractor,
+    TreeDeciduous,
     TrendingDown,
     TrendingUp,
     UserCheck,
@@ -58,6 +62,7 @@
   let showIncomeTrendModal = $state(false);
   let showPovertyTrendModal = $state(false);
   let showAgricultureTrendModal = $state(false);
+  let showPetsTrendModal = $state(false);
 
   // Get available years for comparison
   const availableYears = $derived(getAllAvailableYears(sitios));
@@ -148,6 +153,69 @@
           name: 'Farm Area (ha)',
           data: areaData,
           color: 'hsl(120, 60%, 50%)'
+        }
+      ]
+    };
+  });
+
+  // Time series data for pets trend
+  const petsTrendData = $derived.by(() => {
+    if (!hasMultipleYears) {
+      return { categories: [], series: [] };
+    }
+
+    const categories: string[] = [];
+    const dogsData: number[] = [];
+    const catsData: number[] = [];
+    const vaccinatedDogsData: number[] = [];
+    const vaccinatedCatsData: number[] = [];
+
+    availableYears.forEach((year) => {
+      categories.push(year.toString());
+
+      let totalDogs = 0;
+      let totalCats = 0;
+      let totalVaccinatedDogs = 0;
+      let totalVaccinatedCats = 0;
+
+      sitios.forEach((sitio) => {
+        const yearData = sitio.yearlyData?.[year];
+        if (yearData) {
+          totalDogs += yearData.pets?.dogsCount ?? 0;
+          totalCats += yearData.pets?.catsCount ?? 0;
+          totalVaccinatedDogs += yearData.pets?.vaccinatedDogs ?? 0;
+          totalVaccinatedCats += yearData.pets?.vaccinatedCats ?? 0;
+        }
+      });
+
+      dogsData.push(totalDogs);
+      catsData.push(totalCats);
+      vaccinatedDogsData.push(totalVaccinatedDogs);
+      vaccinatedCatsData.push(totalVaccinatedCats);
+    });
+
+    return {
+      categories,
+      series: [
+        {
+          name: 'Dogs',
+          data: dogsData,
+          color: 'hsl(38, 92%, 50%)'
+        },
+        {
+          name: 'Cats',
+          data: catsData,
+          color: 'hsl(24, 95%, 53%)'
+        },
+        {
+          name: 'Vaccinated Dogs',
+          data: vaccinatedDogsData,
+          color: 'hsl(142, 71%, 45%)'
+        },
+        {
+          name: 'Vaccinated Cats',
+          data: vaccinatedCatsData,
+          color: 'hsl(173, 80%, 40%)'
         }
       ]
     };
@@ -328,6 +396,73 @@
       color: 'bg-green-500'
     }
   ]);
+
+  // Backyard gardens aggregation
+  const backyardGardensData = $derived.by(() => {
+    let totalHouseholdsWithGardens = 0;
+    let totalHouseholds = 0;
+    const gardenCropsMap = new Map<string, number>();
+
+    sitios.forEach((sitio) => {
+      const yearData = sitio.yearlyData?.[currentYear];
+      if (yearData) {
+        totalHouseholdsWithGardens += yearData.backyardGardens?.householdsWithGardens ?? 0;
+        totalHouseholds += yearData.totalHouseholds ?? 0;
+
+        // Aggregate common crops
+        const crops = yearData.backyardGardens?.commonCrops ?? [];
+        crops.forEach((crop) => {
+          gardenCropsMap.set(crop, (gardenCropsMap.get(crop) || 0) + 1);
+        });
+      }
+    });
+
+    const topGardenCrops = Array.from(gardenCropsMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([crop, count]) => ({ label: crop, count }));
+
+    return {
+      totalHouseholdsWithGardens,
+      totalHouseholds,
+      gardenRate: totalHouseholds > 0 ? (totalHouseholdsWithGardens / totalHouseholds) * 100 : 0,
+      topGardenCrops,
+      hasGardens: totalHouseholdsWithGardens > 0
+    };
+  });
+
+  // Pets aggregation
+  const petsData = $derived.by(() => {
+    let totalDogs = 0;
+    let totalCats = 0;
+    let totalVaccinatedDogs = 0;
+    let totalVaccinatedCats = 0;
+
+    sitios.forEach((sitio) => {
+      const yearData = sitio.yearlyData?.[currentYear];
+      if (yearData && yearData.pets) {
+        totalDogs += yearData.pets.dogsCount ?? 0;
+        totalCats += yearData.pets.catsCount ?? 0;
+        totalVaccinatedDogs += yearData.pets.vaccinatedDogs ?? 0;
+        totalVaccinatedCats += yearData.pets.vaccinatedCats ?? 0;
+      }
+    });
+
+    const totalPets = totalDogs + totalCats;
+    const dogVaccinationRate = totalDogs > 0 ? (totalVaccinatedDogs / totalDogs) * 100 : 0;
+    const catVaccinationRate = totalCats > 0 ? (totalVaccinatedCats / totalCats) * 100 : 0;
+
+    return {
+      totalDogs,
+      totalCats,
+      totalVaccinatedDogs,
+      totalVaccinatedCats,
+      totalPets,
+      dogVaccinationRate,
+      catVaccinationRate,
+      hasPets: totalPets > 0
+    };
+  });
 
   // Hazard exposure data
   const hazardData = $derived([
@@ -735,6 +870,65 @@
               {/if}
             </div>
           </div>
+
+          <!-- Backyard Gardens -->
+          <div
+            class="rounded-xl border border-teal-100 bg-linear-to-br from-teal-50/80 to-cyan-50/50 p-4 dark:border-teal-800/30 dark:from-teal-900/15 dark:to-cyan-900/10"
+          >
+            <div class="mb-3 flex items-center gap-2">
+              <div class="rounded-lg bg-teal-100 p-1.5 dark:bg-teal-800/40">
+                <TreeDeciduous class="size-4 text-teal-600 dark:text-teal-400" />
+              </div>
+              <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Backyard Gardens</h4>
+            </div>
+            {#if backyardGardensData.hasGardens}
+              <div class="space-y-3">
+                <!-- Progress Bar -->
+                <div>
+                  <div class="mb-2 flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Households with Gardens
+                    </span>
+                    <span class="text-xs font-semibold text-teal-600 dark:text-teal-400">
+                      {backyardGardensData.gardenRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div class="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                    <div
+                      class="h-full rounded-full bg-linear-to-r from-teal-500 to-cyan-500 transition-all"
+                      style="width: {Math.min(backyardGardensData.gardenRate, 100)}%"
+                    ></div>
+                  </div>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {backyardGardensData.totalHouseholdsWithGardens.toLocaleString()} out of {backyardGardensData.totalHouseholds.toLocaleString()}
+                    households
+                  </p>
+                </div>
+
+                <!-- Common Garden Crops -->
+                {#if backyardGardensData.topGardenCrops.length > 0}
+                  <div>
+                    <span class="mb-2 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Common Garden Crops
+                    </span>
+                    <div class="flex flex-wrap gap-1.5">
+                      {#each backyardGardensData.topGardenCrops as crop}
+                        <Badge
+                          variant="secondary"
+                          class="border-teal-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-teal-700 shadow-sm dark:border-teal-600/30 dark:bg-teal-900/30 dark:text-teal-300"
+                        >
+                          {crop.label}
+                          <span class="ml-1 text-[10px] opacity-70">({crop.count})</span>
+                        </Badge>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            {:else}
+              <span class="text-sm text-muted-foreground italic">No backyard gardens reported</span>
+            {/if}
+          </div>
         </div>
       {/snippet}
     </InfoCard>
@@ -749,6 +943,7 @@
       icon={Banknote}
       iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
       iconTextColor="text-indigo-500"
+      class="hidden"
     >
       {#snippet headerAction()}
         {#if hasMultipleYears && povertyTrendData.categories.length > 1}
@@ -853,6 +1048,7 @@
       icon={Leaf}
       iconBgColor="bg-green-50 dark:bg-green-900/20"
       iconTextColor="text-green-500"
+      class="hidden"
     >
       {#snippet children()}
         <div class="flex flex-col gap-4">
@@ -924,6 +1120,185 @@
             </div>
           </div>
         </div>
+      {/snippet}
+    </InfoCard>
+
+    <!-- Household Pets Card -->
+    <InfoCard
+      title="Household Pets"
+      description="Pet population and vaccination coverage"
+      icon={Dog}
+      iconBgColor="bg-violet-50 dark:bg-violet-900/20"
+      iconTextColor="text-violet-500"
+    >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && petsTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical pets trend"
+            onclick={() => (showPetsTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
+      {#snippet children()}
+        {#if petsData.hasPets}
+          <div class="flex flex-col gap-4">
+            <!-- Total Pets Summary -->
+            <div
+              class="relative overflow-hidden rounded-2xl border border-violet-100 bg-linear-to-br from-violet-50 via-violet-50/80 to-purple-50/50 p-5 dark:border-violet-800/30 dark:from-violet-900/20 dark:via-violet-900/15 dark:to-purple-900/10"
+            >
+              <div
+                class="absolute -top-6 -right-6 size-32 rounded-full bg-violet-200/30 blur-2xl dark:bg-violet-500/10"
+              ></div>
+              <div class="relative flex items-center justify-between">
+                <div>
+                  <span
+                    class="text-[10px] font-semibold tracking-wide text-violet-700 uppercase dark:text-violet-300"
+                  >
+                    Total Pets
+                  </span>
+                  <p class="mt-1 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {petsData.totalPets.toLocaleString()}
+                  </p>
+                  <p class="mt-1 text-xs text-muted-foreground">across all households</p>
+                </div>
+                <div class="rounded-full bg-violet-100 p-3 dark:bg-violet-800/40">
+                  <Dog class="size-8 text-violet-600 dark:text-violet-400" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Dogs Section -->
+            {#if petsData.totalDogs > 0}
+              <div
+                class="rounded-xl border border-amber-100 bg-linear-to-br from-amber-50/80 to-yellow-50/50 p-4 dark:border-amber-800/30 dark:from-amber-900/15 dark:to-yellow-900/10"
+              >
+                <div class="mb-3 flex items-center gap-2">
+                  <div class="rounded-lg bg-amber-100 p-1.5 dark:bg-amber-800/40">
+                    <Dog class="size-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Dogs</h4>
+                    <p class="text-xs text-muted-foreground">
+                      {petsData.totalDogs.toLocaleString()} total
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <div class="mb-2 flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <Syringe class="size-3 text-emerald-600 dark:text-emerald-400" />
+                      <span class="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Vaccination Coverage
+                      </span>
+                    </div>
+                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {petsData.dogVaccinationRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div class="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                    <div
+                      class="h-full rounded-full bg-linear-to-r from-emerald-500 to-teal-500 transition-all"
+                      style="width: {Math.min(petsData.dogVaccinationRate, 100)}%"
+                    ></div>
+                  </div>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {petsData.totalVaccinatedDogs.toLocaleString()} vaccinated
+                  </p>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Cats Section -->
+            {#if petsData.totalCats > 0}
+              <div
+                class="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50/80 to-red-50/50 p-4 dark:border-orange-800/30 dark:from-orange-900/15 dark:to-red-900/10"
+              >
+                <div class="mb-3 flex items-center gap-2">
+                  <div class="rounded-lg bg-orange-100 p-1.5 dark:bg-orange-800/40">
+                    <Cat class="size-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Cats</h4>
+                    <p class="text-xs text-muted-foreground">
+                      {petsData.totalCats.toLocaleString()} total
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <div class="mb-2 flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <Syringe class="size-3 text-emerald-600 dark:text-emerald-400" />
+                      <span class="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Vaccination Coverage
+                      </span>
+                    </div>
+                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {petsData.catVaccinationRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div class="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                    <div
+                      class="h-full rounded-full bg-linear-to-r from-emerald-500 to-teal-500 transition-all"
+                      style="width: {Math.min(petsData.catVaccinationRate, 100)}%"
+                    ></div>
+                  </div>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {petsData.totalVaccinatedCats.toLocaleString()} vaccinated
+                  </p>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Vaccination Status Summary -->
+            <div
+              class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/80"
+            >
+              <div class="flex items-center gap-2">
+                <div class="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-800/40">
+                  <Syringe class="size-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
+                  Vaccination Summary
+                </h4>
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div class="text-center">
+                  <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    {(petsData.totalVaccinatedDogs + petsData.totalVaccinatedCats).toLocaleString()}
+                  </p>
+                  <p class="text-[10px] text-muted-foreground">Total Vaccinated</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-lg font-bold text-slate-900 dark:text-white">
+                    {(
+                      ((petsData.totalVaccinatedDogs + petsData.totalVaccinatedCats) /
+                        petsData.totalPets) *
+                      100
+                    ).toFixed(1)}%
+                  </p>
+                  <p class="text-[10px] text-muted-foreground">Overall Rate</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        {:else}
+          <div
+            class="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 py-8 text-center dark:border-slate-700/50 dark:bg-slate-800/30"
+          >
+            <div class="rounded-full bg-slate-100 p-3 dark:bg-slate-700/50">
+              <Dog class="size-6 text-slate-400 dark:text-slate-500" />
+            </div>
+            <p class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-400">
+              No Pets Reported
+            </p>
+            <p class="mt-1 text-xs text-muted-foreground">No household pet data available</p>
+          </div>
+        {/if}
       {/snippet}
     </InfoCard>
 
@@ -1110,6 +1485,33 @@
       <LineChart
         series={agricultureTrendData.series}
         categories={agricultureTrendData.categories}
+        height={300}
+        curve="smooth"
+        showLegend={true}
+        yAxisFormatter={(val) => val.toLocaleString()}
+      />
+    </div>
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Pets Trend Modal -->
+<Dialog.Root bind:open={showPetsTrendModal}>
+  <Dialog.Content class="max-w-3xl!">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2">
+        <div class="rounded-lg bg-violet-50 p-2 dark:bg-violet-900/20">
+          <Dog class="size-5 text-violet-600 dark:text-violet-400" />
+        </div>
+        Household Pets - Historical Trend
+      </Dialog.Title>
+      <Dialog.Description>
+        Year-over-year pet population and vaccination rates across {petsTrendData.categories.length} years
+      </Dialog.Description>
+    </Dialog.Header>
+    <div class="py-4">
+      <LineChart
+        series={petsTrendData.series}
+        categories={petsTrendData.categories}
         height={300}
         curve="smooth"
         showLegend={true}
