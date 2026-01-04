@@ -4,13 +4,14 @@
   import { Button } from '$lib/components/ui/button';
   import { ThemeToggle } from '$lib/components/ui/theme-toggle';
   import { authStore } from '$lib/stores/auth.svelte';
-  import { Home, LayoutDashboard, LogIn, Menu, Users, X } from '@lucide/svelte';
+  import { GitCompareArrows, Home, LayoutDashboard, LogIn, Menu, Users, X } from '@lucide/svelte';
 
   let mobileMenuOpen = $state(false);
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/sitios', label: 'Sitios', icon: Users }
+    { href: '/sitios', label: 'Sitios', icon: Users },
+    { href: '/compare', label: 'Compare', icon: GitCompareArrows }
   ];
 
   function isActive(href: string): boolean {

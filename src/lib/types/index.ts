@@ -92,3 +92,25 @@ export type { SitioDashboardData, SitioFilterContext } from './dashboard';
 
 // Project Types
 export type { Project, ProjectFormData, ProjectWithSitios } from './project';
+
+// Comparison Types
+export { DEFAULT_COMPARISON_LIMITS, METRIC_GROUP_LABELS } from './comparison';
+export type {
+  AggregateComparisonResult,
+  AggregateLevel,
+  AggregatedEntityData,
+  ComparisonBarChartData,
+  ComparisonConfig,
+  ComparisonDiff,
+  ComparisonExportConfig,
+  ComparisonLimits,
+  ComparisonLineChartData,
+  ComparisonMetricGroup,
+  ComparisonMetricValue,
+  ComparisonRadarChartData,
+  ComparisonResult,
+  ComparisonType,
+  SerializedComparisonConfig,
+  SpatialComparisonResult,
+  TemporalComparisonResult
+} from './comparison';

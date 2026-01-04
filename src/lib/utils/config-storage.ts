@@ -12,21 +12,24 @@ import { logAuditAction } from './audit';
 // ===== STORAGE KEYS =====
 
 export const CONFIG_STORAGE_KEYS = {
-  LOCATIONS: 'sccdp_config_locations'
+  LOCATIONS: 'sccdp_config_locations',
+  COMPARISON_LIMITS: 'sccdp_config_comparison_limits'
 } as const;
 
 export type ConfigStorageKey = (typeof CONFIG_STORAGE_KEYS)[keyof typeof CONFIG_STORAGE_KEYS];
 
 // ===== CONFIG SECTION TYPES =====
 
-export type ConfigSection = 'locations';
+export type ConfigSection = 'locations' | 'comparisonLimits';
 
 export const CONFIG_SECTION_LABELS: Record<ConfigSection, string> = {
-  locations: 'Municipalities & Barangays'
+  locations: 'Municipalities & Barangays',
+  comparisonLimits: 'Comparison Limits'
 };
 
 export const CONFIG_SECTION_DESCRIPTIONS: Record<ConfigSection, string> = {
-  locations: 'Manage the list of municipalities and their barangays in South Cotabato.'
+  locations: 'Manage the list of municipalities and their barangays in South Cotabato.',
+  comparisonLimits: 'Configure maximum sitios and years allowed for data comparisons.'
 };
 
 // ===== GENERIC CONFIG STORAGE FUNCTIONS =====
@@ -125,4 +128,37 @@ export interface LocationsConfig {
     name: string;
     barangays: string[];
   }>;
+}
+
+// ===== COMPARISON LIMITS CONFIG =====
+
+import { DEFAULT_COMPARISON_LIMITS, type ComparisonLimits } from '$lib/types/comparison';
+
+/**
+ * Load comparison limits configuration
+ */
+export function loadComparisonLimits(): ComparisonLimits {
+  return getConfigWithOverrides<ComparisonLimits>(
+    CONFIG_STORAGE_KEYS.COMPARISON_LIMITS,
+    DEFAULT_COMPARISON_LIMITS
+  );
+}
+
+/**
+ * Save comparison limits configuration
+ */
+export function saveComparisonLimits(limits: ComparisonLimits): boolean {
+  return saveConfigOverride(
+    CONFIG_STORAGE_KEYS.COMPARISON_LIMITS,
+    limits,
+    'comparisonLimits',
+    `Updated comparison limits: max ${limits.maxSitios} sitios, max ${limits.maxYears} years`
+  );
+}
+
+/**
+ * Reset comparison limits to defaults
+ */
+export function resetComparisonLimits(): boolean {
+  return resetConfigToDefault(CONFIG_STORAGE_KEYS.COMPARISON_LIMITS, 'comparisonLimits');
 }
