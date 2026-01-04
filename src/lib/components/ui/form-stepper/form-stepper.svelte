@@ -240,7 +240,7 @@
     <nav class="relative p-3">
       <!-- Connecting line - animated gradient -->
       <div
-        class="absolute top-6 left-[41px] z-0 h-[calc(100%-3rem)] w-0.5 overflow-hidden rounded-full bg-muted"
+        class="absolute top-6 left-10.25 z-0 h-[calc(100%-3rem)] w-0.5 overflow-hidden rounded-full bg-muted"
         aria-hidden="true"
       >
         <div

@@ -1,8 +1,10 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
   import CsvImportDialog from '$lib/components/admin/sitios/CsvImportDialog.svelte';
-  import SitiosTable from '$lib/components/admin/sitios/SitiosTable.svelte';
+  import SitioListDisplay from '$lib/components/sitios/SitioListDisplay.svelte';
+  import SitioListFilters from '$lib/components/sitios/SitioListFilters.svelte';
   import * as AlertDialog from '$lib/components/ui/alert-dialog';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
@@ -11,21 +13,24 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import * as Select from '$lib/components/ui/select';
-  import { getBarangaysForMunicipality, getMunicipalities } from '$lib/config/location-data';
   import { authStore } from '$lib/stores/auth.svelte';
   import type { SitioProfile, SitioRecord } from '$lib/types';
+  import {
+    buildURLWithConfig,
+    hasActiveFilters as checkHasActiveFilters,
+    parseListConfigFromURL,
+    prepareSitiosForSort,
+    processSitios
+  } from '$lib/utils/sitio-sorting';
   import { deleteSitio, loadSitios, updateSitio } from '$lib/utils/storage';
   import {
     Building2,
     CalendarPlus,
     Copy,
     FileSpreadsheet,
-    FilterX,
     House,
     MapPin,
     Plus,
-    RefreshCw,
-    Search,
     Trash2,
     Users
   } from '@lucide/svelte';
@@ -45,20 +50,15 @@
   // Permission check
   const canCreateSitio = $derived(authStore.canCreateSitio());
 
-  // Initialize with data values
-  const initialMunicipality = $derived(data.municipality || 'all');
-  const initialBarangay = $derived(data.barangay || 'all');
-
   // State
   let sitios = $state<SitioRecord[]>([]);
-  let searchQuery = $state('');
-  let municipalityFilter = $derived(initialMunicipality);
-  let barangayFilter = $derived(initialBarangay);
-  let selectedYear = $state<string>('latest');
   let currentPage = $state(1);
   let itemsPerPage = $state(10);
-  let sortBy = $state<'name' | 'municipality' | 'barangay' | 'population' | 'households'>('name');
-  let sortOrder = $state<'asc' | 'desc'>('asc');
+
+  // Parse list config from URL
+  const listConfig = $derived.by(() => {
+    return parseListConfigFromURL($page.url.searchParams);
+  });
 
   // Dialog states
   let isDeleteDialogOpen = $state(false);
@@ -68,120 +68,35 @@
   let newYearToAdd = $state<number>(new Date().getFullYear());
   let copyFromYear = $state<string>('none');
 
-  // Derived values
-  const municipalities = $derived(getMunicipalities());
-  const barangays = $derived(
-    municipalityFilter !== 'all' ? getBarangaysForMunicipality(municipalityFilter) : []
-  );
+  // Prepare sitios with profile data
+  const sitiosWithProfile = $derived(prepareSitiosForSort(sitios, 'latest'));
 
-  // Get all available years across all sitios
-  const allAvailableYears = $derived.by(() => {
-    const yearsSet = new Set<number>();
-    sitios.forEach((sitio) => {
-      sitio.availableYears.forEach((year) => yearsSet.add(year));
-    });
-    return Array.from(yearsSet).sort((a, b) => b - a);
-  });
-
-  // Extended sitio type for display
-  interface SitioDisplay extends SitioRecord {
-    name?: string;
-    population?: number;
-    households?: number;
-  }
-
-  // Filter and transform sitios
-  const filteredSitios = $derived.by(() => {
-    let result = sitios.filter((sitio) => {
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch =
-          sitio.sitioName.toLowerCase().includes(query) ||
-          sitio.barangay.toLowerCase().includes(query) ||
-          sitio.municipality.toLowerCase().includes(query) ||
-          sitio.coding.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-      }
-
-      // Municipality filter
-      if (municipalityFilter !== 'all' && sitio.municipality !== municipalityFilter) return false;
-
-      // Barangay filter
-      if (barangayFilter !== 'all' && sitio.barangay !== barangayFilter) return false;
-
-      // Year filter - only show sitios that have data for selected year
-      if (selectedYear !== 'latest' && selectedYear !== 'all') {
-        if (!sitio.availableYears.includes(parseInt(selectedYear))) return false;
-      }
-
-      return true;
-    });
-
-    return result;
-  });
-
-  // Transform sitios with computed display values
-  const displaySitios = $derived.by(() => {
-    const targetYear =
-      selectedYear === 'latest' || selectedYear === 'all' ? null : parseInt(selectedYear);
-
-    return filteredSitios.map((sitio): SitioDisplay => {
-      // Get the year to use for data
-      const yearToUse = targetYear
-        ? targetYear.toString()
-        : sitio.availableYears.length > 0
-          ? Math.max(...sitio.availableYears).toString()
-          : null;
-
-      const yearData = yearToUse ? sitio.yearlyData[yearToUse] : null;
-
-      return {
-        ...sitio,
-        name: sitio.sitioName,
-        population: yearData?.totalPopulation ?? 0,
-        households: yearData?.totalHouseholds ?? 0
-      };
-    });
-  });
-
-  // Sort sitios
-  const sortedSitios = $derived.by(() => {
-    return [...displaySitios].sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'name':
-          comparison = (a.name || '').localeCompare(b.name || '');
-          break;
-        case 'municipality':
-          comparison = a.municipality.localeCompare(b.municipality);
-          break;
-        case 'barangay':
-          comparison = a.barangay.localeCompare(b.barangay);
-          break;
-        case 'population':
-          comparison = (a.population || 0) - (b.population || 0);
-          break;
-        case 'households':
-          comparison = (a.households || 0) - (b.households || 0);
-          break;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-  });
+  // Process sitios (filter + sort)
+  const processedSitios = $derived(processSitios(sitiosWithProfile, listConfig));
 
   // Pagination
-  const totalPages = $derived(Math.ceil(sortedSitios.length / itemsPerPage));
+  const totalPages = $derived(Math.ceil(processedSitios.length / itemsPerPage));
   const paginatedSitios = $derived(
-    sortedSitios.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+    processedSitios.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   );
 
-  // Stats
+  // Check if filters are active
+  const hasActiveFilters = $derived(checkHasActiveFilters(listConfig));
+
+  // Stats (computed from all sitios, not filtered)
   const stats = $derived.by(() => {
     const uniqueMunicipalities = new Set(sitios.map((s) => s.municipality));
     const uniqueBarangays = new Set(sitios.map((s) => s.barangay));
-    const totalPopulation = displaySitios.reduce((sum, s) => sum + (s.population || 0), 0);
-    const totalHouseholds = displaySitios.reduce((sum, s) => sum + (s.households || 0), 0);
+
+    // Get totals from processed sitios
+    const totalPopulation = sitiosWithProfile.reduce(
+      (sum, s) => sum + (s.profile.totalPopulation ?? 0),
+      0
+    );
+    const totalHouseholds = sitiosWithProfile.reduce(
+      (sum, s) => sum + (s.profile.totalHouseholds ?? 0),
+      0
+    );
 
     return {
       totalSitios: sitios.length,
@@ -192,13 +107,6 @@
     };
   });
 
-  const hasActiveFilters = $derived(
-    searchQuery !== '' ||
-      municipalityFilter !== 'all' ||
-      barangayFilter !== 'all' ||
-      selectedYear !== 'latest'
-  );
-
   // Load data
   onMount(() => {
     refreshData();
@@ -207,15 +115,6 @@
   function refreshData() {
     sitios = loadSitios();
     currentPage = 1;
-  }
-
-  function handleToggleSort(column: typeof sortBy) {
-    if (sortBy === column) {
-      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    } else {
-      sortBy = column;
-      sortOrder = 'asc';
-    }
   }
 
   function handleEdit(id: number) {
@@ -246,12 +145,11 @@
     toast.info('PDF generation coming soon');
   }
 
-  function clearFilters() {
-    searchQuery = '';
-    municipalityFilter = 'all';
-    barangayFilter = 'all';
-    selectedYear = 'latest';
-    currentPage = 1;
+  function handleManageYears(id: number) {
+    const sitio = sitios.find((s) => s.id === id);
+    if (sitio) {
+      openManageYears(sitio);
+    }
   }
 
   function handleCsvImportComplete(results: {
@@ -452,22 +350,6 @@
       recommendations: []
     };
   }
-
-  // Reset barangay when municipality changes
-  $effect(() => {
-    if (municipalityFilter === 'all') {
-      barangayFilter = 'all';
-    }
-  });
-
-  // Reset page when filters change
-  $effect(() => {
-    searchQuery;
-    municipalityFilter;
-    barangayFilter;
-    selectedYear;
-    currentPage = 1;
-  });
 </script>
 
 <svelte:head>
@@ -544,97 +426,29 @@
       </Card.Root>
     </div>
 
-    <!-- Filters -->
-    <Card.Root>
-      <Card.Content>
-        <div class="flex flex-col gap-4">
-          <!-- Search and Filters Row -->
-          <div class="flex flex-col gap-4 md:flex-row md:items-center">
-            <div class="relative flex-1">
-              <Search
-                class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input placeholder="Search sitios..." bind:value={searchQuery} class="pl-10" />
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <Select.Root type="single" bind:value={municipalityFilter}>
-                <Select.Trigger class="w-40">
-                  {municipalityFilter === 'all' ? 'All Municipalities' : municipalityFilter}
-                </Select.Trigger>
-                <Select.Content>
-                  <Select.Item value="all">All Municipalities</Select.Item>
-                  {#each municipalities as municipality}
-                    <Select.Item value={municipality}>{municipality}</Select.Item>
-                  {/each}
-                </Select.Content>
-              </Select.Root>
+    <!-- Filters and Sort -->
+    <SitioListFilters
+      config={listConfig}
+      onConfigChange={(newConfig) => goto(buildURLWithConfig('/admin/sitios', newConfig))}
+      basePath="/admin/sitios"
+      mode="admin"
+    />
 
-              <Select.Root
-                type="single"
-                bind:value={barangayFilter}
-                disabled={municipalityFilter === 'all'}
-              >
-                <Select.Trigger class="w-40">
-                  {barangayFilter === 'all' ? 'All Barangays' : barangayFilter}
-                </Select.Trigger>
-                <Select.Content>
-                  <Select.Item value="all">All Barangays</Select.Item>
-                  {#each barangays as brgy}
-                    <Select.Item value={brgy}>{brgy}</Select.Item>
-                  {/each}
-                </Select.Content>
-              </Select.Root>
-
-              <!-- <Select.Root type="single" bind:value={selectedYear}>
-                <Select.Trigger class="w-32">
-                  <Calendar class="mr-2 size-4" />
-                  {selectedYear === 'latest'
-                    ? 'Latest'
-                    : selectedYear === 'all'
-                      ? 'All Years'
-                      : selectedYear}
-                </Select.Trigger>
-                <Select.Content>
-                  <Select.Item value="latest">Latest Year</Select.Item>
-                  <Select.Item value="all">All Years</Select.Item>
-                  {#each allAvailableYears as year}
-                    <Select.Item value={year.toString()}>{year}</Select.Item>
-                  {/each}
-                </Select.Content>
-              </Select.Root> -->
-
-              {#if hasActiveFilters}
-                <Button variant="outline" size="icon" onclick={clearFilters}>
-                  <FilterX class="h-4 w-4" />
-                </Button>
-              {/if}
-
-              <Button variant="outline" size="icon" onclick={refreshData}>
-                <RefreshCw class="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card.Content>
-    </Card.Root>
-
-    <!-- Sitios Table -->
-    <SitiosTable
+    <!-- Sitios Display -->
+    <SitioListDisplay
       sitios={paginatedSitios}
-      totalSitios={sortedSitios.length}
-      {currentPage}
+      totalCount={processedSitios.length}
+      bind:currentPage
       {itemsPerPage}
       {totalPages}
-      {sortBy}
-      {sortOrder}
-      onToggleSort={handleToggleSort}
+      selectedIndicators={listConfig.sortIndicators}
+      mode="admin"
+      {hasActiveFilters}
       onRefresh={refreshData}
       onDelete={handleDelete}
-      onDownloadPDF={handleDownloadPDF}
-      onPageChange={(page) => (currentPage = page)}
       onEdit={handleEdit}
-      onClearFilters={clearFilters}
-      {hasActiveFilters}
+      onManageYears={handleManageYears}
+      onDownloadPDF={handleDownloadPDF}
     />
   </div>
 </div>
