@@ -47,36 +47,14 @@ export const NATIONAL_AVERAGES = {
 export const LABOR_EMPLOYMENT_AVERAGES = {
 	/**
 	 * Unemployment Rate
-	 * Source: Philippine Statistics Authority (PSA), October 2025
-	 * URL: https://tradingeconomics.com/philippines/unemployment-rate
+	 * Note: This is a target value, not an average
 	 */
 	unemploymentRate: {
-		percent: 5.0,
-		source: 'Philippine Statistics Authority (PSA), October 2025',
+		target: true,
+		percent: 4.1,
+		source: 'Philippine Statistics Authority (PSA), October 2024',
 		url: 'https://tradingeconomics.com/philippines/unemployment-rate',
-		description: 'Percentage of labor force actively seeking employment'
-	},
-
-	/**
-	 * Employment Rate
-	 * Derived from unemployment rate (100 - unemployment rate)
-	 */
-	employmentRate: {
-		percent: 95.0,
-		source: 'Philippine Statistics Authority (PSA), October 2025',
-		url: 'https://tradingeconomics.com/philippines/employment-rate',
-		description: 'Percentage of labor force that is employed'
-	},
-
-	/**
-	 * Labor Force Participation Rate
-	 * Source: Philippine Statistics Authority (PSA), October 2025
-	 */
-	laborForceParticipationRate: {
-		percent: 63.6,
-		source: 'Philippine Statistics Authority (PSA), October 2025',
-		url: 'https://tradingeconomics.com/philippines/labor-force-participation-rate',
-		description: 'Percentage of working-age population (15+) in labor force'
+		description: 'Current unemployment rate in the Philippines'
 	},
 
 	/**
@@ -128,24 +106,33 @@ export const LABOR_EMPLOYMENT_AVERAGES = {
 
 /**
  * Helper function to get labor analytics comparison status
+ * @param isTarget - When true, labels refer to "national target" instead of "national average"
  */
 export function getLaborComparisonStatus(
 	localValue: number,
 	nationalValue: number,
-	metric: 'unemployment' | 'employment' | 'participation' | 'dependency'
+	metric: 'unemployment' | 'employment' | 'participation' | 'dependency',
+	isTarget: boolean = false
 ): {
 	status: 'better' | 'worse' | 'similar';
 	difference: number;
 	label: string;
+	isTarget: boolean;
 } {
 	const difference = localValue - nationalValue;
 	const absDiff = Math.abs(difference);
+	const referenceLabel = isTarget ? 'national target' : 'national average';
 
 	// Threshold for "similar" status (within 2%)
 	const threshold = 2;
 
 	if (absDiff <= threshold) {
-		return { status: 'similar', difference, label: 'Similar to national average' };
+		return {
+			status: 'similar',
+			difference,
+			label: isTarget ? 'Near national target' : 'Similar to national average',
+			isTarget
+		};
 	}
 
 	// For unemployment and dependency, lower is better
@@ -154,15 +141,31 @@ export function getLaborComparisonStatus(
 			return {
 				status: 'better',
 				difference,
-				label: `${absDiff.toFixed(1)}% below national average`
+				label: `${absDiff.toFixed(1)}% below ${referenceLabel}`,
+				isTarget
 			};
 		}
-		return { status: 'worse', difference, label: `${absDiff.toFixed(1)}% above national average` };
+		return {
+			status: 'worse',
+			difference,
+			label: `${absDiff.toFixed(1)}% above ${referenceLabel}`,
+			isTarget
+		};
 	}
 
 	// For employment and participation, higher is better
 	if (difference > 0) {
-		return { status: 'better', difference, label: `${absDiff.toFixed(1)}% above national average` };
+		return {
+			status: 'better',
+			difference,
+			label: `${absDiff.toFixed(1)}% above ${referenceLabel}`,
+			isTarget
+		};
 	}
-	return { status: 'worse', difference, label: `${absDiff.toFixed(1)}% below national average` };
+	return {
+		status: 'worse',
+		difference,
+		label: `${absDiff.toFixed(1)}% below ${referenceLabel}`,
+		isTarget
+	};
 }

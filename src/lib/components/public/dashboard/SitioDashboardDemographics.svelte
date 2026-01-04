@@ -185,41 +185,33 @@
 		{ label: 'No PhilSys ID', value: demographics.totalNoNationalID, color: 'hsl(200, 18%, 46%)' }
 	]);
 
-	// Labor & Employment Analytics (comparison with national averages)
+	// Labor & Employment Analytics (comparison with national averages/targets)
 	const laborAnalytics = $derived(() => {
 		const metrics = laborMetrics();
 		const unemploymentRate = metrics.laborForce > 0 ? 100 - metrics.employmentRate : 0;
 
-		// Get comparison statuses
+		// Helper to check if a metric is a target (type-safe check)
+		const isTarget = (metric: Record<string, unknown>) =>
+			'target' in metric && metric.target === true;
+
+		// Get comparison statuses - pass isTarget flag based on the data
 		const unemploymentComparison = getLaborComparisonStatus(
 			unemploymentRate,
 			LABOR_EMPLOYMENT_AVERAGES.unemploymentRate.percent,
-			'unemployment'
-		);
-
-		const employmentComparison = getLaborComparisonStatus(
-			metrics.employmentRate,
-			LABOR_EMPLOYMENT_AVERAGES.employmentRate.percent,
-			'employment'
-		);
-
-		const participationComparison = getLaborComparisonStatus(
-			metrics.participationRate,
-			LABOR_EMPLOYMENT_AVERAGES.laborForceParticipationRate.percent,
-			'participation'
+			'unemployment',
+			isTarget(LABOR_EMPLOYMENT_AVERAGES.unemploymentRate)
 		);
 
 		const dependencyComparison = getLaborComparisonStatus(
 			parseFloat(metrics.dependencyRatio),
 			LABOR_EMPLOYMENT_AVERAGES.ageDependencyRatio.percent,
-			'dependency'
+			'dependency',
+			isTarget(LABOR_EMPLOYMENT_AVERAGES.ageDependencyRatio)
 		);
 
 		return {
 			unemploymentRate,
 			unemploymentComparison,
-			employmentComparison,
-			participationComparison,
 			dependencyComparison,
 			nationalAverages: LABOR_EMPLOYMENT_AVERAGES
 		};
@@ -729,17 +721,15 @@
 										Labor & Employment Analytics
 									</h4>
 									<HelpTooltip
-										content="Comparison of aggregated labor metrics against Philippine national averages. Data sources include PSA Labor Force Survey and World Bank."
+										content="Comparison of aggregated labor metrics against Philippine national averages and targets. Values marked with 'Target' compare against government targets rather than current averages."
 										class="text-blue-700"
 									/>
 								</div>
-								<p class="text-xs text-muted-foreground">
-									Aggregated vs. Philippine National Averages
-								</p>
+								<p class="text-xs text-muted-foreground">Aggregated vs. Philippine Benchmarks</p>
 							</div>
 						</div>
 
-						<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 							<!-- Unemployment Rate Comparison -->
 							<div class="rounded-lg bg-white/70 p-3 dark:bg-slate-800/50">
 								<div class="mb-2 flex items-center justify-between">
@@ -798,69 +788,9 @@
 									</div>
 								</div>
 								<p class="mt-1 text-center text-[10px] text-muted-foreground">
-									Local • PH National
-								</p>
-							</div>
-
-							<!-- Labor Force Participation Comparison -->
-							<div class="rounded-lg bg-white/70 p-3 dark:bg-slate-800/50">
-								<div class="mb-2 flex items-center justify-between">
-									<span class="text-xs font-medium text-slate-600 dark:text-slate-400">
-										Participation
-									</span>
-									{#if laborAnalytics().participationComparison.status === 'better'}
-										<span
-											class="flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-										>
-											<ArrowUp class="size-3" />
-											Higher
-										</span>
-									{:else if laborAnalytics().participationComparison.status === 'worse'}
-										<span
-											class="flex items-center gap-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
-										>
-											<ArrowDown class="size-3" />
-											Lower
-										</span>
-									{:else}
-										<span
-											class="flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"
-										>
-											<Minus class="size-3" />
-											Similar
-										</span>
-									{/if}
-								</div>
-								<div class="flex items-baseline justify-between gap-2">
-									<p class="text-lg font-bold text-slate-900 dark:text-white">
-										{laborMetrics().participationRate}%
-									</p>
-									<p class="text-xs text-muted-foreground">
-										vs {laborAnalytics().nationalAverages.laborForceParticipationRate.percent}%
-									</p>
-								</div>
-								<div class="mt-2 space-y-1">
-									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-										<div
-											class="h-full rounded-full transition-all duration-500 {laborAnalytics()
-												.participationComparison.status === 'better'
-												? 'bg-emerald-500'
-												: laborAnalytics().participationComparison.status === 'worse'
-													? 'bg-amber-500'
-													: 'bg-slate-400'}"
-											style="width: {laborMetrics().participationRate}%"
-										></div>
-									</div>
-									<div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-										<div
-											class="h-full rounded-full bg-blue-400 transition-all duration-500"
-											style="width: {laborAnalytics().nationalAverages.laborForceParticipationRate
-												.percent}%"
-										></div>
-									</div>
-								</div>
-								<p class="mt-1 text-center text-[10px] text-muted-foreground">
-									Local • PH National
+									Local • {laborAnalytics().unemploymentComparison.isTarget
+										? 'PH Target'
+										: 'PH Average'}
 								</p>
 							</div>
 
@@ -921,7 +851,9 @@
 									</div>
 								</div>
 								<p class="mt-1 text-center text-[10px] text-muted-foreground">
-									Local • PH National
+									Local • {laborAnalytics().dependencyComparison.isTarget
+										? 'PH Target'
+										: 'PH Average'}
 								</p>
 							</div>
 						</div>
