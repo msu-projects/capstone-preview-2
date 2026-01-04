@@ -416,6 +416,111 @@ Table sitio_issues_concerns {
 }
 
 // ============================================
+// CUSTOM FORM INDICATORS
+// ============================================
+
+Table custom_field_groups {
+  id varchar(21) [pk, note: 'nanoid']
+  name varchar(255) [not null]
+  description text
+  icon varchar(50) [note: 'Icon identifier (e.g., Folder, Layers, Users)']
+  is_collapsible boolean [not null, default: true]
+  display_order integer [not null, default: 0, note: 'Order in which groups appear']
+  
+  created_at timestamp [not null, default: `now()`]
+  created_by integer [ref: > users.id]
+  updated_at timestamp
+  updated_by integer [ref: > users.id]
+  
+  indexes {
+    display_order [name: 'idx_custom_groups_order']
+    created_at [name: 'idx_custom_groups_created']
+  }
+  
+  Note: 'Custom field groups for organizing dynamic form fields'
+}
+
+Table custom_field_definitions {
+  id varchar(21) [pk, note: 'nanoid']
+  field_name varchar(100) [not null, unique, note: 'Internal field name (camelCase)']
+  display_label varchar(255) [not null, note: 'Display label shown in forms']
+  data_type varchar(20) [not null, note: 'text, number, boolean, date, array, checkbox, radio']
+  
+  // Validation Rules (stored as JSONB)
+  validation_rules jsonb [not null, note: '{ required, min, max, pattern, options[], allowMultiple }']
+  
+  // Aggregation & Visualization
+  aggregation_type varchar(20) [not null, default: 'sum', note: 'sum, average, count, min, max']
+  visualization_config jsonb [note: '{ enableChart, chartType, colorScheme, showTrend, showOnDashboard }']
+  
+  // Display & Organization
+  display_order integer [not null, default: 0]
+  is_active boolean [not null, default: true, note: 'false = archived/soft-deleted']
+  description text [note: 'Help text for the field']
+  
+  // Group Association
+  group_id varchar(21) [ref: > custom_field_groups.id]
+  group_display_order integer [note: 'Display order within the group']
+  
+  created_at timestamp [not null, default: `now()`]
+  created_by integer [ref: > users.id]
+  updated_at timestamp
+  updated_by integer [ref: > users.id]
+  
+  indexes {
+    field_name [unique, name: 'idx_custom_fields_name']
+    group_id [name: 'idx_custom_fields_group']
+    display_order [name: 'idx_custom_fields_order']
+    is_active [name: 'idx_custom_fields_active']
+  }
+  
+  Note: 'Dynamic custom field definitions created by admins to extend sitio data collection'
+}
+
+Table sitio_custom_field_data {
+  id integer [pk, increment]
+  sitio_data_id integer [not null, ref: > sitio_data.id]
+  field_id varchar(21) [not null, ref: > custom_field_definitions.id]
+  value jsonb [not null, note: 'Stores the actual value - type depends on field definition']
+  
+  indexes {
+    sitio_data_id [name: 'idx_custom_data_sitio']
+    field_id [name: 'idx_custom_data_field']
+    (sitio_data_id, field_id) [unique, name: 'idx_custom_data_unique']
+  }
+  
+  Note: 'Stores custom field values for each sitio yearly snapshot'
+}
+
+// ============================================
+// SYSTEM CONFIGURATIONS
+// ============================================
+
+Table system_configurations {
+  id integer [pk, increment]
+  config_key varchar(100) [not null, unique, note: 'Unique config identifier']
+  config_section varchar(50) [not null, note: 'locations, comparisonLimits, nationalAverages, povertyThresholds']
+  config_data jsonb [not null, note: 'Configuration data in JSON format']
+  description text [note: 'Description of what this configuration controls']
+  
+  is_active boolean [not null, default: true]
+  is_system_default boolean [not null, default: false, note: 'true = built-in default, false = custom override']
+  
+  created_at timestamp [not null, default: `now()`]
+  created_by integer [ref: > users.id]
+  updated_at timestamp
+  updated_by integer [ref: > users.id]
+  
+  indexes {
+    config_key [unique, name: 'idx_config_key']
+    config_section [name: 'idx_config_section']
+    is_active [name: 'idx_config_active']
+  }
+  
+  Note: 'System-wide configuration settings (municipalities, thresholds, national averages, etc.)'
+}
+
+// ============================================
 // USER MANAGEMENT
 // ============================================
 
@@ -513,6 +618,13 @@ TableGroup safety_priorities [color: #e67e22] {
   sitio_issues_concerns
 }
 
+TableGroup custom_fields [color: #8e44ad] {
+  custom_field_groups
+  custom_field_definitions
+  sitio_custom_field_data
+}
+
 TableGroup system [color: #e74c3c] {
+  system_configurations
   audit_logs
 }
