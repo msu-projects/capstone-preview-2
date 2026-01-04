@@ -433,9 +433,9 @@
                 <p class="text-sm font-medium text-foreground">{mode.label}</p>
                 <p class="truncate text-xs text-muted-foreground">{mode.description}</p>
               </div>
-              <Badge variant={mode.enabled ? 'default' : 'outline'} class="shrink-0">
+              <!-- <Badge variant={mode.enabled ? 'default' : 'outline'} class="shrink-0">
                 {mode.enabled ? 'Available' : 'N/A'}
-              </Badge>
+              </Badge> -->
             </div>
           {/each}
         </div>

@@ -17,7 +17,6 @@
   import { deleteSitio, loadSitios, updateSitio } from '$lib/utils/storage';
   import {
     Building2,
-    Calendar,
     CalendarPlus,
     Copy,
     FileSpreadsheet,
@@ -580,7 +579,7 @@
                 </Select.Content>
               </Select.Root>
 
-              <Select.Root type="single" bind:value={selectedYear}>
+              <!-- <Select.Root type="single" bind:value={selectedYear}>
                 <Select.Trigger class="w-32">
                   <Calendar class="mr-2 size-4" />
                   {selectedYear === 'latest'
@@ -596,7 +595,7 @@
                     <Select.Item value={year.toString()}>{year}</Select.Item>
                   {/each}
                 </Select.Content>
-              </Select.Root>
+              </Select.Root> -->
 
               {#if hasActiveFilters}
                 <Button variant="outline" size="icon" onclick={clearFilters}>
