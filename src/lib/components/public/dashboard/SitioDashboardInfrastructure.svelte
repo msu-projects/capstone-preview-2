@@ -44,6 +44,8 @@
   let showSanitationTrendModal = $state(false);
   let showSignalTrendModal = $state(false);
   let showClassroomTrendModal = $state(false);
+  let showAccessModesTrendModal = $state(false);
+  let showFacilitiesTrendModal = $state(false);
 
   interface Props {
     sitios: SitioRecord[];
@@ -178,6 +180,60 @@
       series[2].data.push(infra.studentsPerRoom51_55);
       series[3].data.push(infra.studentsPerRoomMoreThan56);
       series[4].data.push(infra.studentsPerRoomNoClassroom);
+    });
+
+    return { categories, series };
+  });
+
+  // Time series data for access modes trends
+  const accessModesTrendData = $derived.by(() => {
+    const years = getAllAvailableYears(sitios);
+    const categories = years.map((y) => y.toString());
+
+    const series = [
+      { name: 'Paved Road', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      { name: 'Unpaved Road', data: [] as number[], color: 'hsl(27, 87%, 67%)' },
+      { name: 'Footpath', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+      { name: 'Boat', data: [] as number[], color: 'hsl(195, 90%, 50%)' }
+    ];
+
+    years.forEach((year) => {
+      const modes = aggregateAccessModes(sitios, year);
+      series[0].data.push(modes.pavedRoad);
+      series[1].data.push(modes.unpavedRoad);
+      series[2].data.push(modes.footpath);
+      series[3].data.push(modes.boat);
+    });
+
+    return { categories, series };
+  });
+
+  // Time series data for community facilities trends
+  const facilitiesTrendData = $derived.by(() => {
+    const years = getAllAvailableYears(sitios);
+    const categories = years.map((y) => y.toString());
+
+    const series = [
+      { name: 'Health Center', data: [] as number[], color: 'hsl(0, 84%, 60%)' },
+      { name: 'Pharmacy', data: [] as number[], color: 'hsl(217, 91%, 60%)' },
+      { name: 'Community Toilet', data: [] as number[], color: 'hsl(195, 90%, 50%)' },
+      { name: 'Kindergarten', data: [] as number[], color: 'hsl(45, 93%, 47%)' },
+      { name: 'Elementary School', data: [] as number[], color: 'hsl(142, 71%, 45%)' },
+      { name: 'High School', data: [] as number[], color: 'hsl(27, 87%, 67%)' },
+      { name: 'Madrasah', data: [] as number[], color: 'hsl(263, 70%, 50%)' },
+      { name: 'Market', data: [] as number[], color: 'hsl(320, 65%, 52%)' }
+    ];
+
+    years.forEach((year) => {
+      const fac = aggregateFacilities(sitios, year);
+      series[0].data.push(fac.healthCenter.exists);
+      series[1].data.push(fac.pharmacy.exists);
+      series[2].data.push(fac.communityToilet.exists);
+      series[3].data.push(fac.kindergarten.exists);
+      series[4].data.push(fac.elementarySchool.exists);
+      series[5].data.push(fac.highSchool.exists);
+      series[6].data.push(fac.madrasah.exists);
+      series[7].data.push(fac.market.exists);
     });
 
     return { categories, series };
@@ -1227,6 +1283,19 @@
       headerClass="pb-4"
       contentPadding="p-3"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && accessModesTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showAccessModesTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <div class="grid grid-cols-2 gap-3">
           {#each accessModesDisplay as mode}
@@ -1470,6 +1539,19 @@
       iconBgColor="bg-purple-50 dark:bg-purple-900/20"
       iconTextColor="text-purple-500"
     >
+      {#snippet headerAction()}
+        {#if hasMultipleYears && facilitiesTrendData.categories.length > 1}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-muted-foreground hover:text-foreground"
+            title="View historical trend"
+            onclick={() => (showFacilitiesTrendModal = true)}
+          >
+            <ChartLine class="size-4" />
+          </Button>
+        {/if}
+      {/snippet}
       {#snippet children()}
         <div class="grid grid-cols-1 gap-3">
           {#each facilitiesList as { name, data }}
@@ -1667,4 +1749,51 @@
   selectedYear={currentYear}
   metrics={['householdsWithElectricity', 'householdsWithToilet', 'householdsWithInternet']}
   yAxisFormatter={(val) => `${val.toFixed(0)} HH`}
+/>
+
+<!-- Main Access Modes Trend Modal -->
+<TrendComparisonModal
+  bind:open={showAccessModesTrendModal}
+  title="Main Access Modes - Historical Trend"
+  description="Year-over-year transportation access patterns across {accessModesTrendData.categories
+    .length} years"
+  icon={Car}
+  iconBgColor="bg-blue-50 dark:bg-blue-500/10"
+  iconTextColor="text-blue-600 dark:text-blue-400"
+  trendSeries={accessModesTrendData.series}
+  trendCategories={accessModesTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['pavedRoad', 'unpavedRoad', 'footpath', 'boat']}
+  yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+/>
+
+<!-- Community Facilities Trend Modal -->
+<TrendComparisonModal
+  bind:open={showFacilitiesTrendModal}
+  title="Community Facilities - Historical Trend"
+  description="Year-over-year facility availability across {facilitiesTrendData.categories
+    .length} years"
+  icon={Building2}
+  iconBgColor="bg-purple-50 dark:bg-purple-900/20"
+  iconTextColor="text-purple-500"
+  trendSeries={facilitiesTrendData.series}
+  trendCategories={facilitiesTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={[
+    'healthCenterExists',
+    'pharmacyExists',
+    'communityToiletExists',
+    'kindergartenExists',
+    'elementarySchoolExists',
+    'highSchoolExists',
+    'madrasahExists',
+    'marketExists'
+  ]}
+  yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
 />

@@ -169,6 +169,20 @@ export interface YearlyMetrics {
   studentsPerRoom51_55: number;
   studentsPerRoomMoreThan56: number;
   studentsPerRoomNoClassroom: number;
+  // Access modes
+  pavedRoad: number;
+  unpavedRoad: number;
+  footpath: number;
+  boat: number;
+  // Community facilities (exists counts)
+  healthCenterExists: number;
+  pharmacyExists: number;
+  communityToiletExists: number;
+  kindergartenExists: number;
+  elementarySchoolExists: number;
+  highSchoolExists: number;
+  madrasahExists: number;
+  marketExists: number;
 }
 
 /**
@@ -235,6 +249,20 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
   let studentsPerRoom51_55 = 0;
   let studentsPerRoomMoreThan56 = 0;
   let studentsPerRoomNoClassroom = 0;
+  // Access modes
+  let pavedRoad = 0;
+  let unpavedRoad = 0;
+  let footpath = 0;
+  let boat = 0;
+  // Community facilities
+  let healthCenterExists = 0;
+  let pharmacyExists = 0;
+  let communityToiletExists = 0;
+  let kindergartenExists = 0;
+  let elementarySchoolExists = 0;
+  let highSchoolExists = 0;
+  let madrasahExists = 0;
+  let marketExists = 0;
 
   for (const sitio of sitios) {
     const profile = getDataForYear(sitio, year);
@@ -330,6 +358,22 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
     } else if (studentsPerRoom === 'more_than_56') {
       studentsPerRoomMoreThan56++;
     }
+
+    // Access modes
+    if (profile.mainAccess?.pavedRoad) pavedRoad++;
+    if (profile.mainAccess?.unpavedRoad) unpavedRoad++;
+    if (profile.mainAccess?.footpath) footpath++;
+    if (profile.mainAccess?.boat) boat++;
+
+    // Community facilities
+    if (profile.facilities?.healthCenter) healthCenterExists++;
+    if (profile.facilities?.pharmacy) pharmacyExists++;
+    if (profile.facilities?.communityToilet) communityToiletExists++;
+    if (profile.facilities?.kindergarten) kindergartenExists++;
+    if (profile.facilities?.elementarySchool) elementarySchoolExists++;
+    if (profile.facilities?.highSchool) highSchoolExists++;
+    if (profile.facilities?.madrasah) madrasahExists++;
+    if (profile.facilities?.market) marketExists++;
   }
 
   const employed = totalLaborWorkforce - totalUnemployed;
@@ -412,7 +456,21 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
     studentsPerRoom46_50,
     studentsPerRoom51_55,
     studentsPerRoomMoreThan56,
-    studentsPerRoomNoClassroom
+    studentsPerRoomNoClassroom,
+    // Access modes
+    pavedRoad,
+    unpavedRoad,
+    footpath,
+    boat,
+    // Community facilities
+    healthCenterExists,
+    pharmacyExists,
+    communityToiletExists,
+    kindergartenExists,
+    elementarySchoolExists,
+    highSchoolExists,
+    madrasahExists,
+    marketExists
   };
 }
 
