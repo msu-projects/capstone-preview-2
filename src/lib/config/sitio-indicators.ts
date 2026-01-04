@@ -597,6 +597,29 @@ export const SITIO_INDICATORS: SitioIndicator[] = [
     description: 'Whether high school exists',
     higherIsBetter: true
   },
+  {
+    key: 'classroomDensity',
+    label: 'Classroom Density',
+    shortLabel: 'Classroom Density',
+    category: 'education',
+    accessor: (p) => {
+      const densityMap: Record<SitioProfile['studentsPerRoom'], number> = {
+        less_than_46: 1,
+        '46_50': 2,
+        '51_55': 3,
+        more_than_56: 4,
+        no_classroom: 5
+      };
+      return densityMap[p.studentsPerRoom] ?? 0;
+    },
+    defaultOrder: 'asc',
+    format: (v) => {
+      const labels = ['Unknown', '<46', '46-50', '51-55', '>56', 'No Classroom'];
+      return labels[v] || 'Unknown';
+    },
+    description: 'Students per classroom density level',
+    higherIsBetter: false
+  },
 
   // ==========================================
   // WATER & SANITATION INDICATORS
