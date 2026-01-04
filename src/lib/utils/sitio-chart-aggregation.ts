@@ -741,9 +741,9 @@ export interface FacilityConditionCount {
   exists: number;
   excellent: number; // condition 5
   good: number; // condition 4
-  fair: number; // condition 3
+  average: number; // condition 3
   poor: number; // condition 2
-  critical: number; // condition 1
+  bad: number; // condition 1
   notExist: number;
   averageDistance: number;
 }
@@ -764,9 +764,9 @@ function createEmptyFacilityCount(): FacilityConditionCount {
     exists: 0,
     excellent: 0,
     good: 0,
-    fair: 0,
+    average: 0,
     poor: 0,
-    critical: 0,
+    bad: 0,
     notExist: 0,
     averageDistance: 0
   };
@@ -801,9 +801,9 @@ export function aggregateFacilities(sitios: SitioRecord[], year?: number): Facil
         const condition = facilityData.condition;
         if (condition === 5) count.excellent++;
         else if (condition === 4) count.good++;
-        else if (condition === 3) count.fair++;
+        else if (condition === 3) count.average++;
         else if (condition === 2) count.poor++;
-        else if (condition === 1) count.critical++;
+        else if (condition === 1) count.bad++;
       } else if (facilityData.exists === 'no') {
         count.notExist++;
         if (facilityData.distanceToNearest) {
@@ -1004,7 +1004,7 @@ export interface InfrastructureAggregation {
     totalLength: number;
     excellent: number;
     good: number;
-    fair: number;
+    average: number;
     poor: number;
     bad: number;
   };
@@ -1013,7 +1013,7 @@ export interface InfrastructureAggregation {
     totalLength: number;
     excellent: number;
     good: number;
-    fair: number;
+    average: number;
     poor: number;
     bad: number;
   };
@@ -1022,7 +1022,7 @@ export interface InfrastructureAggregation {
     totalLength: number;
     excellent: number;
     good: number;
-    fair: number;
+    average: number;
     poor: number;
     bad: number;
   };
@@ -1031,7 +1031,7 @@ export interface InfrastructureAggregation {
     totalLength: number;
     excellent: number;
     good: number;
-    fair: number;
+    average: number;
     poor: number;
     bad: number;
   };
@@ -1061,10 +1061,10 @@ export function aggregateInfrastructure(
   year?: number
 ): InfrastructureAggregation {
   const result: InfrastructureAggregation = {
-    roadAsphalt: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
-    roadConcrete: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
-    roadGravel: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
-    roadNatural: { exists: 0, totalLength: 0, excellent: 0, good: 0, fair: 0, poor: 0, bad: 0 },
+    roadAsphalt: { exists: 0, totalLength: 0, excellent: 0, good: 0, average: 0, poor: 0, bad: 0 },
+    roadConcrete: { exists: 0, totalLength: 0, excellent: 0, good: 0, average: 0, poor: 0, bad: 0 },
+    roadGravel: { exists: 0, totalLength: 0, excellent: 0, good: 0, average: 0, poor: 0, bad: 0 },
+    roadNatural: { exists: 0, totalLength: 0, excellent: 0, good: 0, average: 0, poor: 0, bad: 0 },
 
     waterNatural: { exists: 0, functioning: 0, notFunctioning: 0 },
     waterLevel1: { exists: 0, functioning: 0, notFunctioning: 0 },
@@ -1086,12 +1086,12 @@ export function aggregateInfrastructure(
   // Helper to categorize condition (1-5 scale)
   const categorizeCondition = (
     condition: number | undefined,
-    road: { excellent: number; good: number; fair: number; poor: number; bad: number }
+    road: { excellent: number; good: number; average: number; poor: number; bad: number }
   ) => {
     if (!condition) return;
     if (condition === 5) road.excellent++;
     else if (condition === 4) road.good++;
-    else if (condition === 3) road.fair++;
+    else if (condition === 3) road.average++;
     else if (condition === 2) road.poor++;
     else if (condition === 1) road.bad++;
   };

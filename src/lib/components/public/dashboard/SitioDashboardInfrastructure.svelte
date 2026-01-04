@@ -985,11 +985,11 @@
                     {/if}
                   </div>
                   <div class="flex gap-1">
-                    {#if road.data.fair > 0}
+                    {#if road.data.average > 0}
                       <Badge
                         variant="outline"
                         class="border-yellow-100 bg-yellow-50 px-1.5 py-0 text-[10px] text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-400"
-                        >{road.data.fair} fair</Badge
+                        >{road.data.average} average</Badge
                       >
                     {/if}
                     {#if road.data.poor > 0 || road.data.bad > 0}
@@ -1506,18 +1506,18 @@
                     {/if}
                   </div>
                   <div class="flex gap-1">
-                    {#if data.fair > 0}
+                    {#if data.average > 0}
                       <Badge
                         variant="outline"
                         class="border-yellow-100 bg-yellow-50 px-1.5 py-0 text-[10px] text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-400"
-                        >{data.fair} fair</Badge
+                        >{data.average} avg</Badge
                       >
                     {/if}
-                    {#if data.poor > 0 || data.critical > 0}
+                    {#if data.poor > 0 || data.bad > 0}
                       <Badge
                         variant="outline"
                         class="border-red-100 bg-red-50 px-1.5 py-0 text-[10px] text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
-                        >{data.poor + data.critical} poor</Badge
+                        >{data.poor + data.bad} poor</Badge
                       >
                     {/if}
                   </div>

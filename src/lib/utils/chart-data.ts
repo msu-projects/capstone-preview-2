@@ -28,7 +28,7 @@ export function getConditionLabel(condition?: number): string {
     case 4:
       return 'Good';
     case 3:
-      return 'Fair';
+      return 'Average';
     case 2:
       return 'Poor';
     case 1:
@@ -206,8 +206,8 @@ export function analyzeFacilityGaps(sitios: SitioProfile[]) {
       const missing = sitios.filter(
         (s) => s.facilities[facility.key as keyof typeof s.facilities].exists === 'no'
       ).length;
-      // Condition 1 = Bad (critical)
-      const critical = sitios.filter((s) => {
+      // Condition 1 = Bad
+      const bad = sitios.filter((s) => {
         const f = s.facilities[facility.key as keyof typeof s.facilities];
         return f.exists === 'yes' && f.condition === 1;
       }).length;
@@ -216,21 +216,21 @@ export function analyzeFacilityGaps(sitios: SitioProfile[]) {
         const f = s.facilities[facility.key as keyof typeof s.facilities];
         return f.exists === 'yes' && f.condition === 2;
       }).length;
-      // Condition 3 = Fair
-      const fair = sitios.filter((s) => {
+      // Condition 3 = Average
+      const average = sitios.filter((s) => {
         const f = s.facilities[facility.key as keyof typeof s.facilities];
         return f.exists === 'yes' && f.condition === 3;
       }).length;
 
-      const total = missing + critical + poor;
+      const total = missing + bad + poor;
       const percentage = sitios.length > 0 ? (missing / sitios.length) * 100 : 0;
 
       return {
         ...facility,
         missing,
-        critical,
+        bad,
         poor,
-        fair,
+        average,
         total,
         percentage
       };

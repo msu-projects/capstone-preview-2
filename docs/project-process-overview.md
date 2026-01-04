@@ -236,9 +236,9 @@ Each facility contains the following properties:
 
 - **5** - Excellent: New or very recently renovated; no defects
 - **4** - Good: Functional with only minor cosmetic wear
-- **3** - Fair: Functional but showing clear signs of age; likely needs repair soon
+- **3** - Average: Functional but showing clear signs of age; likely needs repair soon
 - **2** - Poor: Major defects; requires immediate repair to stay functional
-- **1** - Bad/Critical: Unsafe to use; needs replacement or total overhaul
+- **1** - Bad: Unsafe to use; needs replacement or total overhaul
 
 ### 3.5 Road & Internal Infrastructure
 
@@ -263,7 +263,7 @@ Each road type contains the following properties (infrastructure object):
 
 - **5** - Excellent: New or very recently paved
 - **4** - Good: Minor wear, fully accessible
-- **3** - Fair: Some wear, accessible but needs maintenance soon
+- **3** - Average: Some wear, accessible but needs maintenance soon
 - **2** - Poor: Potholes, slow travel, needs repair
 - **1** - Bad: Dilapidated, difficult for vehicles
 

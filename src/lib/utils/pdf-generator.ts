@@ -537,15 +537,15 @@ function buildFacilitiesSection(
         label,
         facility.excellent,
         facility.good,
-        facility.fair,
+        facility.average,
         facility.poor,
-        facility.critical
+        facility.bad
       ]);
     }
   }
 
   content.push(
-    createTable(['Facility', 'Excellent', 'Good', 'Fair', 'Poor', 'Critical'], conditionRows, [
+    createTable(['Facility', 'Excellent', 'Good', 'Average', 'Poor', 'Bad'], conditionRows, [
       '*',
       60,
       60,
@@ -602,7 +602,7 @@ function buildInfrastructureSection(
 
   content.push(
     createTable(
-      ['Road Type', 'Sitios', 'Total Length (km)', 'Excellent', 'Good', 'Fair', 'Poor', 'Bad'],
+      ['Road Type', 'Sitios', 'Total Length (km)', 'Excellent', 'Good', 'Average', 'Poor', 'Bad'],
       [
         [
           'Asphalt',
@@ -610,7 +610,7 @@ function buildInfrastructureSection(
           infrastructure.roadAsphalt.totalLength.toFixed(1),
           infrastructure.roadAsphalt.excellent,
           infrastructure.roadAsphalt.good,
-          infrastructure.roadAsphalt.fair,
+          infrastructure.roadAsphalt.average,
           infrastructure.roadAsphalt.poor,
           infrastructure.roadAsphalt.bad
         ],
@@ -620,7 +620,7 @@ function buildInfrastructureSection(
           infrastructure.roadConcrete.totalLength.toFixed(1),
           infrastructure.roadConcrete.excellent,
           infrastructure.roadConcrete.good,
-          infrastructure.roadConcrete.fair,
+          infrastructure.roadConcrete.average,
           infrastructure.roadConcrete.poor,
           infrastructure.roadConcrete.bad
         ],
@@ -630,7 +630,7 @@ function buildInfrastructureSection(
           infrastructure.roadGravel.totalLength.toFixed(1),
           infrastructure.roadGravel.excellent,
           infrastructure.roadGravel.good,
-          infrastructure.roadGravel.fair,
+          infrastructure.roadGravel.average,
           infrastructure.roadGravel.poor,
           infrastructure.roadGravel.bad
         ],
@@ -640,7 +640,7 @@ function buildInfrastructureSection(
           infrastructure.roadNatural.totalLength.toFixed(1),
           infrastructure.roadNatural.excellent,
           infrastructure.roadNatural.good,
-          infrastructure.roadNatural.fair,
+          infrastructure.roadNatural.average,
           infrastructure.roadNatural.poor,
           infrastructure.roadNatural.bad
         ]

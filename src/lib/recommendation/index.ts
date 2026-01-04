@@ -301,7 +301,7 @@ export const CONCRETE_TIRE_PATH_CONFIG: PPAConfig = {
       maxPoints: 1.5,
       enabled: true,
       evaluate: (profile) => {
-        // Check road conditions (1=bad, 2=poor, 3=fair, 4=good, 5=excellent)
+        // Check road conditions (1=bad, 2=poor, 3=average, 4=good, 5=excellent)
         const roads = [
           profile.infrastructure.asphalt,
           profile.infrastructure.concrete,
@@ -641,7 +641,7 @@ export const MADRASAH_FACILITY_CONFIG: PPAConfig = {
           return { points: 0, reason: 'Not applicable - non-Muslim community' };
         }
         if (profile.facilities.madrasah.exists === 'yes') {
-          // Condition: 1=bad, 2=poor, 3=fair, 4=good, 5=excellent
+          // Condition: 1=bad, 2=poor, 3=average, 4=good, 5=excellent
           if (profile.facilities.madrasah.condition === 1) {
             return {
               points: 2.0,
@@ -757,12 +757,12 @@ export const SCHOOL_BUILDING_CONFIG: PPAConfig = {
     {
       id: 'poor_school_condition',
       name: 'Poor School Facility Condition',
-      description: 'Existing school in poor/critical condition',
+      description: 'Existing school in poor/bad condition',
       maxPoints: 2.0,
       enabled: true,
       evaluate: (profile) => {
         const elementary = profile.facilities.elementarySchool;
-        // Condition: 1=bad, 2=poor, 3=fair, 4=good, 5=excellent
+        // Condition: 1=bad, 2=poor, 3=average, 4=good, 5=excellent
         if (elementary.exists === 'yes' && elementary.condition === 1) {
           return {
             points: 2.0,

@@ -201,7 +201,7 @@
     level3: { name: 'Level 3', desc: 'House connection' }
   };
 
-  const conditionLabels = ['', 'Bad', 'Poor', 'Fair', 'Good', 'Excellent'];
+  const conditionLabels = ['', 'Bad', 'Poor', 'Average', 'Good', 'Excellent'];
 </script>
 
 <div class="space-y-6">
@@ -698,7 +698,7 @@
                     <Select.Content>
                       <Select.Item value="1">Bad</Select.Item>
                       <Select.Item value="2">Poor</Select.Item>
-                      <Select.Item value="3">Fair</Select.Item>
+                      <Select.Item value="3">Average</Select.Item>
                       <Select.Item value="4">Good</Select.Item>
                       <Select.Item value="5">Excellent</Select.Item>
                     </Select.Content>
@@ -804,7 +804,7 @@
                     <Select.Content>
                       <Select.Item value="1">Bad</Select.Item>
                       <Select.Item value="2">Poor</Select.Item>
-                      <Select.Item value="3">Fair</Select.Item>
+                      <Select.Item value="3">Average</Select.Item>
                       <Select.Item value="4">Good</Select.Item>
                       <Select.Item value="5">Excellent</Select.Item>
                     </Select.Content>

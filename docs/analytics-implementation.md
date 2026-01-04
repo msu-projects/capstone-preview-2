@@ -314,7 +314,7 @@ Facility conditions are rated on a 1-5 scale:
 
 - **5** = Excellent
 - **4** = Good
-- **3** = Fair
+- **3** = Average
 - **2** = Poor
 - **1** = Bad
 
@@ -778,9 +778,9 @@ const expensiveMetric = $derived.by(() => {
 
 ```svelte
 {#if data.length > 0}
-	<Chart {options} />
+  <Chart {options} />
 {:else}
-	<EmptyState />
+  <EmptyState />
 {/if}
 ```
 
@@ -910,20 +910,20 @@ function getLaborComparisonStatus(
 ```svelte
 <!-- Comparison badge -->
 {#if comparison.status === 'better'}
-	<Badge variant="success">
-		<TrendingUp class="h-3 w-3" />
-		{Math.abs(comparison.difference).toFixed(1)}% better
-	</Badge>
+  <Badge variant="success">
+    <TrendingUp class="h-3 w-3" />
+    {Math.abs(comparison.difference).toFixed(1)}% better
+  </Badge>
 {:else if comparison.status === 'worse'}
-	<Badge variant="destructive">
-		<TrendingDown class="h-3 w-3" />
-		{Math.abs(comparison.difference).toFixed(1)}% worse
-	</Badge>
+  <Badge variant="destructive">
+    <TrendingDown class="h-3 w-3" />
+    {Math.abs(comparison.difference).toFixed(1)}% worse
+  </Badge>
 {:else}
-	<Badge variant="secondary">
-		<Minus class="h-3 w-3" />
-		Similar to national
-	</Badge>
+  <Badge variant="secondary">
+    <Minus class="h-3 w-3" />
+    Similar to national
+  </Badge>
 {/if}
 ```
 
@@ -933,11 +933,11 @@ Comparisons include contextual information:
 
 ```svelte
 <HelpTooltip>
-	<p class="font-semibold">National Average: {national.percent}%</p>
-	<p class="text-xs text-muted-foreground">{national.source}</p>
-	<p class="mt-2 text-xs">
-		Your region: {local.percent}% ({comparison.label})
-	</p>
+  <p class="font-semibold">National Average: {national.percent}%</p>
+  <p class="text-xs text-muted-foreground">{national.source}</p>
+  <p class="mt-2 text-xs">
+    Your region: {local.percent}% ({comparison.label})
+  </p>
 </HelpTooltip>
 ```
 

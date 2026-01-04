@@ -593,7 +593,7 @@
       case 4:
         return { text: 'Good', class: 'text-green-600 dark:text-green-400' };
       case 3:
-        return { text: 'Fair', class: 'text-yellow-600 dark:text-yellow-400' };
+        return { text: 'Average', class: 'text-yellow-600 dark:text-yellow-400' };
       case 2:
         return { text: 'Poor', class: 'text-orange-600 dark:text-orange-400' };
       case 1:
