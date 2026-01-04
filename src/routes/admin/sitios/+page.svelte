@@ -476,11 +476,7 @@
 
 <div class="flex min-h-screen flex-col bg-muted/30">
   <!-- Header -->
-  <AdminHeader
-    title="Sitios Management"
-    description="Manage sitio records and yearly data"
-    breadcrumbs={[{ label: 'Sitios' }]}
-  >
+  <AdminHeader title="Sitios Management" description="Manage sitio records and yearly data">
     {#snippet actions()}
       {#if canCreateSitio}
         <Button variant="outline" size="sm" onclick={() => (isCsvImportDialogOpen = true)}>

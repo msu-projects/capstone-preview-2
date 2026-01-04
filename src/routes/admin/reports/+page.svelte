@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import AppBreadcrumb from '$lib/components/AppBreadcrumb.svelte';
+  import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
   import {
     ReportFilters,
     ReportGenerating,
@@ -17,7 +16,7 @@
   import { downloadAggregateReport } from '$lib/utils/pdf-generator';
   import { getAllAvailableYears } from '$lib/utils/sitio-chart-aggregation';
   import { loadSitios } from '$lib/utils/storage';
-  import { ArrowLeft, FileBarChart, FileDown, Info, Settings2 } from '@lucide/svelte';
+  import { FileBarChart, FileDown, Info, Settings2 } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
 
@@ -148,41 +147,27 @@
     parts.push(`(${filters.year})`);
     return parts.join(' ');
   }
-
-  const breadcrumbItems = [
-    { label: 'Admin', href: '/admin' },
-    { label: 'Reports', href: '/admin/reports' }
-  ];
 </script>
 
 <svelte:head>
   <title>Generate Reports | Admin</title>
 </svelte:head>
 
-<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
-  <AppBreadcrumb items={breadcrumbItems} />
-
-  <!-- Header -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex items-center gap-4">
-      <Button variant="ghost" size="icon" onclick={() => goto('/admin')}>
-        <ArrowLeft class="h-5 w-5" />
-      </Button>
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">Generate Reports</h1>
-        <p class="text-muted-foreground">
-          Create PDF reports from dashboard data with customizable sections
-        </p>
-      </div>
-    </div>
+<AdminHeader
+  title="Generate Reports"
+  description="Create PDF reports from dashboard data with customizable sections"
+>
+  {#snippet badges()}
     <div class="flex items-center gap-2">
       <FileBarChart class="h-5 w-5 text-muted-foreground" />
       <span class="text-sm text-muted-foreground">
         {sitios.length} sitios available
       </span>
     </div>
-  </div>
+  {/snippet}
+</AdminHeader>
 
+<div class="mt-4 flex flex-1 flex-col gap-4 p-4 pt-0">
   {#if !canExport}
     <Card.Root class="border-destructive">
       <Card.Content class="pt-6">

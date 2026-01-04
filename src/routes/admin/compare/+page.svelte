@@ -336,15 +336,16 @@
       return `${entityNames} (${comparisonResult.year})`;
     }
   });
-
-  const breadcrumbItems = [{ label: 'Dashboard', href: '/admin' }, { label: 'Compare Data' }];
 </script>
 
 <svelte:head>
   <title>Compare Data | Admin | South Cotabato Convergence Data Bank</title>
 </svelte:head>
 
-<AdminHeader title="Compare Data" breadcrumbs={breadcrumbItems}>
+<AdminHeader
+  title="Compare Data"
+  description="Compare sitios across years, locations, or aggregated groups. Generate tables and charts, export to PDF, or share a link."
+>
   {#snippet actions()}
     {#if hasCompared}
       <Button variant="outline" size="sm" onclick={shareComparison}>
@@ -367,7 +368,7 @@
   {/snippet}
 </AdminHeader>
 
-<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
+<div class="mt-4 flex flex-1 flex-col gap-4 p-4 pt-0">
   {#if isLoading}
     <DashboardSkeleton />
   {:else if sitios.length === 0}

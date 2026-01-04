@@ -13,8 +13,8 @@
     FolderKanban,
     GitCompareArrows,
     LayoutDashboard,
-    List,
     LogOut,
+    MapPin,
     Settings2,
     Shield,
     ShieldCheck,
@@ -41,10 +41,18 @@
   const navGroups: NavGroup[] = [
     {
       title: 'Main',
+      items: [{ title: 'Dashboard', url: '/admin', icon: LayoutDashboard }]
+    },
+    {
+      title: 'Data Management',
       items: [
-        { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
-        { title: 'Sitios List', url: '/admin/sitios', icon: List },
-        { title: 'Projects', url: '/admin/projects', icon: FolderKanban },
+        { title: 'Sitios', url: '/admin/sitios', icon: MapPin },
+        { title: 'Projects', url: '/admin/projects', icon: FolderKanban }
+      ]
+    },
+    {
+      title: 'Utilities',
+      items: [
         { title: 'Compare Data', url: '/admin/compare', icon: GitCompareArrows },
         { title: 'Reports', url: '/admin/reports', icon: FileBarChart }
       ]
