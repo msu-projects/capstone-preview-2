@@ -1,9 +1,7 @@
 <script lang="ts">
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
-  import LineChart from '$lib/components/charts/LineChart.svelte';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import { getNationalAverages } from '$lib/config/national-averages';
@@ -37,6 +35,7 @@
     TrendingUp,
     Zap
   } from '@lucide/svelte';
+  import TrendComparisonModal from './TrendComparisonModal.svelte';
 
   // Modal states for trend modals
   let showUtilityTrendModal = $state(false);
@@ -49,9 +48,16 @@
   interface Props {
     sitios: SitioRecord[];
     selectedYear?: number;
+    selectedMunicipality?: string;
+    selectedBarangay?: string;
   }
 
-  let { sitios, selectedYear }: Props = $props();
+  let {
+    sitios,
+    selectedYear,
+    selectedMunicipality = 'all',
+    selectedBarangay = 'all'
+  }: Props = $props();
 
   // Get national averages with config overrides
   const NATIONAL_AVERAGES = $derived(getNationalAverages());
@@ -1534,200 +1540,131 @@
 </div>
 
 <!-- Road Infrastructure Trend Modal -->
-<Dialog.Root bind:open={showRoadTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-slate-100 p-2 dark:bg-slate-800">
-          <Car class="size-5 text-slate-600 dark:text-slate-400" />
-        </div>
-        Road Infrastructure - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year road network development across {roadTrendData.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={roadTrendData.series}
-        categories={roadTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(1)} km`}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showRoadTrendModal}
+  title="Road Infrastructure - Historical Trend"
+  description="Year-over-year road network development across {roadTrendData.categories
+    .length} years"
+  icon={Car}
+  iconBgColor="bg-slate-100 dark:bg-slate-800"
+  iconTextColor="text-slate-600 dark:text-slate-400"
+  trendSeries={roadTrendData.series}
+  trendCategories={roadTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['roadConcrete', 'roadAsphalt', 'roadGravel', 'roadNatural', 'totalRoadLength']}
+  yAxisFormatter={(val) => `${val.toFixed(1)} km`}
+/>
 
 <!-- Water Sources Trend Modal -->
-<Dialog.Root bind:open={showWaterTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20">
-          <Droplets class="size-5 text-blue-600 dark:text-blue-400" />
-        </div>
-        Water Sources - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year functional water sources across {waterTrendData.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={waterTrendData.series}
-        categories={waterTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(0)} units`}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showWaterTrendModal}
+  title="Water Sources - Historical Trend"
+  description="Year-over-year functional water sources across {waterTrendData.categories
+    .length} years"
+  icon={Droplets}
+  iconBgColor="bg-blue-100 dark:bg-blue-900/20"
+  iconTextColor="text-blue-600 dark:text-blue-400"
+  trendSeries={waterTrendData.series}
+  trendCategories={waterTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={[
+    'waterNaturalFunctioning',
+    'waterLevel1Functioning',
+    'waterLevel2Functioning',
+    'waterLevel3Functioning'
+  ]}
+  yAxisFormatter={(val) => `${val.toFixed(0)} units`}
+/>
 
 <!-- Sanitation Types Trend Modal -->
-<Dialog.Root bind:open={showSanitationTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-teal-100 p-2 dark:bg-teal-900/20">
-          <Droplets class="size-5 text-teal-600 dark:text-teal-400" />
-        </div>
-        Sanitation Types - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year sanitation facility distribution across {sanitationTrendData.categories
-          .length}
-        years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={sanitationTrendData.series}
-        categories={sanitationTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showSanitationTrendModal}
+  title="Sanitation Types - Historical Trend"
+  description="Year-over-year sanitation facility distribution across {sanitationTrendData
+    .categories.length} years"
+  icon={Droplets}
+  iconBgColor="bg-teal-100 dark:bg-teal-900/20"
+  iconTextColor="text-teal-600 dark:text-teal-400"
+  trendSeries={sanitationTrendData.series}
+  trendCategories={sanitationTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={[
+    'sanitationWaterSealed',
+    'sanitationPitLatrine',
+    'sanitationCommunityCR',
+    'sanitationOpenDefecation'
+  ]}
+  yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+/>
 
 <!-- Mobile Signal Coverage Trend Modal -->
-<Dialog.Root bind:open={showSignalTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-slate-100 p-2 dark:bg-slate-900/20">
-          <Router class="size-5 text-slate-600 dark:text-slate-400" />
-        </div>
-        Mobile Signal Coverage - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year network coverage improvements across {signalTrendData.categories.length}
-        years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={signalTrendData.series}
-        categories={signalTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showSignalTrendModal}
+  title="Mobile Signal Coverage - Historical Trend"
+  description="Year-over-year network coverage improvements across {signalTrendData.categories
+    .length} years"
+  icon={Router}
+  iconBgColor="bg-slate-100 dark:bg-slate-900/20"
+  iconTextColor="text-slate-600 dark:text-slate-400"
+  trendSeries={signalTrendData.series}
+  trendCategories={signalTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['signal5G', 'signal4G', 'signal3G', 'signal2G', 'signalNone']}
+  yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+/>
 
 <!-- Classroom Density Trend Modal -->
-<Dialog.Root bind:open={showClassroomTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-indigo-100 p-2 dark:bg-indigo-900/20">
-          <GraduationCap class="size-5 text-indigo-600 dark:text-indigo-400" />
-        </div>
-        Classroom Density - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year pupil:room ratio distribution across {classroomTrendData.categories.length}
-        years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={classroomTrendData.series}
-        categories={classroomTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showClassroomTrendModal}
+  title="Classroom Density - Historical Trend"
+  description="Year-over-year pupil:room ratio distribution across {classroomTrendData.categories
+    .length} years"
+  icon={GraduationCap}
+  iconBgColor="bg-indigo-100 dark:bg-indigo-900/20"
+  iconTextColor="text-indigo-600 dark:text-indigo-400"
+  trendSeries={classroomTrendData.series}
+  trendCategories={classroomTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={[
+    'studentsPerRoomLessThan46',
+    'studentsPerRoom46_50',
+    'studentsPerRoom51_55',
+    'studentsPerRoomMoreThan56',
+    'studentsPerRoomNoClassroom'
+  ]}
+  yAxisFormatter={(val) => `${val.toFixed(0)} sitios`}
+/>
 
 <!-- Utility Access Trend Modal -->
-<Dialog.Root bind:open={showUtilityTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-yellow-50 p-2 dark:bg-yellow-900/20">
-          <Zap class="size-5 text-yellow-600 dark:text-yellow-400" />
-        </div>
-        Utility Access - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year utility coverage improvements across {utilityTrendData.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <!-- Trend badges -->
-      <div class="mb-4 flex flex-wrap gap-2">
-        {#if yearComparison.trends.electricityAccess}
-          <Badge
-            variant={yearComparison.trends.electricityAccess.isPositive ? 'default' : 'destructive'}
-            class="gap-1"
-          >
-            <Zap class="size-3" />
-            Electricity {yearComparison.trends.electricityAccess.value >= 0 ? '+' : ''}
-            {yearComparison.trends.electricityAccess.value.toFixed(1)}% vs last year
-          </Badge>
-        {/if}
-        {#if yearComparison.trends.toiletAccess}
-          <Badge
-            variant={yearComparison.trends.toiletAccess.isPositive ? 'default' : 'destructive'}
-            class="gap-1"
-          >
-            <Droplets class="size-3" />
-            Sanitation {yearComparison.trends.toiletAccess.value >= 0 ? '+' : ''}
-            {yearComparison.trends.toiletAccess.value.toFixed(1)}% vs last year
-          </Badge>
-        {/if}
-        {#if yearComparison.trends.internetAccess}
-          <Badge
-            variant={yearComparison.trends.internetAccess.isPositive ? 'default' : 'destructive'}
-            class="gap-1"
-          >
-            <Router class="size-3" />
-            Internet {yearComparison.trends.internetAccess.value >= 0 ? '+' : ''}
-            {yearComparison.trends.internetAccess.value.toFixed(1)}% vs last year
-          </Badge>
-        {/if}
-      </div>
-      <LineChart
-        series={utilityTrendData.series}
-        categories={utilityTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => `${val.toFixed(0)} HH`}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showUtilityTrendModal}
+  title="Utility Access - Historical Trend"
+  description="Year-over-year utility coverage improvements across {utilityTrendData.categories
+    .length} years"
+  icon={Zap}
+  iconBgColor="bg-yellow-50 dark:bg-yellow-900/20"
+  iconTextColor="text-yellow-600 dark:text-yellow-400"
+  trendSeries={utilityTrendData.series}
+  trendCategories={utilityTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['householdsWithElectricity', 'householdsWithToilet', 'householdsWithInternet']}
+  yAxisFormatter={(val) => `${val.toFixed(0)} HH`}
+/>

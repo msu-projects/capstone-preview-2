@@ -138,6 +138,37 @@ export interface YearlyMetrics {
   totalOSY: number;
   totalNoBirthCert: number;
   totalNoNationalID: number;
+  // Agriculture metrics
+  totalFarmers: number;
+  totalFarmerOrgs: number;
+  totalFarmArea: number;
+  // Pets metrics
+  totalDogs: number;
+  totalCats: number;
+  vaccinatedDogs: number;
+  vaccinatedCats: number;
+  // Water sources (functional counts)
+  waterNaturalFunctioning: number;
+  waterLevel1Functioning: number;
+  waterLevel2Functioning: number;
+  waterLevel3Functioning: number;
+  // Sanitation types
+  sanitationWaterSealed: number;
+  sanitationPitLatrine: number;
+  sanitationCommunityCR: number;
+  sanitationOpenDefecation: number;
+  // Mobile signal coverage
+  signal5G: number;
+  signal4G: number;
+  signal3G: number;
+  signal2G: number;
+  signalNone: number;
+  // Classroom density
+  studentsPerRoomLessThan46: number;
+  studentsPerRoom46_50: number;
+  studentsPerRoom51_55: number;
+  studentsPerRoomMoreThan56: number;
+  studentsPerRoomNoClassroom: number;
 }
 
 /**
@@ -173,6 +204,37 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
   let totalNoBirthCert = 0;
   let totalNoNationalID = 0;
   let totalLaborForce60to64 = 0;
+  // Agriculture metrics
+  let totalFarmers = 0;
+  let totalFarmerOrgs = 0;
+  let totalFarmArea = 0;
+  // Pets metrics
+  let totalDogs = 0;
+  let totalCats = 0;
+  let vaccinatedDogs = 0;
+  let vaccinatedCats = 0;
+  // Water sources (functional counts)
+  let waterNaturalFunctioning = 0;
+  let waterLevel1Functioning = 0;
+  let waterLevel2Functioning = 0;
+  let waterLevel3Functioning = 0;
+  // Sanitation types
+  let sanitationWaterSealed = 0;
+  let sanitationPitLatrine = 0;
+  let sanitationCommunityCR = 0;
+  let sanitationOpenDefecation = 0;
+  // Mobile signal coverage
+  let signal5G = 0;
+  let signal4G = 0;
+  let signal3G = 0;
+  let signal2G = 0;
+  let signalNone = 0;
+  // Classroom density
+  let studentsPerRoomLessThan46 = 0;
+  let studentsPerRoom46_50 = 0;
+  let studentsPerRoom51_55 = 0;
+  let studentsPerRoomMoreThan56 = 0;
+  let studentsPerRoomNoClassroom = 0;
 
   for (const sitio of sitios) {
     const profile = getDataForYear(sitio, year);
@@ -222,6 +284,51 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
       // Income cluster classification (7-tier system)
       const cluster = getIncomeCluster(profile.averageDailyIncome);
       incomeClusterCounts[cluster]++;
+    }
+
+    // Agriculture metrics
+    totalFarmers += profile.agriculture?.numberOfFarmers || 0;
+    totalFarmerOrgs += profile.agriculture?.numberOfAssociations || 0;
+    totalFarmArea += profile.agriculture?.estimatedFarmAreaHectares || 0;
+
+    // Pets metrics
+    totalDogs += profile.pets?.dogsCount || 0;
+    totalCats += profile.pets?.catsCount || 0;
+    vaccinatedDogs += profile.pets?.vaccinatedDogs || 0;
+    vaccinatedCats += profile.pets?.vaccinatedCats || 0;
+
+    // Water sources (functional counts)
+    waterNaturalFunctioning += profile.waterSources?.natural?.functioningCount || 0;
+    waterLevel1Functioning += profile.waterSources?.level1?.functioningCount || 0;
+    waterLevel2Functioning += profile.waterSources?.level2?.functioningCount || 0;
+    waterLevel3Functioning += profile.waterSources?.level3?.functioningCount || 0;
+
+    // Sanitation types (count sitios using each type)
+    if (profile.sanitationTypes?.waterSealed) sanitationWaterSealed++;
+    if (profile.sanitationTypes?.pitLatrine) sanitationPitLatrine++;
+    if (profile.sanitationTypes?.communityCR) sanitationCommunityCR++;
+    if (profile.sanitationTypes?.openDefecation) sanitationOpenDefecation++;
+
+    // Mobile signal coverage
+    const signal = profile.mobileSignal;
+    if (signal === '5g') signal5G++;
+    else if (signal === '4g') signal4G++;
+    else if (signal === '3g') signal3G++;
+    else if (signal === '2g') signal2G++;
+    else if (signal === 'none' || !signal) signalNone++;
+
+    // Classroom density (students per room ratio)
+    const studentsPerRoom = profile.studentsPerRoom;
+    if (!studentsPerRoom || studentsPerRoom === 'no_classroom') {
+      studentsPerRoomNoClassroom++;
+    } else if (studentsPerRoom === 'less_than_46') {
+      studentsPerRoomLessThan46++;
+    } else if (studentsPerRoom === '46_50') {
+      studentsPerRoom46_50++;
+    } else if (studentsPerRoom === '51_55') {
+      studentsPerRoom51_55++;
+    } else if (studentsPerRoom === 'more_than_56') {
+      studentsPerRoomMoreThan56++;
     }
   }
 
@@ -274,7 +381,38 @@ export function aggregateMetricsForYear(sitios: SitioRecord[], year: number): Ye
     totalSeniors,
     totalOSY,
     totalNoBirthCert,
-    totalNoNationalID
+    totalNoNationalID,
+    // Agriculture metrics
+    totalFarmers,
+    totalFarmerOrgs,
+    totalFarmArea,
+    // Pets metrics
+    totalDogs,
+    totalCats,
+    vaccinatedDogs,
+    vaccinatedCats,
+    // Water sources
+    waterNaturalFunctioning,
+    waterLevel1Functioning,
+    waterLevel2Functioning,
+    waterLevel3Functioning,
+    // Sanitation types
+    sanitationWaterSealed,
+    sanitationPitLatrine,
+    sanitationCommunityCR,
+    sanitationOpenDefecation,
+    // Mobile signal coverage
+    signal5G,
+    signal4G,
+    signal3G,
+    signal2G,
+    signalNone,
+    // Classroom density
+    studentsPerRoomLessThan46,
+    studentsPerRoom46_50,
+    studentsPerRoom51_55,
+    studentsPerRoomMoreThan56,
+    studentsPerRoomNoClassroom
   };
 }
 
@@ -409,7 +547,38 @@ export function prepareTimeSeriesData(
     totalSeniors: 'Senior Citizens',
     totalOSY: 'Out of School Youth',
     totalNoBirthCert: 'No Birth Certificate',
-    totalNoNationalID: 'No PhilSys ID'
+    totalNoNationalID: 'No PhilSys ID',
+    // Agriculture
+    totalFarmers: 'Farmers',
+    totalFarmerOrgs: 'Farmer Organizations',
+    totalFarmArea: 'Farm Area (ha)',
+    // Pets
+    totalDogs: 'Dogs',
+    totalCats: 'Cats',
+    vaccinatedDogs: 'Vaccinated Dogs',
+    vaccinatedCats: 'Vaccinated Cats',
+    // Water sources
+    waterNaturalFunctioning: 'Natural Source (Functional)',
+    waterLevel1Functioning: 'Level 1 (Functional)',
+    waterLevel2Functioning: 'Level 2 (Functional)',
+    waterLevel3Functioning: 'Level 3 (Functional)',
+    // Sanitation
+    sanitationWaterSealed: 'Water Sealed',
+    sanitationPitLatrine: 'Pit Latrine',
+    sanitationCommunityCR: 'Community CR',
+    sanitationOpenDefecation: 'Open Defecation',
+    // Signal coverage
+    signal5G: '5G Coverage',
+    signal4G: '4G Coverage',
+    signal3G: '3G Coverage',
+    signal2G: '2G Coverage',
+    signalNone: 'No Signal',
+    // Classroom density
+    studentsPerRoomLessThan46: '<46 Students/Room',
+    studentsPerRoom46_50: '46-50 Students/Room',
+    studentsPerRoom51_55: '51-55 Students/Room',
+    studentsPerRoomMoreThan56: '>56 Students/Room',
+    studentsPerRoomNoClassroom: 'No Classroom'
   };
 
   const metricColors: Record<string, string> = {
@@ -447,7 +616,38 @@ export function prepareTimeSeriesData(
     totalSeniors: 'hsl(25, 95%, 53%)',
     totalOSY: 'hsl(0, 84%, 60%)',
     totalNoBirthCert: 'hsl(45, 93%, 47%)',
-    totalNoNationalID: 'hsl(200, 18%, 46%)'
+    totalNoNationalID: 'hsl(200, 18%, 46%)',
+    // Agriculture
+    totalFarmers: 'hsl(38, 92%, 50%)',
+    totalFarmerOrgs: 'hsl(142, 71%, 45%)',
+    totalFarmArea: 'hsl(120, 60%, 50%)',
+    // Pets
+    totalDogs: 'hsl(38, 92%, 50%)',
+    totalCats: 'hsl(24, 95%, 53%)',
+    vaccinatedDogs: 'hsl(142, 71%, 45%)',
+    vaccinatedCats: 'hsl(173, 80%, 40%)',
+    // Water sources
+    waterNaturalFunctioning: 'hsl(142, 71%, 45%)',
+    waterLevel1Functioning: 'hsl(217, 91%, 60%)',
+    waterLevel2Functioning: 'hsl(45, 93%, 47%)',
+    waterLevel3Functioning: 'hsl(263, 70%, 50%)',
+    // Sanitation
+    sanitationWaterSealed: 'hsl(142, 71%, 45%)',
+    sanitationPitLatrine: 'hsl(45, 93%, 47%)',
+    sanitationCommunityCR: 'hsl(217, 91%, 60%)',
+    sanitationOpenDefecation: 'hsl(0, 84%, 60%)',
+    // Signal coverage
+    signal5G: 'hsl(142, 71%, 45%)',
+    signal4G: 'hsl(217, 91%, 60%)',
+    signal3G: 'hsl(45, 93%, 47%)',
+    signal2G: 'hsl(27, 87%, 67%)',
+    signalNone: 'hsl(0, 84%, 60%)',
+    // Classroom density
+    studentsPerRoomLessThan46: 'hsl(217, 91%, 60%)',
+    studentsPerRoom46_50: 'hsl(45, 93%, 47%)',
+    studentsPerRoom51_55: 'hsl(25, 95%, 53%)',
+    studentsPerRoomMoreThan56: 'hsl(0, 84%, 60%)',
+    studentsPerRoomNoClassroom: 'hsl(0, 0%, 30%)'
   };
 
   const series: MultiSeriesTimeData[] = metrics.map((metric) => ({
@@ -1891,7 +2091,48 @@ export const METRIC_LABELS: Partial<Record<keyof YearlyMetrics, string>> = {
   totalSeniors: 'Senior Citizens',
   totalOSY: 'Out of School Youth',
   totalNoBirthCert: 'No Birth Certificate',
-  totalNoNationalID: 'No PhilSys ID'
+  totalNoNationalID: 'No PhilSys ID',
+  // Agriculture
+  totalFarmers: 'Farmers',
+  totalFarmerOrgs: 'Farmer Organizations',
+  totalFarmArea: 'Farm Area (ha)',
+  // Pets
+  totalDogs: 'Dogs',
+  totalCats: 'Cats',
+  vaccinatedDogs: 'Vaccinated Dogs',
+  vaccinatedCats: 'Vaccinated Cats',
+  // Water sources
+  waterNaturalFunctioning: 'Natural Source (Functional)',
+  waterLevel1Functioning: 'Level 1 (Functional)',
+  waterLevel2Functioning: 'Level 2 (Functional)',
+  waterLevel3Functioning: 'Level 3 (Functional)',
+  // Sanitation
+  sanitationWaterSealed: 'Water Sealed',
+  sanitationPitLatrine: 'Pit Latrine',
+  sanitationCommunityCR: 'Community CR',
+  sanitationOpenDefecation: 'Open Defecation',
+  // Signal coverage
+  signal5G: '5G Coverage',
+  signal4G: '4G Coverage',
+  signal3G: '3G Coverage',
+  signal2G: '2G Coverage',
+  signalNone: 'No Signal',
+  // Classroom density
+  studentsPerRoomLessThan46: '<46 Students/Room',
+  studentsPerRoom46_50: '46-50 Students/Room',
+  studentsPerRoom51_55: '51-55 Students/Room',
+  studentsPerRoomMoreThan56: '>56 Students/Room',
+  studentsPerRoomNoClassroom: 'No Classroom',
+  // Road infrastructure
+  roadConcrete: 'Concrete Roads',
+  roadAsphalt: 'Asphalt Roads',
+  roadGravel: 'Gravel Roads',
+  roadNatural: 'Natural Roads',
+  totalRoadLength: 'Total Road Length',
+  // Utility metrics
+  householdsWithElectricity: 'Electricity',
+  householdsWithToilet: 'Sanitary Toilet',
+  householdsWithInternet: 'Internet'
 };
 
 /**
@@ -1920,7 +2161,48 @@ export const METRIC_COLORS: Partial<Record<keyof YearlyMetrics, string>> = {
   totalSeniors: 'hsl(25, 95%, 53%)',
   totalOSY: 'hsl(0, 84%, 60%)',
   totalNoBirthCert: 'hsl(45, 93%, 47%)',
-  totalNoNationalID: 'hsl(200, 18%, 46%)'
+  totalNoNationalID: 'hsl(200, 18%, 46%)',
+  // Agriculture
+  totalFarmers: 'hsl(38, 92%, 50%)',
+  totalFarmerOrgs: 'hsl(142, 71%, 45%)',
+  totalFarmArea: 'hsl(120, 60%, 50%)',
+  // Pets
+  totalDogs: 'hsl(38, 92%, 50%)',
+  totalCats: 'hsl(24, 95%, 53%)',
+  vaccinatedDogs: 'hsl(142, 71%, 45%)',
+  vaccinatedCats: 'hsl(173, 80%, 40%)',
+  // Water sources
+  waterNaturalFunctioning: 'hsl(142, 71%, 45%)',
+  waterLevel1Functioning: 'hsl(217, 91%, 60%)',
+  waterLevel2Functioning: 'hsl(45, 93%, 47%)',
+  waterLevel3Functioning: 'hsl(263, 70%, 50%)',
+  // Sanitation
+  sanitationWaterSealed: 'hsl(142, 71%, 45%)',
+  sanitationPitLatrine: 'hsl(45, 93%, 47%)',
+  sanitationCommunityCR: 'hsl(217, 91%, 60%)',
+  sanitationOpenDefecation: 'hsl(0, 84%, 60%)',
+  // Signal coverage
+  signal5G: 'hsl(142, 71%, 45%)',
+  signal4G: 'hsl(217, 91%, 60%)',
+  signal3G: 'hsl(45, 93%, 47%)',
+  signal2G: 'hsl(27, 87%, 67%)',
+  signalNone: 'hsl(0, 84%, 60%)',
+  // Classroom density
+  studentsPerRoomLessThan46: 'hsl(217, 91%, 60%)',
+  studentsPerRoom46_50: 'hsl(45, 93%, 47%)',
+  studentsPerRoom51_55: 'hsl(25, 95%, 53%)',
+  studentsPerRoomMoreThan56: 'hsl(0, 84%, 60%)',
+  studentsPerRoomNoClassroom: 'hsl(0, 0%, 30%)',
+  // Road infrastructure
+  roadConcrete: 'hsl(217, 91%, 60%)',
+  roadAsphalt: 'hsl(215, 20%, 55%)',
+  roadGravel: 'hsl(27, 87%, 67%)',
+  roadNatural: 'hsl(25, 5%, 45%)',
+  totalRoadLength: 'hsl(25, 95%, 53%)',
+  // Utility metrics
+  householdsWithElectricity: 'hsl(45, 93%, 47%)',
+  householdsWithToilet: 'hsl(217, 91%, 60%)',
+  householdsWithInternet: 'hsl(142, 71%, 45%)'
 };
 
 /**

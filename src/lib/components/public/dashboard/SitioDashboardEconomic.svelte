@@ -1,10 +1,8 @@
 <script lang="ts">
   import DonutChart from '$lib/components/charts/DonutChart.svelte';
-  import LineChart from '$lib/components/charts/LineChart.svelte';
   import TreemapChart from '$lib/components/charts/TreemapChart.svelte';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
   import HelpTooltip from '$lib/components/ui/help-tooltip/help-tooltip.svelte';
   import InfoCard from '$lib/components/ui/info-card/InfoCard.svelte';
   import * as Popover from '$lib/components/ui/popover';
@@ -56,13 +54,21 @@
     Wheat,
     Wind
   } from '@lucide/svelte';
+  import TrendComparisonModal from './TrendComparisonModal.svelte';
 
   interface Props {
     sitios: SitioRecord[];
     selectedYear?: number;
+    selectedMunicipality?: string;
+    selectedBarangay?: string;
   }
 
-  let { sitios, selectedYear }: Props = $props();
+  let {
+    sitios,
+    selectedYear,
+    selectedMunicipality = 'all',
+    selectedBarangay = 'all'
+  }: Props = $props();
 
   // Modal states for trend modals
   let showIncomeTrendModal = $state(false);
@@ -1394,127 +1400,73 @@
 </div>
 
 <!-- Income Trend Modal -->
-<Dialog.Root bind:open={showIncomeTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-900/20">
-          <Banknote class="size-5 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        Average Daily Income - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year income trends across {incomeTrendData.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="space-y-6 py-4">
-      <div>
-        <LineChart
-          series={incomeTrendData.series}
-          categories={incomeTrendData.categories}
-          height={300}
-          curve="smooth"
-          showLegend={true}
-          yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
-        />
-      </div>
-
-      <!-- Income Cluster Distribution Line Chart -->
-      <div>
-        <h3 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
-          Income Cluster Distribution - Historical Trend
-        </h3>
-        <LineChart
-          series={incomeClusterTrendData.series}
-          categories={incomeClusterTrendData.categories}
-          height={300}
-          curve="smooth"
-          showLegend={true}
-          yAxisFormatter={(val) => val.toLocaleString()}
-        />
-      </div>
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showIncomeTrendModal}
+  title="Average Daily Income - Historical Trend"
+  description="Year-over-year income trends across {incomeTrendData.categories.length} years"
+  icon={Banknote}
+  iconBgColor="bg-emerald-50 dark:bg-emerald-900/20"
+  iconTextColor="text-emerald-600 dark:text-emerald-400"
+  trendSeries={incomeTrendData.series}
+  trendCategories={incomeTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['averageDailyIncome']}
+  yAxisFormatter={(val) => `₱${val.toLocaleString()}`}
+/>
 
 <!-- Income Cluster Distribution Trend Modal -->
-<Dialog.Root bind:open={showPovertyTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900/20">
-          <Banknote class="size-5 text-indigo-600 dark:text-indigo-400" />
-        </div>
-        Income Cluster Distribution - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year distribution of sitios by income cluster across {incomeClusterTrendData
-          .categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={incomeClusterTrendData.series}
-        categories={incomeClusterTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showPovertyTrendModal}
+  title="Income Cluster Distribution - Historical Trend"
+  description="Year-over-year distribution of sitios by income cluster across {incomeClusterTrendData
+    .categories.length} years"
+  icon={Banknote}
+  iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
+  iconTextColor="text-indigo-600 dark:text-indigo-400"
+  trendSeries={incomeClusterTrendData.series}
+  trendCategories={incomeClusterTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['averageDailyIncome']}
+/>
 
 <!-- Agriculture Trend Modal -->
-<Dialog.Root bind:open={showAgricultureTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
-          <Wheat class="size-5 text-amber-600 dark:text-amber-400" />
-        </div>
-        Agriculture - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year agriculture metrics across {agricultureTrendData.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={agricultureTrendData.series}
-        categories={agricultureTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showAgricultureTrendModal}
+  title="Agriculture - Historical Trend"
+  description="Year-over-year agriculture metrics across {agricultureTrendData.categories
+    .length} years"
+  icon={Wheat}
+  iconBgColor="bg-amber-50 dark:bg-amber-900/20"
+  iconTextColor="text-amber-600 dark:text-amber-400"
+  trendSeries={agricultureTrendData.series}
+  trendCategories={agricultureTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalFarmers', 'totalFarmerOrgs', 'totalFarmArea']}
+/>
 
 <!-- Pets Trend Modal -->
-<Dialog.Root bind:open={showPetsTrendModal}>
-  <Dialog.Content class="max-w-3xl!">
-    <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2">
-        <div class="rounded-lg bg-violet-50 p-2 dark:bg-violet-900/20">
-          <Dog class="size-5 text-violet-600 dark:text-violet-400" />
-        </div>
-        Household Pets - Historical Trend
-      </Dialog.Title>
-      <Dialog.Description>
-        Year-over-year pet population and vaccination rates across {petsTrendData.categories.length} years
-      </Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <LineChart
-        series={petsTrendData.series}
-        categories={petsTrendData.categories}
-        height={300}
-        curve="smooth"
-        showLegend={true}
-        yAxisFormatter={(val) => val.toLocaleString()}
-      />
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<TrendComparisonModal
+  bind:open={showPetsTrendModal}
+  title="Household Pets - Historical Trend"
+  description="Year-over-year pet population and vaccination rates across {petsTrendData.categories
+    .length} years"
+  icon={Dog}
+  iconBgColor="bg-violet-50 dark:bg-violet-900/20"
+  iconTextColor="text-violet-600 dark:text-violet-400"
+  trendSeries={petsTrendData.series}
+  trendCategories={petsTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalDogs', 'totalCats', 'vaccinatedDogs', 'vaccinatedCats']}
+/>
