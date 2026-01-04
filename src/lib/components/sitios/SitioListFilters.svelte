@@ -29,6 +29,8 @@
     ArrowUp,
     Check,
     ChevronDown,
+    ChevronsDownUp,
+    ChevronsUpDown,
     ChevronUp,
     FilterX,
     GripVertical,
@@ -70,6 +72,7 @@
   let expandedCategories = new SvelteSet<string>();
   let localSearchQuery = $state(config.filters.searchQuery);
   let isIndicatorSectionOpen = $state(true);
+  let expandedMobileCategories = new SvelteSet<string>();
 
   // Derived values
   const barangays = $derived(
@@ -89,6 +92,9 @@
       config.filters.classifications.conflict !== null ||
       config.sortIndicators.length > 0
   );
+
+  const allCategoriesCollapsed = $derived(expandedCategories.size === 0);
+  const allMobileCategoriesCollapsed = $derived(expandedMobileCategories.size === 0);
 
   // Update config and optionally sync to URL
   function updateConfig(newConfig: SitioListConfig) {
@@ -275,6 +281,32 @@
       sortIndicators: []
     });
     toast.success('Cleared all sort indicators');
+  }
+
+  // Toggle all categories
+  function toggleAllCategories() {
+    if (allCategoriesCollapsed) {
+      // Expand all
+      categorizedIndicators.forEach(({ category }) => {
+        expandedCategories.add(category.key);
+      });
+    } else {
+      // Collapse all
+      expandedCategories.clear();
+    }
+  }
+
+  // Toggle all mobile categories
+  function toggleAllMobileCategories() {
+    if (allMobileCategoriesCollapsed) {
+      // Expand all
+      categorizedIndicators.forEach(({ category }) => {
+        expandedMobileCategories.add(category.key);
+      });
+    } else {
+      // Collapse all
+      expandedMobileCategories.clear();
+    }
   }
 </script>
 
@@ -478,12 +510,39 @@
             {/if}
 
             <!-- Indicator Categories -->
-            <Label class="mb-2 block text-sm font-medium text-muted-foreground">
-              Available Indicators ({MAX_SORT_INDICATORS - config.sortIndicators.length} more can be selected)
-            </Label>
+            <div class="mb-2 flex items-center justify-between">
+              <Label class="text-sm font-medium text-muted-foreground">
+                Available Indicators ({MAX_SORT_INDICATORS - config.sortIndicators.length} more can be
+                selected)
+              </Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onclick={toggleAllCategories}
+                class="gap-1.5 text-xs"
+                title={allCategoriesCollapsed ? 'Expand all categories' : 'Collapse all categories'}
+              >
+                {#if allCategoriesCollapsed}
+                  <ChevronsDownUp class="size-3.5" />
+                  Expand All
+                {:else}
+                  <ChevronsUpDown class="size-3.5" />
+                  Collapse All
+                {/if}
+              </Button>
+            </div>
             <div class="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
               {#each categorizedIndicators as { category, indicators }}
-                <Collapsible.Root>
+                <Collapsible.Root
+                  open={expandedCategories.has(category.key)}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      expandedCategories.add(category.key);
+                    } else {
+                      expandedCategories.delete(category.key);
+                    }
+                  }}
+                >
                   <div class="rounded-md border">
                     <Collapsible.Trigger
                       class="flex w-full items-center justify-between rounded-t-md px-3 py-2 text-sm font-medium hover:bg-muted"
@@ -726,11 +785,39 @@
 
           <!-- Indicator Categories -->
           <div class="space-y-3">
-            <Label class="text-sm font-medium">
-              Select Indicators ({MAX_SORT_INDICATORS - config.sortIndicators.length} remaining)
-            </Label>
+            <div class="flex items-center justify-between">
+              <Label class="text-sm font-medium">
+                Select Indicators ({MAX_SORT_INDICATORS - config.sortIndicators.length} remaining)
+              </Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onclick={toggleAllMobileCategories}
+                class="gap-1.5 text-xs"
+                title={allMobileCategoriesCollapsed
+                  ? 'Expand all categories'
+                  : 'Collapse all categories'}
+              >
+                {#if allMobileCategoriesCollapsed}
+                  <ChevronsDownUp class="size-3.5" />
+                  Expand All
+                {:else}
+                  <ChevronsUpDown class="size-3.5" />
+                  Collapse All
+                {/if}
+              </Button>
+            </div>
             {#each categorizedIndicators as { category, indicators }}
-              <Collapsible.Root>
+              <Collapsible.Root
+                open={expandedMobileCategories.has(category.key)}
+                onOpenChange={(open) => {
+                  if (open) {
+                    expandedMobileCategories.add(category.key);
+                  } else {
+                    expandedMobileCategories.delete(category.key);
+                  }
+                }}
+              >
                 <Collapsible.Trigger
                   class="flex w-full items-center justify-between py-2 text-sm font-medium hover:text-primary"
                 >
