@@ -16,7 +16,7 @@
   import * as Select from '$lib/components/ui/select';
   import * as Tabs from '$lib/components/ui/tabs';
   import type { SitioRecord } from '$lib/types';
-  import { loadAuditLogs } from '$lib/utils/audit';
+  import { initializeMockAuditLogs, loadAuditLogs } from '$lib/utils/audit';
   import toTitleCase from '$lib/utils/common';
   import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
   import { getAllAvailableYears } from '$lib/utils/sitio-chart-aggregation';
@@ -130,6 +130,7 @@
     // Lazy load activity feed when activity tab is visited
     if (value === 'activity' && recentActivities.length === 0) {
       setTimeout(() => {
+        initializeMockAuditLogs(); // Initialize mock data if needed
         recentActivities = loadAuditLogs().reverse().slice(0, 10);
       }, 0);
     }

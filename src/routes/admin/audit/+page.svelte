@@ -8,7 +8,7 @@
   import * as Select from '$lib/components/ui/select';
   import * as Table from '$lib/components/ui/table';
   import type { AuditAction, AuditLog, AuditResourceType } from '$lib/types';
-  import { getAuditLogStats, loadAuditLogs } from '$lib/utils/audit';
+  import { getAuditLogStats, initializeMockAuditLogs, loadAuditLogs } from '$lib/utils/audit';
   import toTitleCase from '$lib/utils/common';
   import {
     Activity,
@@ -20,6 +20,7 @@
     Pencil,
     Plus,
     RefreshCw,
+    RotateCcw,
     Search,
     Trash,
     Upload,
@@ -98,6 +99,8 @@
 
   // Load data on mount
   onMount(() => {
+    // Initialize mock data if needed
+    initializeMockAuditLogs();
     refreshLogs();
   });
 
@@ -125,6 +128,8 @@
         return Download;
       case 'import':
         return Upload;
+      case 'rollback':
+        return RotateCcw;
       default:
         return Activity;
     }
@@ -139,6 +144,8 @@
       case 'create':
         return 'default';
       case 'update':
+        return 'secondary';
+      case 'rollback':
         return 'secondary';
       default:
         return 'outline';
@@ -320,6 +327,7 @@
                 <Select.Item value="view">View</Select.Item>
                 <Select.Item value="export">Export</Select.Item>
                 <Select.Item value="import">Import</Select.Item>
+                <Select.Item value="rollback">Rollback</Select.Item>
               </Select.Content>
             </Select.Root>
             <Select.Root type="single" bind:value={resourceFilter}>

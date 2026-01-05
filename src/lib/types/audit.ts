@@ -14,7 +14,8 @@ export type AuditAction =
   | 'submit_for_review'
   | 'approve'
   | 'reject'
-  | 'resolve_conflict';
+  | 'resolve_conflict'
+  | 'rollback';
 
 export type AuditResourceType = 'user' | 'sitio' | 'system' | 'report' | 'project';
 

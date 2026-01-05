@@ -14,6 +14,7 @@
     LogOut,
     Pencil,
     Plus,
+    RotateCcw,
     Trash,
     Upload,
     User,
@@ -70,7 +71,8 @@
       submit_for_review: FileText,
       approve: Plus,
       reject: Trash,
-      resolve_conflict: Pencil
+      resolve_conflict: Pencil,
+      rollback: RotateCcw
     };
     return iconMap[action] || Activity;
   }
@@ -84,6 +86,8 @@
       case 'create':
         return 'default';
       case 'update':
+        return 'secondary';
+      case 'rollback':
         return 'secondary';
       default:
         return 'outline';

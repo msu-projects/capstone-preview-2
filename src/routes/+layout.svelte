@@ -4,6 +4,7 @@
   import '$lib/mock-data';
   import { authStore } from '$lib/stores/auth.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
+  import { initializeMockAuditLogs } from '$lib/utils/audit';
   import { onMount } from 'svelte';
   import './layout.css';
 
@@ -12,6 +13,8 @@
   onMount(() => {
     authStore.initialize();
     themeStore.initializeTheme();
+
+    initializeMockAuditLogs();
   });
 </script>
 

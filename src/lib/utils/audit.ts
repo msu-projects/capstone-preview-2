@@ -194,3 +194,193 @@ export function getAuditLogStats(): {
     byUser
   };
 }
+
+/**
+ * Initialize mock audit logs with rollback examples
+ */
+export function initializeMockAuditLogs(): void {
+  const existingLogs = loadAuditLogs();
+
+  // Only initialize if no logs exist
+  if (existingLogs.length > 0) return;
+
+  const now = new Date();
+  const mockLogs: AuditLog[] = [
+    // Recent rollback action
+    {
+      id: 'mock_rollback_001',
+      user_id: 1,
+      user_name: 'Admin User',
+      action: 'rollback',
+      resource_type: 'sitio',
+      resource_id: 15,
+      resource_name: 'Sitio Maligaya, Brgy. San Isidro',
+      details: 'Rolled back incorrect population update from March 2025',
+      changes: [
+        {
+          field: 'totalPopulation',
+          oldValue: 850,
+          newValue: 720
+        },
+        {
+          field: 'totalHouseholds',
+          oldValue: 210,
+          newValue: 180
+        },
+        {
+          field: 'povertyRate',
+          oldValue: 28.5,
+          newValue: 32.1
+        }
+      ],
+      ip_address: '192.168.1.100',
+      timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
+    },
+    // Original update that was rolled back
+    {
+      id: 'mock_update_001',
+      user_id: 2,
+      user_name: 'Maria Santos',
+      action: 'update',
+      resource_type: 'sitio',
+      resource_id: 15,
+      resource_name: 'Sitio Maligaya, Brgy. San Isidro',
+      details: 'Updated demographic data based on field survey',
+      changes: [
+        {
+          field: 'totalPopulation',
+          oldValue: 720,
+          newValue: 850
+        },
+        {
+          field: 'totalHouseholds',
+          oldValue: 180,
+          newValue: 210
+        },
+        {
+          field: 'povertyRate',
+          oldValue: 32.1,
+          newValue: 28.5
+        }
+      ],
+      ip_address: '192.168.1.105',
+      timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString() // 5 hours ago
+    },
+    // Another rollback for a project
+    {
+      id: 'mock_rollback_002',
+      user_id: 1,
+      user_name: 'Admin User',
+      action: 'rollback',
+      resource_type: 'project',
+      resource_id: 8,
+      resource_name: 'Water System Installation - Phase 2',
+      details: 'Reverted accidental project completion marking',
+      changes: [
+        {
+          field: 'status',
+          oldValue: 'completed',
+          newValue: 'ongoing'
+        },
+        {
+          field: 'completionPercentage',
+          oldValue: 100,
+          newValue: 75
+        },
+        {
+          field: 'completedAt',
+          oldValue: '2026-01-04T10:30:00Z',
+          newValue: null
+        }
+      ],
+      ip_address: '192.168.1.100',
+      timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString() // 1 day ago
+    },
+    // The action that was rolled back
+    {
+      id: 'mock_update_002',
+      user_id: 3,
+      user_name: 'Juan Dela Cruz',
+      action: 'update',
+      resource_type: 'project',
+      resource_id: 8,
+      resource_name: 'Water System Installation - Phase 2',
+      details: 'Marked project as completed',
+      changes: [
+        {
+          field: 'status',
+          oldValue: 'ongoing',
+          newValue: 'completed'
+        },
+        {
+          field: 'completionPercentage',
+          oldValue: 75,
+          newValue: 100
+        },
+        {
+          field: 'completedAt',
+          oldValue: null,
+          newValue: '2026-01-04T10:30:00Z'
+        }
+      ],
+      ip_address: '192.168.1.110',
+      timestamp: new Date(now.getTime() - 1.2 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    // Rollback of a delete action
+    {
+      id: 'mock_rollback_003',
+      user_id: 1,
+      user_name: 'Admin User',
+      action: 'rollback',
+      resource_type: 'sitio',
+      resource_id: 23,
+      resource_name: 'Sitio Riverside, Brgy. Poblacion',
+      details: 'Restored accidentally deleted sitio profile',
+      changes: [
+        {
+          field: 'deleted',
+          oldValue: true,
+          newValue: false
+        }
+      ],
+      ip_address: '192.168.1.100',
+      timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days ago
+    },
+    // Some regular audit entries
+    {
+      id: 'mock_login_001',
+      user_id: 1,
+      user_name: 'Admin User',
+      action: 'login',
+      resource_type: 'system',
+      details: 'Successful login',
+      ip_address: '192.168.1.100',
+      timestamp: new Date(now.getTime() - 30 * 60 * 1000).toISOString() // 30 minutes ago
+    },
+    {
+      id: 'mock_create_001',
+      user_id: 2,
+      user_name: 'Maria Santos',
+      action: 'create',
+      resource_type: 'sitio',
+      resource_id: 45,
+      resource_name: 'Sitio New Dawn, Brgy. Esperanza',
+      details: 'Created new sitio profile',
+      ip_address: '192.168.1.105',
+      timestamp: new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString() // 6 hours ago
+    },
+    {
+      id: 'mock_export_001',
+      user_id: 1,
+      user_name: 'Admin User',
+      action: 'export',
+      resource_type: 'report',
+      resource_name: 'Q4 2025 Vulnerability Assessment',
+      details: 'Exported report as PDF',
+      ip_address: '192.168.1.100',
+      timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago
+    }
+  ];
+
+  saveAuditLogs(mockLogs);
+}

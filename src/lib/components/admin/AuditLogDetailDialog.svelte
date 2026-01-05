@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Badge } from '$lib/components/ui/badge';
+  import { Button } from '$lib/components/ui/button';
   import * as Collapsible from '$lib/components/ui/collapsible';
   import * as Dialog from '$lib/components/ui/dialog';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
@@ -8,6 +9,7 @@
   import toTitleCase from '$lib/utils/common';
   import {
     Activity,
+    AlertTriangle,
     ArrowRight,
     Calendar,
     CalendarDays,
@@ -23,6 +25,7 @@
     Minus,
     Pencil,
     Plus,
+    RotateCcw,
     Trash,
     Upload,
     User,
@@ -73,7 +76,8 @@
       submit_for_review: FileText,
       approve: Plus,
       reject: Trash,
-      resolve_conflict: Pencil
+      resolve_conflict: Pencil,
+      rollback: RotateCcw
     };
     return iconMap[action] || Activity;
   }
@@ -87,6 +91,8 @@
       case 'create':
         return 'default';
       case 'update':
+        return 'secondary';
+      case 'rollback':
         return 'secondary';
       default:
         return 'outline';
@@ -320,6 +326,40 @@
   // Get yearly data changes
   function getYearlyChanges(changes: AuditFieldChange[]): AuditFieldChange[] {
     return changes.filter((c) => isYearlyDataField(c.field));
+  }
+
+  // Rollback functionality
+  function handleRollback() {
+    if (!log) return;
+
+    // In a real implementation, this would:
+    // 1. Check if the action is rollbackable (update/delete/approve)
+    // 2. Revert the changes by applying oldValue back
+    // 3. Create a new audit log with action='rollback'
+    // 4. Update the resource with the old data
+
+    // For prototype, just show a message
+    alert(
+      `Rollback would revert changes made in:\n\n` +
+        `Action: ${log.action}\n` +
+        `Resource: ${log.resource_type} - ${log.resource_name || log.resource_id}\n` +
+        `User: ${log.user_name}\n` +
+        `Timestamp: ${formatFullTimestamp(log.timestamp)}\n\n` +
+        `This is a prototype feature - not yet implemented.`
+    );
+  }
+
+  // Check if log is rollbackable
+  function isRollbackable(log: AuditLog | null): boolean {
+    if (!log) return false;
+    // Only certain actions can be rolled back
+    const rollbackableActions: AuditAction[] = ['update', 'delete', 'approve', 'create'];
+    return (
+      rollbackableActions.includes(log.action) &&
+      Boolean(log.changes && log.changes.length > 0) &&
+      // Don't allow rollback on already rolled back actions
+      log.action !== 'rollback'
+    );
   }
 </script>
 
@@ -651,6 +691,26 @@
           </div>
         </div>
       </ScrollArea>
+
+      <!-- Footer with Rollback Action -->
+      {#if isRollbackable(log)}
+        <Dialog.Footer
+          class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:space-x-2"
+        >
+          <div
+            class="flex items-start gap-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
+          >
+            <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Rollback will revert all changes from this action. This operation cannot be undone.
+            </p>
+          </div>
+          <Button variant="destructive" onclick={handleRollback} class="gap-2">
+            <RotateCcw class="h-4 w-4" />
+            Rollback Changes
+          </Button>
+        </Dialog.Footer>
+      {/if}
     {/if}
   </Dialog.Content>
 </Dialog.Root>

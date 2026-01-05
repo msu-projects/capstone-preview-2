@@ -78,7 +78,7 @@
           url: '/admin/review',
           icon: ClipboardCheck,
           requiresReviewer: true,
-          badge: () => pendingCount
+          badge: () => 3
         },
         { title: 'Users', url: '/admin/users', icon: Users, requiresSuperadmin: true },
         { title: 'Configuration', url: '/admin/config', icon: Settings2, requiresSuperadmin: true },
