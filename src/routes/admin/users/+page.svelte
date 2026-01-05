@@ -37,7 +37,7 @@
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
 
-  type ResourcePermissionKey = 'sitios' | 'users' | 'audit_logs';
+  type ResourcePermissionKey = 'sitios' | 'users' | 'audit_logs' | 'project';
 
   // State
   let users = $state<User[]>([]);
@@ -272,7 +272,12 @@
   }
 
   // Get resource permission keys (excludes canReview)
-  const resourcePermissionKeys: ResourcePermissionKey[] = ['sitios', 'users', 'audit_logs'];
+  const resourcePermissionKeys: ResourcePermissionKey[] = [
+    'sitios',
+    'users',
+    'audit_logs',
+    'project'
+  ];
 </script>
 
 <svelte:head>
