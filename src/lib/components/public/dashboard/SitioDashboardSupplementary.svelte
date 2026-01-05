@@ -79,9 +79,9 @@
   }
 
   // Helper to get custom field value
-  function getFieldValue(sitio: SitioRecord, fieldId: string): unknown {
+  function getFieldValue(sitio: SitioRecord, fieldName: string): unknown {
     const yearData = getYearData(sitio, currentYear);
-    return yearData?.customFields?.[fieldId];
+    return yearData?.customFields?.[fieldName];
   }
 
   // Group fields by their groupId
@@ -134,7 +134,7 @@
   function hasGroupData(fields: CustomFieldDefinition[]): boolean {
     for (const def of fields) {
       for (const sitio of sitios) {
-        const value = getFieldValue(sitio, def.id);
+        const value = getFieldValue(sitio, def.fieldName);
         if (value !== null && value !== undefined && value !== '') {
           return true;
         }
@@ -269,7 +269,7 @@
     const values: number[] = [];
 
     for (const sitio of sitios) {
-      const value = getFieldValue(sitio, def.id);
+      const value = getFieldValue(sitio, def.fieldName);
       if (typeof value === 'number' && !isNaN(value)) {
         values.push(value);
       }
@@ -298,7 +298,7 @@
     let notRecorded = 0;
 
     for (const sitio of sitios) {
-      const value = getFieldValue(sitio, def.id);
+      const value = getFieldValue(sitio, def.fieldName);
       if (value === true) {
         yes++;
       } else if (value === false) {
@@ -331,7 +331,7 @@
     const counts = new Map<string, number>();
 
     for (const sitio of sitios) {
-      const value = getFieldValue(sitio, def.id);
+      const value = getFieldValue(sitio, def.fieldName);
       if (Array.isArray(value)) {
         for (const item of value) {
           if (typeof item === 'string' && item.trim()) {
@@ -350,7 +350,7 @@
     const counts = new Map<string, number>();
 
     for (const sitio of sitios) {
-      const value = getFieldValue(sitio, def.id);
+      const value = getFieldValue(sitio, def.fieldName);
       if (typeof value === 'string' && value.trim()) {
         const normalized = value.trim();
         counts.set(normalized, (counts.get(normalized) || 0) + 1);
@@ -365,7 +365,7 @@
     const counts = new Map<string, number>();
 
     for (const sitio of sitios) {
-      const value = getFieldValue(sitio, def.id);
+      const value = getFieldValue(sitio, def.fieldName);
       if (Array.isArray(value)) {
         for (const item of value) {
           if (typeof item === 'string' && item.trim()) {
@@ -502,7 +502,7 @@
   function getFieldsWithDataCount(fields: CustomFieldDefinition[]): number {
     return fields.filter((def) => {
       for (const sitio of sitios) {
-        const value = getFieldValue(sitio, def.id);
+        const value = getFieldValue(sitio, def.fieldName);
         if (value !== null && value !== undefined && value !== '') {
           return true;
         }
