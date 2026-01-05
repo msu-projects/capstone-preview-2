@@ -203,6 +203,8 @@ export interface SitioWithProfile extends SitioRecord {
   indicatorValues: Map<string, number>;
   /** Cached project count for this sitio */
   _projectCount: number;
+  /** Cached latest project date timestamp for this sitio */
+  _latestProjectDate: number;
 }
 
 /**
@@ -238,16 +240,27 @@ export function prepareSitiosForSort(sitios: SitioRecord[], year: string): Sitio
       const profile = sitio.yearlyData[targetYear];
       const indicatorValues = new Map<string, number>();
 
-      // Calculate project count for extendedAccessor
-      const projectCount = projects.filter(
-        (p) => p.sitioIds && p.sitioIds.includes(sitio.id)
-      ).length;
+      // Calculate project count and latest project date for extendedAccessor
+      const sitioProjects = projects.filter((p) => p.sitioIds && p.sitioIds.includes(sitio.id));
+      const projectCount = sitioProjects.length;
+
+      // Find the most recent project date
+      let latestProjectDate = 0;
+      sitioProjects.forEach((p: any) => {
+        if (p.projectDate) {
+          const timestamp = new Date(p.projectDate).getTime();
+          if (timestamp > latestProjectDate) {
+            latestProjectDate = timestamp;
+          }
+        }
+      });
 
       return {
         ...sitio,
         profile,
         indicatorValues,
-        _projectCount: projectCount
+        _projectCount: projectCount,
+        _latestProjectDate: latestProjectDate
       };
     })
     .filter((s): s is SitioWithProfile => s !== null);

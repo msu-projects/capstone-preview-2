@@ -78,7 +78,7 @@ export interface SitioIndicator {
   accessor: (profile: SitioProfile) => number;
   /** Extended accessor that can access full SitioRecord (optional) */
   extendedAccessor?: (
-    sitioRecord: SitioRecord & { _projectCount?: number },
+    sitioRecord: SitioRecord & { _projectCount?: number; _latestProjectDate?: number },
     profile: SitioProfile
   ) => number;
   /** Default sort order */
@@ -939,6 +939,30 @@ export const SITIO_INDICATORS: SitioIndicator[] = [
     defaultOrder: 'desc',
     format: formatNumber,
     description: 'Total number of projects implemented in this sitio',
+    higherIsBetter: true
+  },
+  {
+    key: 'latestProjectDate',
+    label: 'Latest Project Date',
+    shortLabel: 'Latest Project',
+    category: 'projectsUpdates',
+    accessor: () => 0, // Will be overridden by extendedAccessor
+    extendedAccessor: (sitioRecord) => {
+      // Return the timestamp of the most recent project
+      // The value will be injected during sort preparation
+      return sitioRecord._latestProjectDate || 0;
+    },
+    defaultOrder: 'desc',
+    format: (v) => {
+      if (v === 0) return 'No Projects';
+      const date = new Date(v);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    },
+    description: 'Date of the most recent project implemented in this sitio',
     higherIsBetter: true
   },
   {
