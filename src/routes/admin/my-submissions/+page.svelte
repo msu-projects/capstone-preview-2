@@ -72,7 +72,7 @@
     rejected: mySubmissions.filter((c) => c.status === 'rejected').length,
     needsRevision: mySubmissions.filter((c) => c.status === 'needs_revision').length,
     conflict: mySubmissions.filter((c) => c.status === 'conflict').length,
-    superseded: mySubmissions.filter((c) => c.status === 'superseded').length,
+    // superseded: mySubmissions.filter((c) => c.status === 'superseded').length,
     total: mySubmissions.length
   });
 
@@ -233,8 +233,8 @@
         return 'outline';
       case 'conflict':
         return 'outline';
-      case 'superseded':
-        return 'secondary';
+      // case 'superseded':
+      //   return 'secondary';
       default:
         return 'outline';
     }
@@ -252,8 +252,8 @@
         return Edit;
       case 'conflict':
         return AlertTriangle;
-      case 'superseded':
-        return RefreshCw;
+      // case 'superseded':
+      //   return RefreshCw;
       default:
         return Clock;
     }
@@ -775,7 +775,7 @@
             <Select.Item value="approved">Approved</Select.Item>
             <Select.Item value="rejected">Rejected</Select.Item>
             <Select.Item value="conflict">Conflict</Select.Item>
-            <Select.Item value="superseded">Superseded</Select.Item>
+            <!-- <Select.Item value="superseded">Superseded</Select.Item> -->
           </Select.Content>
         </Select.Root>
 
