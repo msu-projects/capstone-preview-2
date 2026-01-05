@@ -3,6 +3,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
+  import * as Collapsible from '$lib/components/ui/collapsible';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Input } from '$lib/components/ui/input';
   import * as Select from '$lib/components/ui/select';
@@ -31,6 +32,7 @@
     ArrowRight,
     Check,
     CheckCircle,
+    ChevronDown,
     Clock,
     Edit,
     Eye,
@@ -71,6 +73,8 @@
   let reviewComment = $state('');
   let isProcessing = $state(false);
   let reviewAction = $state<'approve' | 'reject' | 'revision'>('approve');
+  let changesOverviewOpen = $state(false);
+  let rawJsonOpen = $state(false);
 
   // Computed
   const filteredChanges = $derived.by(() => {
@@ -994,146 +998,167 @@
 
           <!-- Diff View -->
           <div class="space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <p class="text-sm font-medium">Changes Overview</p>
-                {#if selectedComparisonYear}
-                  <Badge variant="secondary" class="text-xs">
-                    Year {selectedComparisonYear}
-                  </Badge>
-                {/if}
-              </div>
-              <Badge variant="outline" class="text-xs">
-                {selectedFieldDiffs.length} field(s) changed
-              </Badge>
-            </div>
-
-            <!-- Field-by-Field Comparison -->
-            <div class="space-y-3 rounded-lg border bg-card p-4">
-              {#each selectedFieldDiffs as diff}
+            <Collapsible.Root bind:open={changesOverviewOpen}>
+              <Collapsible.Trigger class="w-full">
                 <div
-                  class="rounded-lg border transition-colors hover:bg-muted/50 {diff.type ===
-                  'added'
-                    ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30'
-                    : diff.type === 'removed'
-                      ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
-                      : 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30'}"
+                  class="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                 >
-                  <div class="p-3">
-                    <!-- Field Header -->
-                    <div class="mb-2 flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        {#if diff.type === 'added'}
-                          <div
-                            class="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                          >
-                            <Plus class="h-3 w-3" />
-                            Added
+                  <div class="flex items-center gap-2">
+                    <ChevronDown
+                      class="h-4 w-4 transition-transform {changesOverviewOpen ? 'rotate-180' : ''}"
+                    />
+                    <p class="text-sm font-medium">Changes Overview</p>
+                    {#if selectedComparisonYear}
+                      <Badge variant="secondary" class="text-xs">
+                        Year {selectedComparisonYear}
+                      </Badge>
+                    {/if}
+                  </div>
+                  <Badge variant="outline" class="text-xs">
+                    {selectedFieldDiffs.length} field(s) changed
+                  </Badge>
+                </div>
+              </Collapsible.Trigger>
+
+              <Collapsible.Content>
+                <!-- Field-by-Field Comparison -->
+                <div class="mt-3 space-y-3 rounded-lg border bg-card p-4">
+                  {#each selectedFieldDiffs as diff}
+                    <div
+                      class="rounded-lg border transition-colors hover:bg-muted/50 {diff.type ===
+                      'added'
+                        ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30'
+                        : diff.type === 'removed'
+                          ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
+                          : 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30'}"
+                    >
+                      <div class="p-3">
+                        <!-- Field Header -->
+                        <div class="mb-2 flex items-center justify-between">
+                          <div class="flex items-center gap-2">
+                            {#if diff.type === 'added'}
+                              <div
+                                class="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                              >
+                                <Plus class="h-3 w-3" />
+                                Added
+                              </div>
+                            {:else if diff.type === 'removed'}
+                              <div
+                                class="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300"
+                              >
+                                <Minus class="h-3 w-3" />
+                                Removed
+                              </div>
+                            {:else}
+                              <div
+                                class="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                              >
+                                <ArrowRight class="h-3 w-3" />
+                                Modified
+                              </div>
+                            {/if}
+                            <span class="text-sm font-semibold">{formatFieldName(diff.field)}</span>
                           </div>
-                        {:else if diff.type === 'removed'}
-                          <div
-                            class="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300"
-                          >
-                            <Minus class="h-3 w-3" />
-                            Removed
-                          </div>
-                        {:else}
-                          <div
-                            class="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
-                          >
-                            <ArrowRight class="h-3 w-3" />
-                            Modified
-                          </div>
-                        {/if}
-                        <span class="text-sm font-semibold">{formatFieldName(diff.field)}</span>
+                        </div>
+
+                        <!-- Value Comparison -->
+                        <div class="grid gap-3 md:grid-cols-2">
+                          {#if diff.type !== 'added'}
+                            <div class="space-y-1">
+                              <p class="text-xs font-medium text-muted-foreground">
+                                Original Value
+                              </p>
+                              <div
+                                class="rounded-md bg-background/80 p-2 text-sm shadow-sm ring-1 ring-gray-200 ring-inset dark:ring-gray-800"
+                              >
+                                {#if typeof diff.original === 'object'}
+                                  <pre class="overflow-x-auto text-xs">{JSON.stringify(
+                                      diff.original,
+                                      null,
+                                      2
+                                    )}</pre>
+                                {:else}
+                                  <span class="wrap-break-word">{formatValue(diff.original)}</span>
+                                {/if}
+                              </div>
+                            </div>
+                          {/if}
+
+                          {#if diff.type !== 'removed'}
+                            <div class="space-y-1" class:md:col-span-2={diff.type === 'added'}>
+                              <p class="text-xs font-medium text-muted-foreground">
+                                {diff.type === 'added' ? 'New Value' : 'Proposed Value'}
+                              </p>
+                              <div
+                                class="rounded-md bg-background/80 p-2 text-sm font-medium shadow-sm ring-1 ring-inset {diff.type ===
+                                'added'
+                                  ? 'ring-green-300 dark:ring-green-800'
+                                  : 'ring-orange-300 dark:ring-orange-800'}"
+                              >
+                                {#if typeof diff.proposed === 'object'}
+                                  <pre class="overflow-x-auto text-xs">{JSON.stringify(
+                                      diff.proposed,
+                                      null,
+                                      2
+                                    )}</pre>
+                                {:else}
+                                  <span class="wrap-break-word">{formatValue(diff.proposed)}</span>
+                                {/if}
+                              </div>
+                            </div>
+                          {/if}
+                        </div>
                       </div>
                     </div>
-
-                    <!-- Value Comparison -->
-                    <div class="grid gap-3 md:grid-cols-2">
-                      {#if diff.type !== 'added'}
-                        <div class="space-y-1">
-                          <p class="text-xs font-medium text-muted-foreground">Original Value</p>
-                          <div
-                            class="rounded-md bg-background/80 p-2 text-sm shadow-sm ring-1 ring-gray-200 ring-inset dark:ring-gray-800"
-                          >
-                            {#if typeof diff.original === 'object'}
-                              <pre class="overflow-x-auto text-xs">{JSON.stringify(
-                                  diff.original,
-                                  null,
-                                  2
-                                )}</pre>
-                            {:else}
-                              <span class="wrap-break-word">{formatValue(diff.original)}</span>
-                            {/if}
-                          </div>
-                        </div>
-                      {/if}
-
-                      {#if diff.type !== 'removed'}
-                        <div class="space-y-1" class:md:col-span-2={diff.type === 'added'}>
-                          <p class="text-xs font-medium text-muted-foreground">
-                            {diff.type === 'added' ? 'New Value' : 'Proposed Value'}
-                          </p>
-                          <div
-                            class="rounded-md bg-background/80 p-2 text-sm font-medium shadow-sm ring-1 ring-inset {diff.type ===
-                            'added'
-                              ? 'ring-green-300 dark:ring-green-800'
-                              : 'ring-orange-300 dark:ring-orange-800'}"
-                          >
-                            {#if typeof diff.proposed === 'object'}
-                              <pre class="overflow-x-auto text-xs">{JSON.stringify(
-                                  diff.proposed,
-                                  null,
-                                  2
-                                )}</pre>
-                            {:else}
-                              <span class="wrap-break-word">{formatValue(diff.proposed)}</span>
-                            {/if}
-                          </div>
-                        </div>
-                      {/if}
+                  {:else}
+                    <div class="py-8 text-center text-sm text-muted-foreground">
+                      No changes detected
                     </div>
-                  </div>
+                  {/each}
                 </div>
-              {:else}
-                <div class="py-8 text-center text-sm text-muted-foreground">
-                  No changes detected
-                </div>
-              {/each}
-            </div>
+              </Collapsible.Content>
+            </Collapsible.Root>
 
             <!-- Raw JSON Toggle (Collapsed by default) -->
-            <details class="group">
-              <summary
-                class="cursor-pointer rounded-lg border bg-muted/30 p-3 text-sm font-medium hover:bg-muted/50"
-              >
-                <span class="flex items-center gap-2">
-                  <span>View Raw JSON Data</span>
-                  <Badge variant="outline" class="text-xs">Advanced</Badge>
-                </span>
-              </summary>
-              <div class="mt-2 grid gap-4 md:grid-cols-2">
-                <div>
-                  <p class="mb-1 text-xs font-medium text-muted-foreground">Original Data</p>
-                  <pre
-                    class="max-h-60 overflow-auto rounded-lg border bg-muted p-3 text-xs">{JSON.stringify(
-                      selectedChange.originalData,
-                      null,
-                      2
-                    )}</pre>
+            <Collapsible.Root bind:open={rawJsonOpen}>
+              <Collapsible.Trigger class="w-full">
+                <div
+                  class="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                >
+                  <div class="flex items-center gap-2">
+                    <ChevronDown
+                      class="h-4 w-4 transition-transform {rawJsonOpen ? 'rotate-180' : ''}"
+                    />
+                    <span class="text-sm font-medium">View Raw JSON Data</span>
+                    <Badge variant="outline" class="text-xs">Advanced</Badge>
+                  </div>
                 </div>
-                <div>
-                  <p class="mb-1 text-xs font-medium text-muted-foreground">Proposed Data</p>
-                  <pre
-                    class="max-h-60 overflow-auto rounded-lg border bg-muted p-3 text-xs">{JSON.stringify(
-                      selectedChange.proposedData,
-                      null,
-                      2
-                    )}</pre>
+              </Collapsible.Trigger>
+
+              <Collapsible.Content>
+                <div class="mt-2 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-muted-foreground">Original Data</p>
+                    <pre
+                      class="max-h-60 overflow-auto rounded-lg border bg-muted p-3 text-xs">{JSON.stringify(
+                        selectedChange.originalData,
+                        null,
+                        2
+                      )}</pre>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-muted-foreground">Proposed Data</p>
+                    <pre
+                      class="max-h-60 overflow-auto rounded-lg border bg-muted p-3 text-xs">{JSON.stringify(
+                        selectedChange.proposedData,
+                        null,
+                        2
+                      )}</pre>
+                  </div>
                 </div>
-              </div>
-            </details>
+              </Collapsible.Content>
+            </Collapsible.Root>
           </div>
 
           <!-- Revision History -->

@@ -4,6 +4,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
+  import * as Collapsible from '$lib/components/ui/collapsible';
   import * as Dialog from '$lib/components/ui/dialog';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { Input } from '$lib/components/ui/input';
@@ -26,6 +27,7 @@
     ArrowRight,
     Check,
     CheckCircle,
+    ChevronDown,
     Clock,
     Edit,
     Eye,
@@ -60,6 +62,8 @@
   let editComment = $state('');
   let withdrawReason = $state('');
   let isProcessing = $state(false);
+  let changesOverviewOpen = $state(false);
+  let rawJsonOpen = $state(false);
 
   // Statistics
   let statistics = $derived({
@@ -368,27 +372,254 @@
     });
   }
 
-  function getChangedFields(change: PendingChange): string[] {
-    if (!change.originalData || !change.proposedData) return [];
-    const original = change.originalData as Record<string, unknown>;
-    const proposed = change.proposedData as Record<string, unknown>;
-    const changedFields: string[] = [];
+  // Computed for selected change dialog
+  const selectedComparisonYear = $derived.by(() => {
+    if (!selectedChange) return null;
+    return getComparisonYear(
+      selectedChange.originalData as Record<string, unknown>,
+      selectedChange.proposedData as Record<string, unknown>
+    );
+  });
 
-    for (const key in proposed) {
-      if (JSON.stringify(original[key]) !== JSON.stringify(proposed[key])) {
-        changedFields.push(key);
+  const selectedFieldDiffs = $derived.by(() => {
+    if (!selectedChange) return [];
+    return getFieldDifferences(
+      selectedChange.originalData as Record<string, unknown>,
+      selectedChange.proposedData as Record<string, unknown>
+    );
+  });
+
+  // Helper to format data for display
+  function formatValue(value: unknown): string {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'object') return JSON.stringify(value, null, 2);
+    return String(value);
+  }
+
+  /**
+   * Check if data contains yearlyData structure (SitioRecord with year-based data)
+   */
+  function hasYearlyDataStructure(data: Record<string, unknown>): boolean {
+    return 'yearlyData' in data && typeof data.yearlyData === 'object' && data.yearlyData !== null;
+  }
+
+  /**
+   * Extract the year being edited from proposed data
+   * Returns the first year found in yearlyData, or null if none found
+   */
+  function extractEditedYear(proposed: Record<string, unknown>): string | null {
+    if (!hasYearlyDataStructure(proposed)) return null;
+    const yearlyData = proposed.yearlyData as Record<string, unknown>;
+    const years = Object.keys(yearlyData).filter((key) => /^\d{4}$/.test(key));
+    return years.length > 0 ? years[0] : null;
+  }
+
+  /**
+   * Normalize data for comparison: extract year-specific data if applicable
+   * This handles the case where original is flat SitioRecord and proposed has yearlyData
+   */
+  function normalizeForComparison(
+    original: Record<string, unknown>,
+    proposed: Record<string, unknown>
+  ): {
+    normalizedOriginal: Record<string, unknown>;
+    normalizedProposed: Record<string, unknown>;
+    year: string | null;
+  } {
+    const proposedHasYearly = hasYearlyDataStructure(proposed);
+    const originalHasYearly = hasYearlyDataStructure(original);
+
+    // Case: Proposed has yearlyData, original has yearlyData - compare specific year
+    if (proposedHasYearly && originalHasYearly) {
+      const year = extractEditedYear(proposed);
+      if (year) {
+        const originalYearlyData = original.yearlyData as Record<string, Record<string, unknown>>;
+        const proposedYearlyData = proposed.yearlyData as Record<string, Record<string, unknown>>;
+
+        return {
+          normalizedOriginal: originalYearlyData[year] || {},
+          normalizedProposed: proposedYearlyData[year] || {},
+          year
+        };
       }
     }
 
-    return changedFields;
+    // Case: Proposed has yearlyData but original doesn't (legacy/flat structure)
+    // This means original might be the old SitioRecord format
+    if (proposedHasYearly && !originalHasYearly) {
+      const year = extractEditedYear(proposed);
+      if (year) {
+        const proposedYearlyData = proposed.yearlyData as Record<string, Record<string, unknown>>;
+        // Original is flat, so use it directly for comparison with the year data
+        return {
+          normalizedOriginal: original,
+          normalizedProposed: proposedYearlyData[year] || {},
+          year
+        };
+      }
+    }
+
+    // Case: Neither has yearlyData or both are flat - compare directly
+    return {
+      normalizedOriginal: original,
+      normalizedProposed: proposed,
+      year: null
+    };
   }
 
-  function getFieldValue(data: unknown, field: string): string {
-    if (!data) return 'N/A';
-    const obj = data as Record<string, unknown>;
-    const value = obj[field];
-    if (value === null || value === undefined) return 'N/A';
-    return String(value);
+  /**
+   * Deep compare two values, returning differences recursively
+   */
+  function deepCompareValues(
+    original: unknown,
+    proposed: unknown,
+    path: string = ''
+  ): {
+    field: string;
+    original: unknown;
+    proposed: unknown;
+    type: 'added' | 'removed' | 'modified';
+  }[] {
+    const differences: {
+      field: string;
+      original: unknown;
+      proposed: unknown;
+      type: 'added' | 'removed' | 'modified';
+    }[] = [];
+
+    // If both are objects (but not arrays or null), compare their keys
+    if (
+      original !== null &&
+      proposed !== null &&
+      typeof original === 'object' &&
+      typeof proposed === 'object' &&
+      !Array.isArray(original) &&
+      !Array.isArray(proposed)
+    ) {
+      const originalObj = original as Record<string, unknown>;
+      const proposedObj = proposed as Record<string, unknown>;
+      const allKeys = new Set([...Object.keys(originalObj), ...Object.keys(proposedObj)]);
+
+      for (const key of allKeys) {
+        const fieldPath = path ? `${path}.${key}` : key;
+
+        if (!(key in originalObj)) {
+          differences.push({
+            field: fieldPath,
+            original: undefined,
+            proposed: proposedObj[key],
+            type: 'added'
+          });
+        } else if (!(key in proposedObj)) {
+          differences.push({
+            field: fieldPath,
+            original: originalObj[key],
+            proposed: undefined,
+            type: 'removed'
+          });
+        } else if (JSON.stringify(originalObj[key]) !== JSON.stringify(proposedObj[key])) {
+          // If nested objects, recursively compare
+          if (
+            typeof originalObj[key] === 'object' &&
+            typeof proposedObj[key] === 'object' &&
+            originalObj[key] !== null &&
+            proposedObj[key] !== null &&
+            !Array.isArray(originalObj[key]) &&
+            !Array.isArray(proposedObj[key])
+          ) {
+            differences.push(...deepCompareValues(originalObj[key], proposedObj[key], fieldPath));
+          } else {
+            differences.push({
+              field: fieldPath,
+              original: originalObj[key],
+              proposed: proposedObj[key],
+              type: 'modified'
+            });
+          }
+        }
+      }
+
+      return differences;
+    }
+
+    // Direct value comparison for primitives and arrays
+    if (JSON.stringify(original) !== JSON.stringify(proposed)) {
+      differences.push({
+        field: path || 'value',
+        original,
+        proposed,
+        type: original === undefined ? 'added' : proposed === undefined ? 'removed' : 'modified'
+      });
+    }
+
+    return differences;
+  }
+
+  // Fields to exclude from comparison (metadata fields)
+  const excludedFields = new Set([
+    'id',
+    'createdAt',
+    'updatedAt',
+    'availableYears',
+    'yearlyData',
+    'coding'
+  ]);
+
+  /**
+   * Compute field-level differences between original and proposed data
+   * Handles yearlyData structure intelligently
+   */
+  function getFieldDifferences(
+    original: Record<string, unknown>,
+    proposed: Record<string, unknown>
+  ): {
+    field: string;
+    original: unknown;
+    proposed: unknown;
+    type: 'added' | 'removed' | 'modified';
+    year?: string;
+  }[] {
+    const { normalizedOriginal, normalizedProposed, year } = normalizeForComparison(
+      original,
+      proposed
+    );
+
+    const differences = deepCompareValues(normalizedOriginal, normalizedProposed);
+
+    // Filter out excluded fields and add year info
+    return differences
+      .filter((diff) => {
+        const topLevelField = diff.field.split('.')[0];
+        return !excludedFields.has(topLevelField);
+      })
+      .map((diff) => ({
+        ...diff,
+        year: year || undefined
+      }));
+  }
+
+  // Get the year being compared (for display purposes)
+  function getComparisonYear(
+    original: Record<string, unknown>,
+    proposed: Record<string, unknown>
+  ): string | null {
+    const { year } = normalizeForComparison(original, proposed);
+    return year;
+  }
+
+  // Format field name for display
+  function formatFieldName(field: string): string {
+    return field
+      .split('.')
+      .map((part) =>
+        part
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase())
+          .trim()
+      )
+      .join(' → ');
   }
 
   onMount(() => {
@@ -904,34 +1135,167 @@
           </div>
         {/if}
 
-        <!-- Changes Comparison -->
-        <div>
-          <div class="mb-3 text-sm font-medium text-muted-foreground">Proposed Changes</div>
-          <div class="space-y-2">
-            {#each getChangedFields(selectedChange) as field}
-              {@const original = getFieldValue(selectedChange.originalData, field)}
-              {@const proposed = getFieldValue(selectedChange.proposedData, field)}
-              <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-md border p-3">
-                <div>
-                  <div class="mb-1 text-xs font-medium text-muted-foreground">
-                    {toTitleCase(field)}
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <Minus class="h-4 w-4 text-red-500" />
-                    <span class="text-sm text-red-600 dark:text-red-400">{original}</span>
-                  </div>
+        <!-- Diff View -->
+        <div class="space-y-3">
+          <Collapsible.Root bind:open={changesOverviewOpen}>
+            <Collapsible.Trigger class="w-full">
+              <div
+                class="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+              >
+                <div class="flex items-center gap-2">
+                  <ChevronDown
+                    class="h-4 w-4 transition-transform {changesOverviewOpen ? 'rotate-180' : ''}"
+                  />
+                  <p class="text-sm font-medium">Changes Overview</p>
+                  {#if selectedComparisonYear}
+                    <Badge variant="secondary" class="text-xs">
+                      Year {selectedComparisonYear}
+                    </Badge>
+                  {/if}
                 </div>
-                <ArrowRight class="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div class="mb-1 text-xs font-medium text-muted-foreground">New Value</div>
-                  <div class="flex items-center gap-2">
-                    <Plus class="h-4 w-4 text-green-500" />
-                    <span class="text-sm text-green-600 dark:text-green-400">{proposed}</span>
+                <Badge variant="outline" class="text-xs">
+                  {selectedFieldDiffs.length} field(s) changed
+                </Badge>
+              </div>
+            </Collapsible.Trigger>
+
+            <Collapsible.Content>
+              <!-- Field-by-Field Comparison -->
+              <div class="mt-3 space-y-3 rounded-lg border bg-card p-4">
+                {#each selectedFieldDiffs as diff}
+                  <div
+                    class="rounded-lg border transition-colors hover:bg-muted/50 {diff.type ===
+                    'added'
+                      ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30'
+                      : diff.type === 'removed'
+                        ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
+                        : 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30'}"
+                  >
+                    <div class="p-3">
+                      <!-- Field Header -->
+                      <div class="mb-2 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          {#if diff.type === 'added'}
+                            <div
+                              class="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                            >
+                              <Plus class="h-3 w-3" />
+                              Added
+                            </div>
+                          {:else if diff.type === 'removed'}
+                            <div
+                              class="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300"
+                            >
+                              <Minus class="h-3 w-3" />
+                              Removed
+                            </div>
+                          {:else}
+                            <div
+                              class="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                            >
+                              <ArrowRight class="h-3 w-3" />
+                              Modified
+                            </div>
+                          {/if}
+                          <span class="text-sm font-semibold">{formatFieldName(diff.field)}</span>
+                        </div>
+                      </div>
+
+                      <!-- Value Comparison -->
+                      <div class="grid gap-3 md:grid-cols-2">
+                        {#if diff.type !== 'added'}
+                          <div class="space-y-1">
+                            <p class="text-xs font-medium text-muted-foreground">Original Value</p>
+                            <div
+                              class="rounded-md bg-background/80 p-2 text-sm shadow-sm ring-1 ring-gray-200 ring-inset dark:ring-gray-800"
+                            >
+                              {#if typeof diff.original === 'object'}
+                                <pre class="overflow-x-auto text-xs">{JSON.stringify(
+                                    diff.original,
+                                    null,
+                                    2
+                                  )}</pre>
+                              {:else}
+                                <span class="wrap-break-word">{formatValue(diff.original)}</span>
+                              {/if}
+                            </div>
+                          </div>
+                        {/if}
+
+                        {#if diff.type !== 'removed'}
+                          <div class="space-y-1" class:md:col-span-2={diff.type === 'added'}>
+                            <p class="text-xs font-medium text-muted-foreground">
+                              {diff.type === 'added' ? 'New Value' : 'Proposed Value'}
+                            </p>
+                            <div
+                              class="rounded-md bg-background/80 p-2 text-sm font-medium shadow-sm ring-1 ring-inset {diff.type ===
+                              'added'
+                                ? 'ring-green-300 dark:ring-green-800'
+                                : 'ring-orange-300 dark:ring-orange-800'}"
+                            >
+                              {#if typeof diff.proposed === 'object'}
+                                <pre class="overflow-x-auto text-xs">{JSON.stringify(
+                                    diff.proposed,
+                                    null,
+                                    2
+                                  )}</pre>
+                              {:else}
+                                <span class="wrap-break-word">{formatValue(diff.proposed)}</span>
+                              {/if}
+                            </div>
+                          </div>
+                        {/if}
+                      </div>
+                    </div>
                   </div>
+                {:else}
+                  <div class="py-8 text-center text-sm text-muted-foreground">
+                    No changes detected
+                  </div>
+                {/each}
+              </div>
+            </Collapsible.Content>
+          </Collapsible.Root>
+
+          <!-- Raw JSON Toggle (Collapsed by default) -->
+          <Collapsible.Root bind:open={rawJsonOpen}>
+            <Collapsible.Trigger class="w-full">
+              <div
+                class="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+              >
+                <div class="flex items-center gap-2">
+                  <ChevronDown
+                    class="h-4 w-4 transition-transform {rawJsonOpen ? 'rotate-180' : ''}"
+                  />
+                  <span class="text-sm font-medium">View Raw JSON Data</span>
+                  <Badge variant="outline" class="text-xs">Advanced</Badge>
                 </div>
               </div>
-            {/each}
-          </div>
+            </Collapsible.Trigger>
+
+            <Collapsible.Content>
+              <div class="mt-2 grid gap-4 md:grid-cols-2">
+                <div>
+                  <p class="mb-1 text-xs font-medium text-muted-foreground">Original Data</p>
+                  <pre
+                    class="max-h-60 overflow-auto rounded-lg border bg-muted p-3 text-xs">{JSON.stringify(
+                      selectedChange.originalData,
+                      null,
+                      2
+                    )}</pre>
+                </div>
+                <div>
+                  <p class="mb-1 text-xs font-medium text-muted-foreground">Proposed Data</p>
+                  <pre
+                    class="max-h-60 overflow-auto rounded-lg border bg-muted p-3 text-xs">{JSON.stringify(
+                      selectedChange.proposedData,
+                      null,
+                      2
+                    )}</pre>
+                </div>
+              </div>
+            </Collapsible.Content>
+          </Collapsible.Root>
         </div>
       </div>
 
