@@ -677,7 +677,7 @@ export function prepareTimeSeriesData(
     totalNoNationalID: 'hsl(200, 18%, 46%)',
     // Agriculture
     totalFarmers: 'hsl(38, 92%, 50%)',
-    totalFarmerOrgs: 'hsl(142, 71%, 45%)',
+    totalFarmerOrgs: 'hsl(163, 100%, 60%)',
     totalFarmArea: 'hsl(120, 60%, 50%)',
     // Pets
     totalDogs: 'hsl(38, 92%, 50%)',
@@ -2222,7 +2222,7 @@ export const METRIC_COLORS: Partial<Record<keyof YearlyMetrics, string>> = {
   totalNoNationalID: 'hsl(200, 18%, 46%)',
   // Agriculture
   totalFarmers: 'hsl(38, 92%, 50%)',
-  totalFarmerOrgs: 'hsl(142, 71%, 45%)',
+  totalFarmerOrgs: 'hsl(163, 100%, 60%)',
   totalFarmArea: 'hsl(120, 60%, 50%)',
   // Pets
   totalDogs: 'hsl(38, 92%, 50%)',
