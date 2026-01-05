@@ -18,6 +18,7 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import type { PriorityItem, SitioRecord } from '$lib/types';
   import { cn } from '$lib/utils';
+  import { submitSitioForReview } from '$lib/utils/approval-aware-storage';
   import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
   import { loadSitios, updateSitio } from '$lib/utils/storage';
   import {
@@ -766,10 +767,11 @@
       [selectedYear]: updatedYearData
     };
 
-    const success = updateSitio(sitio.id, {
+    const result = submitSitioForReview(sitio.id, {
       yearlyData: updatedYearlyData,
       updatedAt: new Date().toISOString()
     });
+    const success = result.success;
 
     // Simulate slight delay for UX
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -777,7 +779,7 @@
     isSaving = false;
 
     if (success) {
-      toast.success('Sitio updated successfully!', {
+      toast.success('Changes submitted for review!', {
         description: `${sitio.sitioName} (${selectedYear}) has been updated.`
       });
       hasUnsavedChanges = false;

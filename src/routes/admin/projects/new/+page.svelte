@@ -12,8 +12,8 @@
   import { SitioMultiSelect } from '$lib/components/ui/sitio-multi-select';
   import { Textarea } from '$lib/components/ui/textarea';
   import { authStore } from '$lib/stores/auth.svelte';
+  import { submitProjectForReview } from '$lib/utils/approval-aware-storage';
   import { validateImageFile } from '$lib/utils/image-utils';
-  import { addProject } from '$lib/utils/project-storage';
   import { ArrowLeft, FileText, ImagePlus, Loader2, MapPin, Save, Trash2, X } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
@@ -169,7 +169,7 @@
     isSaving = true;
 
     try {
-      const project = addProject({
+      const result = submitProjectForReview(null, {
         title: title.trim(),
         description: description.trim(),
         location: { latitude, longitude },
@@ -179,14 +179,14 @@
         images
       });
 
-      if (project) {
-        toast.success('Project created successfully!', {
-          description: `"${title}" has been added.`
+      if (result.success) {
+        toast.success('Project submitted for review!', {
+          description: `"${title}" has been submitted for approval.`
         });
         hasUnsavedChanges = false;
         goto('/admin/projects');
       } else {
-        toast.error('Failed to create project');
+        toast.error(result.error || 'Failed to submit project');
       }
     } catch (error) {
       console.error('Error saving project:', error);

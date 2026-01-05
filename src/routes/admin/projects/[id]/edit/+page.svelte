@@ -14,8 +14,9 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { authStore } from '$lib/stores/auth.svelte';
   import type { Project } from '$lib/types';
+  import { submitProjectForReview } from '$lib/utils/approval-aware-storage';
   import { validateImageFile } from '$lib/utils/image-utils';
-  import { getProjectById, updateProject } from '$lib/utils/project-storage';
+  import { getProjectById } from '$lib/utils/project-storage';
   import { ArrowLeft, FileText, ImagePlus, Loader2, MapPin, Save, Trash2, X } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
@@ -196,7 +197,7 @@
     isSaving = true;
 
     try {
-      const success = updateProject(projectId, {
+      const result = submitProjectForReview(projectId, {
         title: title.trim(),
         description: description.trim(),
         location: { latitude, longitude },
@@ -206,12 +207,12 @@
         images
       });
 
-      if (success) {
-        toast.success('Project updated successfully!');
+      if (result.success) {
+        toast.success('Changes submitted for review!');
         hasUnsavedChanges = false;
         goto(`/admin/projects/${projectId}`);
       } else {
-        toast.error('Failed to update project');
+        toast.error(result.error || 'Failed to submit changes');
       }
     } catch (error) {
       console.error('Error updating project:', error);

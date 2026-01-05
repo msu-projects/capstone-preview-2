@@ -8,7 +8,8 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import type { SitioRecord } from '$lib/types';
   import { cn } from '$lib/utils';
-  import { addSitio, loadSitios } from '$lib/utils/storage';
+  import { submitForReview } from '$lib/utils/pending-changes-storage';
+  import { loadSitios } from '$lib/utils/storage';
   import { ArrowLeft, ArrowRight, Info, Loader2, MapPin, Plus, Shield, X } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
@@ -202,7 +203,15 @@
       updatedAt: new Date().toISOString()
     };
 
-    const success = addSitio(newSitio);
+    // Submit for review instead of directly creating
+    const result = submitForReview({
+      resourceType: 'sitio',
+      resourceId: 0, // 0 indicates new record
+      resourceName: `New: ${sitioName}, ${barangay}, ${municipality}`,
+      originalData: null, // No original data for new records
+      proposedData: newSitio
+    });
+    const success = result !== null;
 
     // Simulate slight delay for UX
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -210,14 +219,14 @@
     isSaving = false;
 
     if (success) {
-      toast.success('Sitio created successfully!', {
-        description: `${sitioName} has been added. You can now add yearly data.`
+      toast.success('New sitio submitted for review!', {
+        description: `${sitioName} has been submitted and is pending approval.`
       });
 
-      // Redirect to the edit page for the new sitio to add yearly data
-      goto(`/admin/sitios/${newId}/edit?year=${currentYear}`);
+      // Redirect to sitios list since the sitio isn't created yet
+      goto('/admin/sitios');
     } else {
-      toast.error('Failed to create sitio');
+      toast.error('Failed to submit sitio for review');
     }
   }
 

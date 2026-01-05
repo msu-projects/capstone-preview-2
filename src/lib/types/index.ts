@@ -128,3 +128,13 @@ export type {
   SpatialComparisonResult,
   TemporalComparisonResult
 } from './comparison';
+
+// Pending Changes & Approval Workflow
+export type {
+  ConflictResolution,
+  PendingChange,
+  PendingChangeFilters,
+  PendingChangeResourceType,
+  PendingChangeStatus,
+  PendingChangeSummary
+} from './pending-changes';

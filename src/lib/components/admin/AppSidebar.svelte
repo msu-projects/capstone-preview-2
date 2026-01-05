@@ -6,7 +6,9 @@
   import * as Sidebar from '$lib/components/ui/sidebar';
   import { ThemeToggle } from '$lib/components/ui/theme-toggle';
   import { authStore } from '$lib/stores/auth.svelte';
+  import { getPendingChangeSummary } from '$lib/utils/pending-changes-storage';
   import {
+    ClipboardCheck,
     ExternalLink,
     FileBarChart,
     FileText,
@@ -22,8 +24,17 @@
     Users
   } from '@lucide/svelte';
   import type { Component, ComponentProps } from 'svelte';
+  import { onMount } from 'svelte';
 
   let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
+
+  // Pending changes count for badge
+  let pendingCount = $state(0);
+
+  onMount(() => {
+    const summary = getPendingChangeSummary();
+    pendingCount = summary.pending + summary.conflict;
+  });
 
   interface NavItem {
     title: string;
@@ -31,6 +42,8 @@
     icon: Component;
     requiresSuperadmin?: boolean;
     requiresAdmin?: boolean;
+    requiresReviewer?: boolean;
+    badge?: () => number;
   }
 
   interface NavGroup {
@@ -60,6 +73,13 @@
     {
       title: 'System',
       items: [
+        {
+          title: 'Review Queue',
+          url: '/admin/review',
+          icon: ClipboardCheck,
+          requiresReviewer: true,
+          badge: () => pendingCount
+        },
         { title: 'Users', url: '/admin/users', icon: Users, requiresSuperadmin: true },
         { title: 'Configuration', url: '/admin/config', icon: Settings2, requiresSuperadmin: true },
         { title: 'Audit Logs', url: '/admin/audit', icon: FileText },
@@ -83,12 +103,13 @@
   }
 
   function isActive(url: string): boolean {
-    // For sitios, projects, recommendations, and config, use startsWith to match sub-routes
+    // For sitios, projects, recommendations, config, and review, use startsWith to match sub-routes
     if (
       url === '/admin/sitios' ||
       url === '/admin/projects' ||
       url === '/admin/recommendations' ||
-      url === '/admin/config'
+      url === '/admin/config' ||
+      url === '/admin/review'
     ) {
       return page.url.pathname.startsWith(url);
     }
@@ -98,6 +119,7 @@
   function canViewItem(item: NavItem): boolean {
     if (item.requiresSuperadmin && !authStore.isSuperadmin) return false;
     if (item.requiresAdmin && !authStore.isAdmin) return false;
+    if (item.requiresReviewer && !authStore.canReview) return false;
     return true;
   }
 
@@ -140,12 +162,22 @@
           {#each group.items as item}
             {#if canViewItem(item)}
               {@const active = isActive(item.url)}
+              {@const badgeCount = item.badge?.() ?? 0}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton tooltipContent={item.title} isActive={active}>
                   {#snippet child({ props })}
                     <a href={item.url} {...props}>
-                      <item.icon class="size-4" />
-                      <span>{item.title}</span>
+                      <span class="flex items-center gap-2">
+                        <item.icon class="size-4" />
+                        <span>{item.title}</span>
+                      </span>
+                      {#if badgeCount > 0}
+                        <span
+                          class="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white"
+                        >
+                          {badgeCount > 99 ? '99+' : badgeCount}
+                        </span>
+                      {/if}
                     </a>
                   {/snippet}
                 </Sidebar.MenuButton>

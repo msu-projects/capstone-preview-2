@@ -12,6 +12,9 @@ const isAuthenticated = $derived(currentUser !== null);
 const isSuperadmin = $derived(currentUser?.role === 'superadmin');
 const isAdmin = $derived(currentUser?.role === 'admin' || currentUser?.role === 'superadmin');
 const isViewer = $derived(currentUser?.role === 'viewer');
+const canReview = $derived(
+  currentUser?.role === 'superadmin' || (currentUser?.permissions?.canReview ?? false)
+);
 
 // Initialize from session storage on module load
 function initializeFromSession(): void {
@@ -98,7 +101,10 @@ function hasPermission(
   // Superadmin has all permissions
   if (currentUser.role === 'superadmin') return true;
 
-  return currentUser.permissions[resource]?.[action] ?? false;
+  const permission = currentUser.permissions[resource];
+  // canReview is a boolean, not a ResourcePermissions object
+  if (typeof permission === 'boolean') return false;
+  return permission?.[action] ?? false;
 }
 
 // Check if user can perform action (for UI conditional rendering)
@@ -157,6 +163,9 @@ export const authStore = {
   },
   get isViewer() {
     return isViewer;
+  },
+  get canReview() {
+    return canReview;
   },
   initialize: initializeFromSession,
   login,

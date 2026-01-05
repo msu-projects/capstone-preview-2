@@ -30,7 +30,6 @@
     X
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
 
   // Props from +page.ts
   interface Props {
@@ -54,7 +53,7 @@
   let selectedYear = $state('latest');
 
   // Track which tabs have been visited for lazy loading
-  let visitedTabs = $state(new SvelteSet(['overview']));
+  // let visitedTabs = $state(new SvelteSet(['overview']));
 
   // Initialize and sync state when data changes (e.g., browser back/forward)
   $effect(() => {
@@ -63,7 +62,7 @@
     activeTab = data.tab;
     selectedYear = data.year;
     // Mark the initial tab as visited
-    visitedTabs.add(data.tab);
+    // visitedTabs.add(data.tab);
   });
 
   onMount(() => {
@@ -149,7 +148,7 @@
   function handleTabChange(value: string) {
     activeTab = value;
     // Mark tab as visited for lazy loading
-    visitedTabs.add(value);
+    // visitedTabs.add(value);
     updateUrl();
   }
 
@@ -347,45 +346,45 @@
         <div class="mt-6">
           <!-- Tab Contents - Lazy loaded -->
           <Tabs.Content value="overview">
-            {#if visitedTabs.has('overview')}
-              <SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
-            {/if}
+            <!-- {#if visitedTabs.has('overview')} -->
+            <SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="demographics">
-            {#if visitedTabs.has('demographics')}
-              <SitioDashboardDemographics
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-                {selectedMunicipality}
-                {selectedBarangay}
-              />
-            {/if}
+            <!-- {#if visitedTabs.has('demographics')} -->
+            <SitioDashboardDemographics
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+              {selectedMunicipality}
+              {selectedBarangay}
+            />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="infrastructure">
-            {#if visitedTabs.has('infrastructure')}
-              <SitioDashboardInfrastructure
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-              />
-            {/if}
+            <!-- {#if visitedTabs.has('infrastructure')} -->
+            <SitioDashboardInfrastructure
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+            />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="economic">
-            {#if visitedTabs.has('economic')}
-              <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
-            {/if}
+            <!-- {#if visitedTabs.has('economic')} -->
+            <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="maps">
-            {#if visitedTabs.has('maps')}
-              <SitioDashboardMaps
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-                onSitioClick={handleSitioClick}
-              />
-            {/if}
+            <!-- {#if visitedTabs.has('maps')} -->
+            <SitioDashboardMaps
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+              onSitioClick={handleSitioClick}
+            />
+            <!-- {/if} -->
           </Tabs.Content>
         </div>
       </Tabs.Root>

@@ -10,7 +10,8 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import type { SitioRecord } from '$lib/types';
   import { cn } from '$lib/utils';
-  import { loadSitios, updateSitio } from '$lib/utils/storage';
+  import { submitSitioForReview } from '$lib/utils/approval-aware-storage';
+  import { loadSitios } from '$lib/utils/storage';
   import { AlertTriangle, ArrowLeft, Info, Loader2, MapPin, Save, Shield, X } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
@@ -131,7 +132,7 @@
       };
     }
 
-    const success = updateSitio(sitio.id, {
+    const updatedData = {
       municipality,
       barangay,
       sitioName,
@@ -141,7 +142,9 @@
       sitioClassification: { ...sitioClassification },
       yearlyData: updatedYearlyData,
       updatedAt: new Date().toISOString()
-    });
+    };
+    const result = submitSitioForReview(sitio.id, updatedData);
+    const success = result.success;
 
     // Simulate slight delay for UX
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -158,7 +161,7 @@
         `Core identifiers updated. Reason: ${changeReason}`
       );
 
-      toast.success('Core identifiers updated successfully!', {
+      toast.success('Changes submitted for review!', {
         description: `${sitioName} has been updated.`
       });
       hasUnsavedChanges = false;

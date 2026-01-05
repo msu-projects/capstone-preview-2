@@ -10,7 +10,11 @@ export type AuditAction =
   | 'delete'
   | 'view'
   | 'export'
-  | 'import';
+  | 'import'
+  | 'submit_for_review'
+  | 'approve'
+  | 'reject'
+  | 'resolve_conflict';
 
 export type AuditResourceType = 'user' | 'sitio' | 'system' | 'report' | 'project';
 

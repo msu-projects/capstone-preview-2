@@ -12,7 +12,7 @@
   import * as Select from '$lib/components/ui/select';
   import * as Table from '$lib/components/ui/table';
   import { authStore } from '$lib/stores/auth.svelte';
-  import type { User, UserPermissions, UserRole } from '$lib/types';
+  import type { ResourcePermissions, User, UserRole } from '$lib/types';
   import { calculateChanges, logAuditAction } from '$lib/utils/audit';
   import toTitleCase from '$lib/utils/common';
   import {
@@ -36,6 +36,8 @@
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
+
+  type ResourcePermissionKey = 'sitios' | 'users' | 'audit_logs';
 
   // State
   let users = $state<User[]>([]);
@@ -263,9 +265,14 @@
   }
 
   // Permission toggle helper
-  function togglePermission(resource: keyof UserPermissions, action: 'read' | 'write' | 'delete') {
-    formData.permissions[resource][action] = !formData.permissions[resource][action];
+  function togglePermission(resource: ResourcePermissionKey, action: 'read' | 'write' | 'delete') {
+    (formData.permissions[resource] as ResourcePermissions)[action] = !(
+      formData.permissions[resource] as ResourcePermissions
+    )[action];
   }
+
+  // Get resource permission keys (excludes canReview)
+  const resourcePermissionKeys: ResourcePermissionKey[] = ['sitios', 'users', 'audit_logs'];
 </script>
 
 <svelte:head>
@@ -385,9 +392,19 @@
                   </div>
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge variant={getRoleBadgeVariant(user.role)}>
-                    {toTitleCase(user.role)}
-                  </Badge>
+                  <div class="flex flex-wrap gap-1">
+                    <Badge variant={getRoleBadgeVariant(user.role)}>
+                      {toTitleCase(user.role)}
+                    </Badge>
+                    {#if user.permissions.canReview}
+                      <Badge
+                        variant="outline"
+                        class="border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
+                      >
+                        Reviewer
+                      </Badge>
+                    {/if}
+                  </div>
                 </Table.Cell>
                 <Table.Cell>{user.department}</Table.Cell>
                 <Table.Cell>
@@ -485,7 +502,7 @@
           <Input id="department" bind:value={formData.department} placeholder="DILG" />
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-3 gap-4">
         <div class="space-y-2">
           <Label>Role</Label>
           <Select.Root
@@ -507,6 +524,21 @@
           <Checkbox id="is_active" bind:checked={formData.is_active} />
           <Label for="is_active">Active</Label>
         </div>
+        <div class="flex items-center space-x-2 pt-6">
+          <Checkbox
+            id="can_review"
+            checked={formData.permissions.canReview}
+            onCheckedChange={() =>
+              (formData.permissions.canReview = !formData.permissions.canReview)}
+            disabled={formData.role === 'superadmin'}
+          />
+          <Label for="can_review">
+            Can Review Changes
+            {#if formData.role === 'superadmin'}
+              <span class="text-xs text-muted-foreground">(always enabled for superadmins)</span>
+            {/if}
+          </Label>
+        </div>
       </div>
 
       <!-- Permissions -->
@@ -523,30 +555,27 @@
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {#each Object.keys(formData.permissions) as resource}
+              {#each resourcePermissionKeys as resource}
                 <Table.Row>
                   <Table.Cell class="font-medium capitalize"
                     >{resource.replace('_', ' ')}</Table.Cell
                   >
                   <Table.Cell class="text-center">
                     <Checkbox
-                      checked={formData.permissions[resource as keyof UserPermissions].read}
-                      onCheckedChange={() =>
-                        togglePermission(resource as keyof UserPermissions, 'read')}
+                      checked={(formData.permissions[resource] as ResourcePermissions).read}
+                      onCheckedChange={() => togglePermission(resource, 'read')}
                     />
                   </Table.Cell>
                   <Table.Cell class="text-center">
                     <Checkbox
-                      checked={formData.permissions[resource as keyof UserPermissions].write}
-                      onCheckedChange={() =>
-                        togglePermission(resource as keyof UserPermissions, 'write')}
+                      checked={(formData.permissions[resource] as ResourcePermissions).write}
+                      onCheckedChange={() => togglePermission(resource, 'write')}
                     />
                   </Table.Cell>
                   <Table.Cell class="text-center">
                     <Checkbox
-                      checked={formData.permissions[resource as keyof UserPermissions].delete}
-                      onCheckedChange={() =>
-                        togglePermission(resource as keyof UserPermissions, 'delete')}
+                      checked={(formData.permissions[resource] as ResourcePermissions).delete}
+                      onCheckedChange={() => togglePermission(resource, 'delete')}
                     />
                   </Table.Cell>
                 </Table.Row>
@@ -596,7 +625,7 @@
           <Input id="edit-department" bind:value={formData.department} />
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-3 gap-4">
         <div class="space-y-2">
           <Label>Role</Label>
           <Select.Root
@@ -618,6 +647,21 @@
           <Checkbox id="edit-is_active" bind:checked={formData.is_active} />
           <Label for="edit-is_active">Active</Label>
         </div>
+        <div class="flex items-center space-x-2 pt-6">
+          <Checkbox
+            id="edit-can_review"
+            checked={formData.permissions.canReview}
+            onCheckedChange={() =>
+              (formData.permissions.canReview = !formData.permissions.canReview)}
+            disabled={formData.role === 'superadmin'}
+          />
+          <Label for="edit-can_review">
+            Can Review Changes
+            {#if formData.role === 'superadmin'}
+              <span class="text-xs text-muted-foreground">(always enabled for superadmins)</span>
+            {/if}
+          </Label>
+        </div>
       </div>
 
       <!-- Permissions -->
@@ -634,30 +678,27 @@
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {#each Object.keys(formData.permissions) as resource}
+              {#each resourcePermissionKeys as resource}
                 <Table.Row>
                   <Table.Cell class="font-medium capitalize"
                     >{resource.replace('_', ' ')}</Table.Cell
                   >
                   <Table.Cell class="text-center">
                     <Checkbox
-                      checked={formData.permissions[resource as keyof UserPermissions].read}
-                      onCheckedChange={() =>
-                        togglePermission(resource as keyof UserPermissions, 'read')}
+                      checked={(formData.permissions[resource] as ResourcePermissions).read}
+                      onCheckedChange={() => togglePermission(resource, 'read')}
                     />
                   </Table.Cell>
                   <Table.Cell class="text-center">
                     <Checkbox
-                      checked={formData.permissions[resource as keyof UserPermissions].write}
-                      onCheckedChange={() =>
-                        togglePermission(resource as keyof UserPermissions, 'write')}
+                      checked={(formData.permissions[resource] as ResourcePermissions).write}
+                      onCheckedChange={() => togglePermission(resource, 'write')}
                     />
                   </Table.Cell>
                   <Table.Cell class="text-center">
                     <Checkbox
-                      checked={formData.permissions[resource as keyof UserPermissions].delete}
-                      onCheckedChange={() =>
-                        togglePermission(resource as keyof UserPermissions, 'delete')}
+                      checked={(formData.permissions[resource] as ResourcePermissions).delete}
+                      onCheckedChange={() => togglePermission(resource, 'delete')}
                     />
                   </Table.Cell>
                 </Table.Row>

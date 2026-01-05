@@ -14,6 +14,7 @@ export interface UserPermissions {
   sitios: ResourcePermissions;
   users: ResourcePermissions;
   audit_logs: ResourcePermissions;
+  canReview: boolean;
 }
 
 export interface User {

@@ -66,7 +66,11 @@
       delete: Trash,
       view: FileText,
       export: Download,
-      import: Upload
+      import: Upload,
+      submit_for_review: FileText,
+      approve: Plus,
+      reject: Trash,
+      resolve_conflict: Pencil
     };
     return iconMap[action] || Activity;
   }

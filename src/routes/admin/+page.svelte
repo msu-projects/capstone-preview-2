@@ -34,7 +34,6 @@
     X
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
 
   let sitios = $state<SitioRecord[]>([]);
   let isLoading = $state(true);
@@ -47,7 +46,7 @@
   let selectedYear = $state('latest');
 
   // Track which tabs have been visited for lazy loading
-  let visitedTabs = $state(new SvelteSet(['overview']));
+  // let visitedTabs = $state(new SvelteSet(['overview']));
 
   // Recent activities - lazy loaded
   let recentActivities = $state<any[]>([]);
@@ -126,7 +125,7 @@
   function handleTabChange(value: string) {
     activeTab = value;
     // Mark tab as visited for lazy loading
-    visitedTabs.add(value);
+    // visitedTabs.add(value);
 
     // Lazy load activity feed when activity tab is visited
     if (value === 'activity' && recentActivities.length === 0) {
@@ -294,66 +293,66 @@
         <div class="mt-6">
           <!-- Tab Contents - Lazy loaded -->
           <Tabs.Content value="overview">
-            {#if visitedTabs.has('overview')}
-              <SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
-            {/if}
+            <!-- {#if visitedTabs.has('overview')} -->
+            <SitioDashboardOverview sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="demographics">
-            {#if visitedTabs.has('demographics')}
-              <SitioDashboardDemographics
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-                {selectedMunicipality}
-              />
-            {/if}
+            <!-- {#if visitedTabs.has('demographics')} -->
+            <SitioDashboardDemographics
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+              {selectedMunicipality}
+            />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="infrastructure">
-            {#if visitedTabs.has('infrastructure')}
-              <SitioDashboardInfrastructure
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-              />
-            {/if}
+            <!-- {#if visitedTabs.has('infrastructure')} -->
+            <SitioDashboardInfrastructure
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+            />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="economic">
-            {#if visitedTabs.has('economic')}
-              <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
-            {/if}
+            <!-- {#if visitedTabs.has('economic')} -->
+            <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="maps">
-            {#if visitedTabs.has('maps')}
-              <SitioDashboardMaps
-                sitios={filteredSitios}
-                selectedYear={selectedYearNumber}
-                onSitioClick={handleSitioClick}
-              />
-            {/if}
+            <!-- {#if visitedTabs.has('maps')} -->
+            <SitioDashboardMaps
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+              onSitioClick={handleSitioClick}
+            />
+            <!-- {/if} -->
           </Tabs.Content>
 
           {#if hasActiveCustomFields}
             <Tabs.Content value="supplementary">
-              {#if visitedTabs.has('supplementary')}
-                <SitioDashboardSupplementary
-                  sitios={filteredSitios}
-                  selectedYear={selectedYearNumber}
-                />
-              {/if}
+              <!-- {#if visitedTabs.has('supplementary')} -->
+              <SitioDashboardSupplementary
+                sitios={filteredSitios}
+                selectedYear={selectedYearNumber}
+              />
+              <!-- {/if} -->
             </Tabs.Content>
           {/if}
 
           <Tabs.Content value="activity">
-            {#if visitedTabs.has('activity')}
-              <div class="grid gap-6 lg:grid-cols-1">
-                <ActivityFeed
-                  activities={recentActivities}
-                  isLoading={recentActivities.length === 0}
-                />
-              </div>
-            {/if}
+            <!-- {#if visitedTabs.has('activity')} -->
+            <div class="grid gap-6 lg:grid-cols-1">
+              <ActivityFeed
+                activities={recentActivities}
+                isLoading={recentActivities.length === 0}
+              />
+            </div>
+            <!-- {/if} -->
           </Tabs.Content>
         </div>
       </Tabs.Root>

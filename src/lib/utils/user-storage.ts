@@ -7,17 +7,20 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
   superadmin: {
     sitios: { read: true, write: true, delete: true },
     users: { read: true, write: true, delete: true },
-    audit_logs: { read: true, write: true, delete: true }
+    audit_logs: { read: true, write: true, delete: true },
+    canReview: true
   },
   admin: {
     sitios: { read: true, write: true, delete: false },
     users: { read: true, write: false, delete: false },
-    audit_logs: { read: true, write: false, delete: false }
+    audit_logs: { read: true, write: false, delete: false },
+    canReview: false
   },
   viewer: {
     sitios: { read: true, write: false, delete: false },
     users: { read: false, write: false, delete: false },
-    audit_logs: { read: false, write: false, delete: false }
+    audit_logs: { read: false, write: false, delete: false },
+    canReview: false
   }
 };
 
