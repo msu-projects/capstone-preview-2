@@ -6,7 +6,10 @@
   import * as Sidebar from '$lib/components/ui/sidebar';
   import { ThemeToggle } from '$lib/components/ui/theme-toggle';
   import { authStore } from '$lib/stores/auth.svelte';
-  import { getPendingChangeSummary } from '$lib/utils/pending-changes-storage';
+  import {
+    getPendingChangeSummary,
+    getUnreadStatusChangeCount
+  } from '$lib/utils/pending-changes-storage';
   import {
     ClipboardCheck,
     ExternalLink,
@@ -17,6 +20,7 @@
     LayoutDashboard,
     LogOut,
     MapPin,
+    Send,
     Settings2,
     Shield,
     ShieldCheck,
@@ -30,11 +34,24 @@
 
   // Pending changes count for badge
   let pendingCount = $state(0);
+  let unreadStatusCount = $state(0);
 
   onMount(() => {
-    const summary = getPendingChangeSummary();
-    pendingCount = summary.pending + summary.conflict;
+    refreshBadges();
+    // Refresh badges every 30 seconds
+    const interval = setInterval(refreshBadges, 30000);
+    return () => clearInterval(interval);
   });
+
+  function refreshBadges() {
+    const summary = getPendingChangeSummary();
+    pendingCount = summary.pending + summary.conflict + summary.needsRevision;
+
+    const currentUser = authStore.currentUser;
+    if (currentUser) {
+      unreadStatusCount = getUnreadStatusChangeCount(currentUser.id);
+    }
+  }
 
   interface NavItem {
     title: string;
@@ -60,7 +77,20 @@
       title: 'Data Management',
       items: [
         { title: 'Sitios', url: '/admin/sitios', icon: MapPin },
-        { title: 'Projects', url: '/admin/projects', icon: FolderKanban }
+        { title: 'Projects', url: '/admin/projects', icon: FolderKanban },
+        {
+          title: 'Review Queue',
+          url: '/admin/review',
+          icon: ClipboardCheck,
+          requiresReviewer: true,
+          badge: () => pendingCount
+        },
+        {
+          title: 'My Submissions',
+          url: '/admin/my-submissions',
+          icon: Send,
+          badge: () => unreadStatusCount
+        }
       ]
     },
     {
@@ -73,13 +103,6 @@
     {
       title: 'System',
       items: [
-        {
-          title: 'Review Queue',
-          url: '/admin/review',
-          icon: ClipboardCheck,
-          requiresReviewer: true,
-          badge: () => 3
-        },
         { title: 'Users', url: '/admin/users', icon: Users, requiresSuperadmin: true },
         { title: 'Configuration', url: '/admin/config', icon: Settings2, requiresSuperadmin: true },
         { title: 'Audit Logs', url: '/admin/audit', icon: FileText },
@@ -103,13 +126,14 @@
   }
 
   function isActive(url: string): boolean {
-    // For sitios, projects, recommendations, config, and review, use startsWith to match sub-routes
+    // For sitios, projects, recommendations, config, review, and my-submissions, use startsWith to match sub-routes
     if (
       url === '/admin/sitios' ||
       url === '/admin/projects' ||
       url === '/admin/recommendations' ||
       url === '/admin/config' ||
-      url === '/admin/review'
+      url === '/admin/review' ||
+      url === '/admin/my-submissions'
     ) {
       return page.url.pathname.startsWith(url);
     }

@@ -14,6 +14,8 @@ export type AuditAction =
   | 'submit_for_review'
   | 'approve'
   | 'reject'
+  | 'request_revision'
+  | 'resubmit'
   | 'resolve_conflict'
   | 'rollback';
 

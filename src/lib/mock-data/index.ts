@@ -26,20 +26,34 @@ import {
   resetMockData,
   SITIO_GENERATION_CONFIG
 } from './sitio-generator';
+import {
+  generateSubmissions,
+  getSubmissionGenerationParams,
+  initializeSubmissionsIfNeeded,
+  isSubmissionsInitialized,
+  loadMockSubmissions,
+  resetSubmissionsMockData
+} from './submission-generator';
 
 // Re-export generator functions and configuration for external use
 export {
   generateProjects,
   generateSitios,
+  generateSubmissions,
   getProjectStats,
   getSitioGenerationParams,
+  getSubmissionGenerationParams,
   initializeProjectsIfNeeded,
+  initializeSubmissionsIfNeeded,
   isMockDataInitialized,
   isProjectsInitialized,
+  isSubmissionsInitialized,
+  loadMockSubmissions,
   MOCK_DATA_INITIALIZED_KEY,
   PROJECTS_INITIALIZED_KEY,
   resetMockData,
   resetProjectMockData,
+  resetSubmissionsMockData,
   SITIO_GENERATION_CONFIG
 };
 

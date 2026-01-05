@@ -16,10 +16,14 @@
   import { Label } from '$lib/components/ui/label';
   import * as Select from '$lib/components/ui/select';
   import { authStore } from '$lib/stores/auth.svelte';
-  import type { PriorityItem, SitioRecord } from '$lib/types';
+  import type { PendingChange, PriorityItem, SitioRecord } from '$lib/types';
   import { cn } from '$lib/utils';
   import { submitSitioForReview } from '$lib/utils/approval-aware-storage';
   import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
+  import {
+    getEditablePendingChange,
+    resubmitPendingChange
+  } from '$lib/utils/pending-changes-storage';
   import { loadSitios, updateSitio } from '$lib/utils/storage';
   import {
     AlertTriangle,
@@ -35,6 +39,7 @@
     MapPin,
     Pencil,
     Plus,
+    RotateCcw,
     Save,
     Sparkles,
     Sprout,
@@ -74,6 +79,7 @@
     data: {
       id: string;
       year: string;
+      pendingChangeId: string | null;
     };
   }
 
@@ -93,6 +99,10 @@
   let deleteYearDialogOpen = $state(false);
   let hasUnsavedChanges = $state(false);
   let newYearInput = $state('');
+
+  // Resubmission state
+  let pendingChange = $state<PendingChange | null>(null);
+  let isResubmission = $state(false);
 
   // Permission checks
   const canEditCore = $derived(authStore.canEditCoreIdentifiers());
@@ -345,11 +355,177 @@
 
   // Load sitio data
   onMount(() => {
+    // Check if there are active custom fields
+    hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
+
+    // Check if this is a resubmission
+    if (data.pendingChangeId) {
+      loadPendingChange();
+    } else {
+      loadSitioData();
+    }
+  });
+
+  function loadPendingChange() {
+    const pc = getEditablePendingChange('sitio', sitioId);
+
+    if (!pc || pc.id !== data.pendingChangeId) {
+      toast.error('Pending change not found or cannot be edited');
+      goto('/admin/my-submissions');
+      return;
+    }
+
+    pendingChange = pc;
+    isResubmission = true;
+
+    // Load the original sitio
     const sitios = loadSitios();
     const found = sitios.find((s) => s.id === sitioId);
 
-    // Check if there are active custom fields
-    hasActiveCustomFields = getActiveCustomFieldDefinitions().length > 0;
+    if (!found) {
+      toast.error('Sitio not found');
+      goto('/admin/sitios');
+      return;
+    }
+
+    sitio = found;
+
+    // Determine year from pending changes
+    const changes = pc.proposedData as Partial<SitioRecord>;
+    if (changes.yearlyData) {
+      // Find the year that was modified
+      const changedYears = Object.keys(changes.yearlyData);
+      if (changedYears.length > 0) {
+        selectedYear = changedYears[0];
+      } else if (found.availableYears.length > 0) {
+        selectedYear = Math.max(...found.availableYears).toString();
+      }
+    } else if (found.availableYears.length > 0) {
+      selectedYear = Math.max(...found.availableYears).toString();
+    }
+
+    // Load the year data with pending changes applied
+    loadYearDataWithChanges(changes);
+
+    isLoading = false;
+    hasUnsavedChanges = true; // Mark as having changes since this is a resubmission
+  }
+
+  function loadYearDataWithChanges(changes: Partial<SitioRecord>) {
+    if (!sitio || !selectedYear) return;
+
+    // Start with original year data
+    const originalYearData = sitio.yearlyData[selectedYear];
+
+    // Merge with pending changes
+    const pendingYearData = changes.yearlyData?.[selectedYear];
+    const yearData = pendingYearData
+      ? { ...originalYearData, ...pendingYearData }
+      : originalYearData;
+
+    if (!yearData) return;
+
+    // Load all the form fields with merged data
+    mainAccess = Object.entries(yearData.mainAccess).find(([_, v]) => v)?.[0] || '';
+    totalPopulation = yearData.totalPopulation || 0;
+    totalHouseholds = yearData.totalHouseholds || 0;
+    registeredVoters = yearData.registeredVoters || 0;
+    laborForceCount = yearData.laborForceCount || 0;
+    schoolAgeChildren = yearData.schoolAgeChildren || 0;
+    population = yearData.population
+      ? { ...yearData.population }
+      : { totalMale: 0, totalFemale: 0 };
+    vulnerableGroups = yearData.vulnerableGroups
+      ? { ...yearData.vulnerableGroups }
+      : {
+          muslimCount: 0,
+          ipCount: 0,
+          seniorsCount: 0,
+          laborForce60to64Count: 0,
+          unemployedCount: 0,
+          noBirthCertCount: 0,
+          noNationalIDCount: 0,
+          outOfSchoolYouth: 0
+        };
+
+    householdsWithToilet = yearData.householdsWithToilet || 0;
+    householdsWithElectricity = yearData.householdsWithElectricity || 0;
+    electricitySources = yearData.electricitySources
+      ? { ...yearData.electricitySources }
+      : { grid: 0, solar: 0, battery: 0, generator: 0 };
+    mobileSignal = yearData.mobileSignal || 'none';
+    householdsWithInternet = yearData.householdsWithInternet || 0;
+
+    if (yearData.facilities) {
+      facilities = JSON.parse(JSON.stringify(yearData.facilities));
+    }
+    if (yearData.infrastructure) {
+      infrastructure = JSON.parse(JSON.stringify(yearData.infrastructure));
+    }
+
+    studentsPerRoom = yearData.studentsPerRoom || 'less_than_46';
+
+    if (yearData.waterSources) {
+      waterSources = JSON.parse(JSON.stringify(yearData.waterSources));
+    }
+    if (yearData.sanitationTypes) {
+      sanitationTypes = { ...yearData.sanitationTypes };
+    }
+
+    workerClass = yearData.workerClass
+      ? { ...yearData.workerClass }
+      : {
+          privateHousehold: 0,
+          privateEstablishment: 0,
+          government: 0,
+          selfEmployed: 0,
+          employer: 0,
+          ofw: 0
+        };
+    averageDailyIncome = yearData.averageDailyIncome || 0;
+    agriculture = yearData.agriculture
+      ? { ...yearData.agriculture }
+      : {
+          numberOfFarmers: 0,
+          numberOfAssociations: 0,
+          estimatedFarmAreaHectares: 0
+        };
+    crops = yearData.crops ? [...yearData.crops] : [];
+    livestock = yearData.livestock ? [...yearData.livestock] : [];
+    pets = yearData.pets
+      ? { ...yearData.pets }
+      : {
+          catsCount: 0,
+          dogsCount: 0,
+          vaccinatedCats: 0,
+          vaccinatedDogs: 0
+        };
+    backyardGardens = yearData.backyardGardens
+      ? {
+          ...yearData.backyardGardens,
+          commonCrops: [...(yearData.backyardGardens.commonCrops || [])]
+        }
+      : {
+          householdsWithGardens: 0,
+          commonCrops: []
+        };
+
+    if (yearData.hazards) {
+      hazards = JSON.parse(JSON.stringify(yearData.hazards));
+    }
+    foodSecurity = yearData.foodSecurity || 'secure';
+    priorities = yearData.priorities ? JSON.parse(JSON.stringify(yearData.priorities)) : [];
+    averageNeedScore = yearData.averageNeedScore || 0;
+    recommendations = yearData.recommendations
+      ? JSON.parse(JSON.stringify(yearData.recommendations))
+      : [];
+    customFields = yearData.customFields ? { ...yearData.customFields } : {};
+    // Note: images are stored separately via image-storage and are loaded by SitioImagesTab
+  }
+
+  function loadSitioData() {
+    const sitios = loadSitios();
+    const found = sitios.find((s) => s.id === sitioId);
 
     if (found) {
       sitio = found;
@@ -365,7 +541,7 @@
       loadYearData();
     }
     isLoading = false;
-  });
+  }
 
   function loadYearData() {
     if (!sitio || !selectedYear) return;
@@ -767,10 +943,24 @@
       [selectedYear]: updatedYearData
     };
 
-    const result = submitSitioForReview(sitio.id, {
+    const changes = {
       yearlyData: updatedYearlyData,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    let result;
+
+    if (isResubmission && pendingChange) {
+      // Resubmit the pending change
+      result = resubmitPendingChange({
+        changeId: pendingChange.id,
+        proposedData: changes
+      });
+    } else {
+      // Normal submission
+      result = submitSitioForReview(sitio.id, changes);
+    }
+
     const success = result.success;
 
     // Simulate slight delay for UX
@@ -779,29 +969,39 @@
     isSaving = false;
 
     if (success) {
-      toast.success('Changes submitted for review!', {
-        description: `${sitio.sitioName} (${selectedYear}) has been updated.`
-      });
-      hasUnsavedChanges = false;
+      if (isResubmission) {
+        toast.success('Changes resubmitted for review!', {
+          description: 'Your updated submission has been sent back for review.'
+        });
+        hasUnsavedChanges = false;
+        goto('/admin/my-submissions');
+      } else {
+        toast.success('Changes submitted for review!', {
+          description: `${sitio.sitioName} (${selectedYear}) has been updated.`
+        });
+        hasUnsavedChanges = false;
 
-      // Refresh sitio data
-      const sitios = loadSitios();
-      sitio = sitios.find((s) => s.id === sitioId) || null;
+        // Refresh sitio data
+        const sitios = loadSitios();
+        sitio = sitios.find((s) => s.id === sitioId) || null;
+      }
     } else {
-      toast.error('Failed to update sitio');
+      toast.error(result.error || 'Failed to update sitio');
     }
   }
 
   function handleCancel() {
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && !isResubmission) {
       cancelDialogOpen = true;
+    } else if (isResubmission) {
+      goto('/admin/my-submissions');
     } else {
       goto('/admin/sitios');
     }
   }
 
   function confirmCancel() {
-    goto('/admin/sitios');
+    goto(isResubmission ? '/admin/my-submissions' : '/admin/sitios');
   }
 
   // Track changes
@@ -836,15 +1036,57 @@
   </div>
 {:else}
   <div class="flex min-h-screen flex-col bg-linear-to-b from-muted/30 via-background to-muted/20">
+    <!-- Resubmission Banner -->
+    {#if isResubmission && pendingChange}
+      <div
+        class="border-b {pendingChange.status === 'needs_revision'
+          ? 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950'
+          : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950'} px-4 py-3 md:px-6"
+      >
+        <div class="mx-auto flex max-w-7xl items-start gap-3">
+          {#if pendingChange.status === 'needs_revision'}
+            <RotateCcw class="mt-0.5 h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400" />
+          {:else}
+            <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+          {/if}
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <p
+                class="font-medium {pendingChange.status === 'needs_revision'
+                  ? 'text-orange-800 dark:text-orange-200'
+                  : 'text-red-800 dark:text-red-200'}"
+              >
+                {pendingChange.status === 'needs_revision'
+                  ? 'Revision Required'
+                  : 'Creating New Submission'}
+              </p>
+              <Badge variant="outline" class="text-xs">
+                {pendingChange.status === 'needs_revision' ? 'Resubmission' : 'New from Rejected'}
+              </Badge>
+            </div>
+            {#if pendingChange.reviewerComment}
+              <p
+                class="mt-1 text-sm {pendingChange.status === 'needs_revision'
+                  ? 'text-orange-700 dark:text-orange-300'
+                  : 'text-red-700 dark:text-red-300'}"
+              >
+                <strong>Reviewer feedback:</strong>
+                {pendingChange.reviewerComment}
+              </p>
+            {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
+
     <!-- Header -->
     <AdminHeader
       sticky
-      title="Edit Yearly Data"
+      title={isResubmission ? 'Resubmit Yearly Data' : 'Edit Yearly Data'}
       description="Update {sitio.sitioName} data for {selectedYear}"
-      breadcrumbs={[
-        { label: 'Sitios', href: '/admin/sitios' },
-        { label: sitio.sitioName || 'Edit' }
-      ]}
+      breadcrumbs={isResubmission
+        ? [{ label: 'My Submissions', href: '/admin/my-submissions' }, { label: 'Resubmit' }]
+        : [{ label: 'Sitios', href: '/admin/sitios' }, { label: sitio.sitioName || 'Edit' }]}
     >
       {#snippet badges()}
         <!-- Year Selector with Add/Delete options -->
@@ -914,7 +1156,12 @@
           >
             {#if isSaving}
               <Loader2 class="size-4 animate-spin" />
-              <span class="hidden sm:inline">Saving...</span>
+              <span class="hidden sm:inline"
+                >{isResubmission ? 'Resubmitting...' : 'Saving...'}</span
+              >
+            {:else if isResubmission}
+              <RotateCcw class="size-4" />
+              <span class="hidden sm:inline">Resubmit</span>
             {:else}
               <Save class="size-4" />
               <span class="hidden sm:inline">Save Changes</span>

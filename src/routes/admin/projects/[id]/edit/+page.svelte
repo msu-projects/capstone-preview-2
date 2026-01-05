@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
   import * as AlertDialog from '$lib/components/ui/alert-dialog';
+  import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
   import { CurrencyInput } from '$lib/components/ui/currency-input';
@@ -13,11 +14,26 @@
   import { SitioMultiSelect } from '$lib/components/ui/sitio-multi-select';
   import { Textarea } from '$lib/components/ui/textarea';
   import { authStore } from '$lib/stores/auth.svelte';
-  import type { Project } from '$lib/types';
+  import type { PendingChange, Project } from '$lib/types';
   import { submitProjectForReview } from '$lib/utils/approval-aware-storage';
   import { validateImageFile } from '$lib/utils/image-utils';
+  import {
+    getEditablePendingChange,
+    resubmitPendingChange
+  } from '$lib/utils/pending-changes-storage';
   import { getProjectById } from '$lib/utils/project-storage';
-  import { ArrowLeft, FileText, ImagePlus, Loader2, MapPin, Save, Trash2, X } from '@lucide/svelte';
+  import {
+    AlertTriangle,
+    ArrowLeft,
+    FileText,
+    ImagePlus,
+    Loader2,
+    MapPin,
+    RotateCcw,
+    Save,
+    Trash2,
+    X
+  } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
 
@@ -30,6 +46,10 @@
   let hasUnsavedChanges = $state(false);
   let isLoading = $state(true);
   let originalProject = $state<Project | null>(null);
+
+  // Resubmission state
+  let pendingChange = $state<PendingChange | null>(null);
+  let isResubmission = $state(false);
 
   // Form data
   let title = $state('');
@@ -49,6 +69,7 @@
   const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image
 
   const projectId = $derived(parseInt(page.params.id || '0'));
+  const pendingChangeId = $derived(page.url.searchParams.get('pendingChangeId'));
 
   // Validation
   const isTitleValid = $derived(title.trim().length >= 3);
@@ -69,8 +90,50 @@
       goto('/admin/projects');
       return;
     }
-    loadProject();
+
+    // Check if this is a resubmission
+    if (pendingChangeId) {
+      loadPendingChange();
+    } else {
+      loadProject();
+    }
   });
+
+  function loadPendingChange() {
+    const pc = getEditablePendingChange('project', projectId);
+
+    if (!pc || pc.id !== pendingChangeId) {
+      toast.error('Pending change not found or cannot be edited');
+      goto('/admin/my-submissions');
+      return;
+    }
+
+    pendingChange = pc;
+    isResubmission = true;
+
+    // Load original project first
+    const project = getProjectById(projectId);
+    if (!project) {
+      toast.error('Project not found');
+      goto('/admin/projects');
+      return;
+    }
+    originalProject = project;
+
+    // Apply pending changes on top
+    const changes = pc.proposedData as Partial<Project>;
+    title = changes.title ?? project.title;
+    description = changes.description ?? project.description;
+    latitude = changes.location?.latitude ?? project.location.latitude;
+    longitude = changes.location?.longitude ?? project.location.longitude;
+    sitioIds = changes.sitioIds ? [...changes.sitioIds] : [...project.sitioIds];
+    cost = changes.cost ?? project.cost;
+    projectDate = changes.projectDate ?? project.projectDate ?? '';
+    images = changes.images ? [...changes.images] : [...project.images];
+
+    isLoading = false;
+    hasUnsavedChanges = true; // Mark as having changes since this is a resubmission
+  }
 
   function loadProject() {
     const project = getProjectById(projectId);
@@ -197,7 +260,7 @@
     isSaving = true;
 
     try {
-      const result = submitProjectForReview(projectId, {
+      const changes = {
         title: title.trim(),
         description: description.trim(),
         location: { latitude, longitude },
@@ -205,14 +268,35 @@
         cost,
         projectDate,
         images
-      });
+      };
 
-      if (result.success) {
-        toast.success('Changes submitted for review!');
-        hasUnsavedChanges = false;
-        goto(`/admin/projects/${projectId}`);
+      let result;
+
+      if (isResubmission && pendingChange) {
+        // Resubmit the pending change
+        result = resubmitPendingChange({
+          changeId: pendingChange.id,
+          proposedData: changes
+        });
+        if (result.success) {
+          toast.success('Changes resubmitted for review!', {
+            description: 'Your updated submission has been sent back for review.'
+          });
+          hasUnsavedChanges = false;
+          goto('/admin/my-submissions');
+        } else {
+          toast.error(result.error || 'Failed to resubmit changes');
+        }
       } else {
-        toast.error(result.error || 'Failed to submit changes');
+        // Normal submission
+        result = submitProjectForReview(projectId, changes);
+        if (result.success) {
+          toast.success('Changes submitted for review!');
+          hasUnsavedChanges = false;
+          goto(`/admin/projects/${projectId}`);
+        } else {
+          toast.error(result.error || 'Failed to submit changes');
+        }
       }
     } catch (error) {
       console.error('Error updating project:', error);
@@ -223,8 +307,10 @@
   }
 
   function handleCancel() {
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && !isResubmission) {
       cancelDialogOpen = true;
+    } else if (isResubmission) {
+      goto('/admin/my-submissions');
     } else {
       goto(`/admin/projects/${projectId}`);
     }
@@ -232,15 +318,20 @@
 
   function confirmCancel() {
     hasUnsavedChanges = false;
-    goto(`/admin/projects/${projectId}`);
+    goto(isResubmission ? '/admin/my-submissions' : `/admin/projects/${projectId}`);
   }
 </script>
 
 <svelte:head>
-  <title>Edit Project - Admin | CATCH-UP Data Bank</title>
+  <title>{isResubmission ? 'Resubmit Project' : 'Edit Project'} - Admin | CATCH-UP Data Bank</title>
 </svelte:head>
 
-<AdminHeader title="Edit Project" description="Update project information">
+<AdminHeader
+  title={isResubmission ? 'Resubmit Project' : 'Edit Project'}
+  description={isResubmission
+    ? 'Update and resubmit your changes for review'
+    : 'Update project information'}
+>
   {#snippet actions()}
     <Button variant="outline" onclick={handleCancel}>
       <X class="mr-2 size-4" />
@@ -249,7 +340,10 @@
     <Button onclick={handleSave} disabled={!canSave || isSaving || !hasUnsavedChanges}>
       {#if isSaving}
         <Loader2 class="mr-2 size-4 animate-spin" />
-        Saving...
+        {isResubmission ? 'Resubmitting...' : 'Saving...'}
+      {:else if isResubmission}
+        <RotateCcw class="mr-2 size-4" />
+        Resubmit for Review
       {:else}
         <Save class="mr-2 size-4" />
         Save Changes
@@ -264,10 +358,63 @@
   </div>
 {:else}
   <div class="space-y-6 p-6">
+    <!-- Resubmission Banner -->
+    {#if isResubmission && pendingChange}
+      <div
+        class="flex items-start gap-3 rounded-lg border {pendingChange.status === 'needs_revision'
+          ? 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950'
+          : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950'} p-4"
+      >
+        {#if pendingChange.status === 'needs_revision'}
+          <RotateCcw class="mt-0.5 h-5 w-5 text-orange-600 dark:text-orange-400" />
+        {:else}
+          <AlertTriangle class="mt-0.5 h-5 w-5 text-red-600 dark:text-red-400" />
+        {/if}
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <p
+              class="font-medium {pendingChange.status === 'needs_revision'
+                ? 'text-orange-800 dark:text-orange-200'
+                : 'text-red-800 dark:text-red-200'}"
+            >
+              {pendingChange.status === 'needs_revision'
+                ? 'Revision Required'
+                : 'Creating New Submission'}
+            </p>
+            <Badge variant="outline" class="text-xs">
+              {pendingChange.status === 'needs_revision' ? 'Resubmission' : 'New from Rejected'}
+            </Badge>
+          </div>
+          {#if pendingChange.reviewerComment}
+            <p
+              class="mt-1 text-sm {pendingChange.status === 'needs_revision'
+                ? 'text-orange-700 dark:text-orange-300'
+                : 'text-red-700 dark:text-red-300'}"
+            >
+              <strong>Reviewer feedback:</strong>
+              {pendingChange.reviewerComment}
+            </p>
+          {/if}
+          <p
+            class="mt-2 text-xs {pendingChange.status === 'needs_revision'
+              ? 'text-orange-600 dark:text-orange-400'
+              : 'text-red-600 dark:text-red-400'}"
+          >
+            Make your changes below and save to resubmit for review.
+          </p>
+        </div>
+      </div>
+    {/if}
+
     <!-- Back Button -->
-    <Button variant="ghost" size="sm" href="/admin/projects/{projectId}" class="gap-2">
+    <Button
+      variant="ghost"
+      size="sm"
+      href={isResubmission ? '/admin/my-submissions' : `/admin/projects/${projectId}`}
+      class="gap-2"
+    >
       <ArrowLeft class="size-4" />
-      Back to Project
+      {isResubmission ? 'Back to My Submissions' : 'Back to Project'}
     </Button>
 
     <div class="grid gap-6 lg:grid-cols-3">

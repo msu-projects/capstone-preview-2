@@ -20,7 +20,10 @@
   import {
     approveChange,
     getPendingChangeById,
+    getPendingChanges,
+    getPendingChangeSummary,
     rejectChange,
+    requestRevisionChange,
     resolveConflict
   } from '$lib/utils/pending-changes-storage';
   import {
@@ -29,13 +32,16 @@
     Check,
     CheckCircle,
     Clock,
+    Edit,
     Eye,
     FileText,
     FolderKanban,
+    History,
     MapPin,
     Minus,
     Plus,
     RefreshCw,
+    RotateCcw,
     Search,
     X,
     XCircle
@@ -43,387 +49,16 @@
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
 
-  // Mock Data
-  const mockPendingChanges: PendingChange[] = [
-    {
-      id: 'change_001',
-      resourceType: 'sitio',
-      resourceId: 1,
-      resourceName: 'Barangay San Isidro, Sitio 1',
-      status: 'pending',
-      originalData: {
-        totalHouseholds: 150,
-        totalPopulation: 600,
-        povertyRate: 35.5,
-        electricityAccess: 85,
-        waterAccess: 70,
-        year: 2024
-      },
-      proposedData: {
-        totalHouseholds: 155,
-        totalPopulation: 620,
-        povertyRate: 33.2,
-        electricityAccess: 88,
-        waterAccess: 75,
-        year: 2024
-      },
-      baseVersionHash: 'hash_001',
-      submittedBy: {
-        userId: 2,
-        userName: 'Maria Santos'
-      },
-      submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-      submitterComment:
-        'Updated population count after recent census. Also improved infrastructure access rates based on new electricity and water connections.'
-    },
-    {
-      id: 'change_002',
-      resourceType: 'project',
-      resourceId: 5,
-      resourceName: 'Community Water System Upgrade',
-      status: 'pending',
-      originalData: {
-        status: 'ongoing',
-        completionPercentage: 45,
-        budget: 500000,
-        actualSpent: 225000,
-        beneficiaries: 300
-      },
-      proposedData: {
-        status: 'ongoing',
-        completionPercentage: 65,
-        budget: 500000,
-        actualSpent: 325000,
-        beneficiaries: 350
-      },
-      baseVersionHash: 'hash_002',
-      submittedBy: {
-        userId: 3,
-        userName: 'Juan Dela Cruz'
-      },
-      submittedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-      submitterComment:
-        'Project progress update. Completion increased from 45% to 65%. Additional households connected, increasing beneficiaries count.'
-    },
-    {
-      id: 'change_003',
-      resourceType: 'sitio',
-      resourceId: 8,
-      resourceName: 'Barangay Nueva Vista, Sitio 3',
-      status: 'approved',
-      originalData: {
-        totalHouseholds: 200,
-        totalPopulation: 850,
-        povertyRate: 42.3,
-        healthFacilities: 1
-      },
-      proposedData: {
-        totalHouseholds: 200,
-        totalPopulation: 850,
-        povertyRate: 42.3,
-        healthFacilities: 2
-      },
-      baseVersionHash: 'hash_003',
-      submittedBy: {
-        userId: 4,
-        userName: 'Rosa Mercado'
-      },
-      submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      reviewedBy: {
-        userId: 1,
-        userName: 'Admin User'
-      },
-      reviewedAt: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), // 20 hours ago
-      submitterComment: 'New barangay health station opened last month.',
-      reviewerComment: 'Verified with barangay records. Approved.'
-    },
-    {
-      id: 'change_004',
-      resourceType: 'sitio',
-      resourceId: 12,
-      resourceName: 'Barangay Maligaya, Sitio 2',
-      status: 'conflict',
-      originalData: {
-        totalHouseholds: 180,
-        totalPopulation: 720,
-        povertyRate: 38.5,
-        electricityAccess: 92
-      },
-      proposedData: {
-        totalHouseholds: 185,
-        totalPopulation: 750,
-        povertyRate: 36.0,
-        electricityAccess: 95
-      },
-      baseVersionHash: 'hash_004',
-      submittedBy: {
-        userId: 5,
-        userName: 'Pedro Reyes'
-      },
-      submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-      submitterComment: 'Updated demographic data from field survey.',
-      conflictDetails: [
-        {
-          field: 'totalPopulation',
-          currentValue: 740,
-          proposedValue: 750
-        },
-        {
-          field: 'electricityAccess',
-          currentValue: 94,
-          proposedValue: 95
-        }
-      ]
-    },
-    {
-      id: 'change_005',
-      resourceType: 'project',
-      resourceId: 12,
-      resourceName: 'School Building Renovation',
-      status: 'rejected',
-      originalData: {
-        status: 'planning',
-        completionPercentage: 0,
-        budget: 750000,
-        startDate: '2025-03-01'
-      },
-      proposedData: {
-        status: 'ongoing',
-        completionPercentage: 10,
-        budget: 750000,
-        startDate: '2025-02-01'
-      },
-      baseVersionHash: 'hash_005',
-      submittedBy: {
-        userId: 6,
-        userName: 'Ana Lopez'
-      },
-      submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-      reviewedBy: {
-        userId: 1,
-        userName: 'Admin User'
-      },
-      reviewedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      submitterComment: 'Project started early, updating status and start date.',
-      reviewerComment:
-        'Project is still in planning phase per official records. Start date change requires council approval first.'
-    },
-    {
-      id: 'change_006',
-      resourceType: 'sitio',
-      resourceId: 15,
-      resourceName: 'Barangay Rizal, Sitio 5',
-      status: 'pending',
-      originalData: {
-        totalHouseholds: 95,
-        totalPopulation: 380,
-        povertyRate: 48.2,
-        roadAccess: 60,
-        schools: 0
-      },
-      proposedData: {
-        totalHouseholds: 95,
-        totalPopulation: 380,
-        povertyRate: 48.2,
-        roadAccess: 60,
-        schools: 1
-      },
-      baseVersionHash: 'hash_006',
-      submittedBy: {
-        userId: 2,
-        userName: 'Maria Santos'
-      },
-      submittedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
-      submitterComment: 'New elementary school facility completed and now operational.'
-    },
-    {
-      id: 'change_007',
-      resourceType: 'project',
-      resourceId: 8,
-      resourceName: 'Road Infrastructure Development',
-      status: 'approved',
-      originalData: {
-        status: 'ongoing',
-        completionPercentage: 30,
-        budget: 1200000,
-        actualSpent: 360000,
-        beneficiaries: 500
-      },
-      proposedData: {
-        status: 'ongoing',
-        completionPercentage: 55,
-        budget: 1200000,
-        actualSpent: 660000,
-        beneficiaries: 550
-      },
-      baseVersionHash: 'hash_007',
-      submittedBy: {
-        userId: 3,
-        userName: 'Juan Dela Cruz'
-      },
-      submittedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-      reviewedBy: {
-        userId: 1,
-        userName: 'Admin User'
-      },
-      reviewedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
-      submitterComment:
-        'Major progress milestone achieved. Road segments in Sector A and B now completed.',
-      reviewerComment: 'Progress verified with engineering team. Approved.'
-    },
-    {
-      id: 'change_008',
-      resourceType: 'sitio',
-      resourceId: 22,
-      resourceName: 'Barangay Esperanza, Sitio 1',
-      status: 'pending',
-      originalData: {
-        totalHouseholds: 220,
-        totalPopulation: 920,
-        povertyRate: 31.5,
-        waterAccess: 88,
-        sanitationAccess: 75
-      },
-      proposedData: {
-        totalHouseholds: 225,
-        totalPopulation: 945,
-        povertyRate: 30.1,
-        waterAccess: 92,
-        sanitationAccess: 82
-      },
-      baseVersionHash: 'hash_008',
-      submittedBy: {
-        userId: 4,
-        userName: 'Rosa Mercado'
-      },
-      submittedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-      submitterComment:
-        'Annual demographic survey results. Improvements in water and sanitation access due to recent WASH program.'
-    },
-    {
-      id: 'change_009',
-      resourceType: 'project',
-      resourceId: 15,
-      resourceName: 'Livelihood Training Program',
-      status: 'pending',
-      originalData: {
-        status: 'completed',
-        completionPercentage: 100,
-        budget: 150000,
-        actualSpent: 142000,
-        beneficiaries: 80
-      },
-      proposedData: {
-        status: 'completed',
-        completionPercentage: 100,
-        budget: 150000,
-        actualSpent: 148000,
-        beneficiaries: 95
-      },
-      baseVersionHash: 'hash_009',
-      submittedBy: {
-        userId: 5,
-        userName: 'Pedro Reyes'
-      },
-      submittedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
-      submitterComment:
-        'Final financial reconciliation showed additional expenses. Also, 15 more participants completed the program than initially recorded.'
-    },
-    {
-      id: 'change_010',
-      resourceType: 'sitio',
-      resourceId: 30,
-      resourceName: 'Barangay Pag-asa, Sitio 4',
-      status: 'superseded',
-      originalData: {
-        totalHouseholds: 175,
-        totalPopulation: 700,
-        povertyRate: 40.0,
-        electricityAccess: 80
-      },
-      proposedData: {
-        totalHouseholds: 180,
-        totalPopulation: 720,
-        povertyRate: 38.5,
-        electricityAccess: 82
-      },
-      baseVersionHash: 'hash_010',
-      submittedBy: {
-        userId: 6,
-        userName: 'Ana Lopez'
-      },
-      submittedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-      submitterComment: 'Quarterly update for Q4 2024.'
-    },
-    {
-      id: 'change_011',
-      resourceType: 'sitio',
-      resourceId: 7,
-      resourceName: 'Barangay Tahanan, Sitio 2',
-      status: 'pending',
-      originalData: {
-        totalHouseholds: 130,
-        totalPopulation: 520,
-        povertyRate: 52.3,
-        healthFacilities: 0,
-        schools: 1
-      },
-      proposedData: {
-        totalHouseholds: 132,
-        totalPopulation: 530,
-        povertyRate: 51.8,
-        healthFacilities: 1,
-        schools: 1
-      },
-      baseVersionHash: 'hash_011',
-      submittedBy: {
-        userId: 2,
-        userName: 'Maria Santos'
-      },
-      submittedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
-      submitterComment:
-        'New rural health unit established. Minor population increase from recent count.'
-    },
-    {
-      id: 'change_012',
-      resourceType: 'project',
-      resourceId: 20,
-      resourceName: 'Solar Panel Installation',
-      status: 'conflict',
-      originalData: {
-        status: 'ongoing',
-        completionPercentage: 75,
-        budget: 850000,
-        actualSpent: 600000,
-        beneficiaries: 200
-      },
-      proposedData: {
-        status: 'ongoing',
-        completionPercentage: 85,
-        budget: 850000,
-        actualSpent: 680000,
-        beneficiaries: 220
-      },
-      baseVersionHash: 'hash_012',
-      submittedBy: {
-        userId: 3,
-        userName: 'Juan Dela Cruz'
-      },
-      submittedAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(), // 10 hours ago
-      submitterComment: 'Installation progress update with expanded coverage.',
-      conflictDetails: [
-        {
-          field: 'completionPercentage',
-          currentValue: 80,
-          proposedValue: 85
-        }
-      ]
-    }
-  ];
-
   // State
   let pendingChanges = $state<PendingChange[]>([]);
-  let summary = $state<PendingChangeSummary>({ pending: 0, approved: 0, rejected: 0, conflict: 0 });
+  let summary = $state<PendingChangeSummary>({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    conflict: 0,
+    needsRevision: 0,
+    superseded: 0
+  });
   let searchQuery = $state('');
   let statusFilter = $state<string>('all');
   let resourceFilter = $state<string>('all');
@@ -435,6 +70,7 @@
   let detailDialogOpen = $state(false);
   let reviewComment = $state('');
   let isProcessing = $state(false);
+  let reviewAction = $state<'approve' | 'reject' | 'revision'>('approve');
 
   // Computed
   const filteredChanges = $derived.by(() => {
@@ -494,17 +130,9 @@
   });
 
   function refreshData() {
-    // Use mock data instead of storage
-    pendingChanges = mockPendingChanges;
-
-    // Calculate summary from mock data
-    summary = {
-      pending: mockPendingChanges.filter((c) => c.status === 'pending').length,
-      approved: mockPendingChanges.filter((c) => c.status === 'approved').length,
-      rejected: mockPendingChanges.filter((c) => c.status === 'rejected').length,
-      conflict: mockPendingChanges.filter((c) => c.status === 'conflict').length
-    };
-
+    // Load from real storage
+    pendingChanges = getPendingChanges();
+    summary = getPendingChangeSummary();
     currentPage = 1;
   }
 
@@ -520,6 +148,8 @@
         return 'destructive';
       case 'conflict':
         return 'destructive';
+      case 'needs_revision':
+        return 'outline';
       case 'superseded':
         return 'outline';
       default:
@@ -638,6 +268,31 @@
       }
 
       toast.success('Change rejected');
+      closeDetailDialog();
+      refreshData();
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  async function handleRequestRevision() {
+    if (!selectedChange) return;
+
+    if (!reviewComment || reviewComment.trim() === '') {
+      toast.error('Comment is required when requesting revision');
+      return;
+    }
+
+    isProcessing = true;
+    try {
+      const result = requestRevisionChange(selectedChange.id, reviewComment);
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to request revision');
+        return;
+      }
+
+      toast.success('Revision requested. The submitter will be notified.');
       closeDetailDialog();
       refreshData();
     } finally {
@@ -914,6 +569,65 @@
       )
       .join(' → ');
   }
+
+  // Format revision action for display
+  function formatRevisionAction(action: string): string {
+    switch (action) {
+      case 'submitted':
+        return 'Submitted';
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      case 'revision_requested':
+        return 'Revision Requested';
+      case 'resubmitted':
+        return 'Resubmitted';
+      default:
+        return toTitleCase(action);
+    }
+  }
+
+  // Get icon for revision action
+  function getRevisionActionIcon(action: string) {
+    switch (action) {
+      case 'submitted':
+        return FileText;
+      case 'approved':
+        return Check;
+      case 'rejected':
+        return X;
+      case 'revision_requested':
+        return Edit;
+      case 'resubmitted':
+        return RotateCcw;
+      default:
+        return Clock;
+    }
+  }
+
+  // Get color class for revision action
+  function getRevisionActionColor(action: string): string {
+    switch (action) {
+      case 'submitted':
+        return 'text-blue-600 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-300';
+      case 'approved':
+        return 'text-green-600 bg-green-100 dark:bg-green-900/50 dark:text-green-300';
+      case 'rejected':
+        return 'text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300';
+      case 'revision_requested':
+        return 'text-orange-600 bg-orange-100 dark:bg-orange-900/50 dark:text-orange-300';
+      case 'resubmitted':
+        return 'text-purple-600 bg-purple-100 dark:bg-purple-900/50 dark:text-purple-300';
+      default:
+        return 'text-gray-600 bg-gray-100 dark:bg-gray-900/50 dark:text-gray-300';
+    }
+  }
+
+  // Check if a change has been resubmitted
+  function hasBeenResubmitted(change: PendingChange): boolean {
+    return (change.resubmitCount || 0) > 0;
+  }
 </script>
 
 <svelte:head>
@@ -940,11 +654,7 @@
 {:else}
   <div class="flex min-h-screen flex-col bg-muted/30">
     <!-- Header -->
-    <AdminHeader
-      title="Review Queue"
-      description="Review and approve pending data changes"
-      breadcrumbs={[{ label: 'Review Queue' }]}
-    >
+    <AdminHeader title="Review Queue" description="Review and approve pending data changes">
       {#snippet actions()}
         <Button variant="outline" onclick={refreshData} size="sm">
           <RefreshCw class="size-4 sm:mr-2" />
@@ -956,12 +666,14 @@
     <!-- Content -->
     <div class="flex-1 space-y-6 p-6">
       <!-- Stats Cards -->
-      <div class="grid gap-4 md:grid-cols-4">
+      <div class="grid gap-4 md:grid-cols-5">
         <Card.Root>
           <Card.Content class="">
             <div class="flex items-center gap-4">
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-                <Clock class="h-6 w-6 text-yellow-600" />
+              <div
+                class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50"
+              >
+                <Clock class="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
                 <p class="text-sm text-muted-foreground">Pending</p>
@@ -973,8 +685,25 @@
         <Card.Root>
           <Card.Content class="">
             <div class="flex items-center gap-4">
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle class="h-6 w-6 text-red-600" />
+              <div
+                class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/50"
+              >
+                <Edit class="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p class="text-sm text-muted-foreground">Needs Revision</p>
+                <p class="text-2xl font-bold">{summary.needsRevision}</p>
+              </div>
+            </div>
+          </Card.Content>
+        </Card.Root>
+        <Card.Root>
+          <Card.Content class="">
+            <div class="flex items-center gap-4">
+              <div
+                class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50"
+              >
+                <AlertTriangle class="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
                 <p class="text-sm text-muted-foreground">Conflicts</p>
@@ -986,8 +715,10 @@
         <Card.Root>
           <Card.Content class="">
             <div class="flex items-center gap-4">
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle class="h-6 w-6 text-green-600" />
+              <div
+                class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50"
+              >
+                <CheckCircle class="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p class="text-sm text-muted-foreground">Approved</p>
@@ -999,8 +730,10 @@
         <Card.Root>
           <Card.Content class="">
             <div class="flex items-center gap-4">
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                <XCircle class="h-6 w-6 text-gray-600" />
+              <div
+                class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
+              >
+                <XCircle class="h-6 w-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
                 <p class="text-sm text-muted-foreground">Rejected</p>
@@ -1023,12 +756,17 @@
             </div>
             <div class="flex flex-wrap gap-2">
               <Select.Root type="single" bind:value={statusFilter}>
-                <Select.Trigger class="w-32.5">
-                  {statusFilter === 'all' ? 'All Status' : toTitleCase(statusFilter)}
+                <Select.Trigger class="w-36">
+                  {statusFilter === 'all'
+                    ? 'All Status'
+                    : statusFilter === 'needs_revision'
+                      ? 'Needs Revision'
+                      : toTitleCase(statusFilter)}
                 </Select.Trigger>
                 <Select.Content>
                   <Select.Item value="all">All Status</Select.Item>
                   <Select.Item value="pending">Pending</Select.Item>
+                  <Select.Item value="needs_revision">Needs Revision</Select.Item>
                   <Select.Item value="conflict">Conflict</Select.Item>
                   <Select.Item value="approved">Approved</Select.Item>
                   <Select.Item value="rejected">Rejected</Select.Item>
@@ -1086,6 +824,12 @@
                     <div class="flex items-center gap-2">
                       <ResourceIcon class="h-4 w-4 text-muted-foreground" />
                       <span class="font-medium">{change.resourceName}</span>
+                      {#if hasBeenResubmitted(change)}
+                        <Badge variant="secondary" class="text-xs">
+                          <RotateCcw class="mr-1 h-3 w-3" />
+                          Resubmitted
+                        </Badge>
+                      {/if}
                     </div>
                   </Table.Cell>
                   <Table.Cell>
@@ -1106,8 +850,12 @@
                         <Check class="mr-1 h-3 w-3" />
                       {:else if change.status === 'rejected'}
                         <X class="mr-1 h-3 w-3" />
+                      {:else if change.status === 'needs_revision'}
+                        <Edit class="mr-1 h-3 w-3" />
                       {/if}
-                      {toTitleCase(change.status)}
+                      {change.status === 'needs_revision'
+                        ? 'Needs Revision'
+                        : toTitleCase(change.status)}
                     </Badge>
                   </Table.Cell>
                   <Table.Cell>
@@ -1388,10 +1136,48 @@
             </details>
           </div>
 
+          <!-- Revision History -->
+          {#if selectedChange.revisionHistory && selectedChange.revisionHistory.length > 0}
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <History class="h-4 w-4 text-muted-foreground" />
+                <p class="text-sm font-medium">Revision History</p>
+              </div>
+              <div class="relative ml-2 border-l-2 border-muted pl-4">
+                {#each selectedChange.revisionHistory as entry, index}
+                  {@const ActionIcon = getRevisionActionIcon(entry.action)}
+                  <div class="relative pb-4 last:pb-0">
+                    <div
+                      class="absolute -left-5.5 flex h-6 w-6 items-center justify-center rounded-full {getRevisionActionColor(
+                        entry.action
+                      )}"
+                    >
+                      <ActionIcon class="h-3 w-3" />
+                    </div>
+                    <div class="ml-2">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm font-medium">{formatRevisionAction(entry.action)}</span
+                        >
+                        <span class="text-xs text-muted-foreground">by {entry.userName}</span>
+                        <span class="text-xs text-muted-foreground">•</span>
+                        <span class="text-xs text-muted-foreground"
+                          >{formatTimestamp(entry.timestamp)}</span
+                        >
+                      </div>
+                      {#if entry.comment}
+                        <p class="mt-1 text-sm text-muted-foreground">{entry.comment}</p>
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
           <!-- Already Reviewed Info -->
-          {#if selectedChange.reviewedBy}
+          {#if selectedChange.reviewedBy && selectedChange.status !== 'pending'}
             <div class="rounded-lg border bg-muted/50 p-3">
-              <p class="mb-1 text-sm font-medium">Reviewed By</p>
+              <p class="mb-1 text-sm font-medium">Last Reviewed By</p>
               <p class="text-sm text-muted-foreground">
                 {selectedChange.reviewedBy.userName} on {formatTimestamp(
                   selectedChange.reviewedAt || ''
@@ -1404,8 +1190,10 @@
                 </p>
               {/if}
             </div>
-          {:else if selectedChange.status === 'pending'}
-            <!-- Review Actions -->
+          {/if}
+
+          <!-- Review Actions for Pending Changes -->
+          {#if selectedChange.status === 'pending'}
             {#if !canReview(selectedChange)}
               <div
                 class="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-950"
@@ -1417,10 +1205,12 @@
                 </p>
               </div>
             {:else}
-              <div class="space-y-3">
+              <div class="space-y-4">
                 <div>
                   <label for="review-comment" class="mb-1 block text-sm font-medium">
-                    Review Comment (Optional)
+                    Review Comment
+                    <span class="text-muted-foreground">(required for Reject/Request Revision)</span
+                    >
                   </label>
                   <Textarea
                     id="review-comment"
@@ -1429,10 +1219,23 @@
                     rows={3}
                   />
                 </div>
-                <div class="flex justify-end gap-2">
-                  <Button variant="destructive" onclick={handleReject} disabled={isProcessing}>
+                <div class="flex flex-wrap justify-end gap-2">
+                  <Button
+                    variant="destructive"
+                    onclick={handleReject}
+                    disabled={isProcessing || !reviewComment.trim()}
+                  >
                     <X class="mr-1 h-4 w-4" />
                     Reject
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onclick={handleRequestRevision}
+                    disabled={isProcessing || !reviewComment.trim()}
+                    class="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950"
+                  >
+                    <Edit class="mr-1 h-4 w-4" />
+                    Request Revision
                   </Button>
                   <Button variant="default" onclick={handleApprove} disabled={isProcessing}>
                     <Check class="mr-1 h-4 w-4" />

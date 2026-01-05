@@ -16,7 +16,7 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     users: { read: true, write: false, delete: false },
     audit_logs: { read: true, write: false, delete: false },
     project: { read: true, write: true, delete: false },
-    canReview: false
+    canReview: true
   },
   viewer: {
     sitios: { read: true, write: false, delete: false },

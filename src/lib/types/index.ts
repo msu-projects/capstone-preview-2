@@ -136,5 +136,7 @@ export type {
   PendingChangeFilters,
   PendingChangeResourceType,
   PendingChangeStatus,
-  PendingChangeSummary
+  PendingChangeSummary,
+  RevisionAction,
+  RevisionHistoryEntry
 } from './pending-changes';

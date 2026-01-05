@@ -1,9 +1,11 @@
+import { initializeSubmissionsIfNeeded } from '$lib/mock-data';
 import type {
   ConflictResolution,
   PendingChange,
   PendingChangeFilters,
   PendingChangeResourceType,
-  PendingChangeSummary
+  PendingChangeSummary,
+  RevisionHistoryEntry
 } from '$lib/types/pending-changes';
 import { nanoid } from 'nanoid';
 import { logAuditAction } from './audit';
@@ -40,7 +42,13 @@ export function loadPendingChanges(): PendingChange[] {
 
   try {
     const json = localStorage.getItem(PENDING_CHANGES_STORAGE_KEY);
-    return json ? JSON.parse(json) : [];
+    if (!json) {
+      // Initialize with mock data if empty
+      const mockData = initializeSubmissionsIfNeeded();
+      savePendingChanges(mockData);
+      return mockData;
+    }
+    return JSON.parse(json);
   } catch (error) {
     console.error('Failed to load pending changes:', error);
     return [];
@@ -120,7 +128,18 @@ export function submitForReview(params: {
       userName
     },
     submittedAt: new Date().toISOString(),
-    submitterComment: params.submitterComment
+    submitterComment: params.submitterComment,
+    revisionHistory: [
+      {
+        action: 'submitted',
+        comment: params.submitterComment,
+        timestamp: new Date().toISOString(),
+        userId,
+        userName
+      }
+    ],
+    statusChangeSeenBySubmitter: true,
+    resubmitCount: 0
   };
 
   changes.push(newChange);
@@ -148,7 +167,11 @@ export function getPendingChanges(filters?: PendingChangeFilters): PendingChange
 
   if (filters) {
     if (filters.status) {
-      changes = changes.filter((c) => c.status === filters.status);
+      if (Array.isArray(filters.status)) {
+        changes = changes.filter((c) => filters.status!.includes(c.status));
+      } else {
+        changes = changes.filter((c) => c.status === filters.status);
+      }
     }
     if (filters.resourceType) {
       changes = changes.filter((c) => c.resourceType === filters.resourceType);
@@ -163,6 +186,9 @@ export function getPendingChanges(filters?: PendingChangeFilters): PendingChange
     if (filters.endDate) {
       const endDate = new Date(filters.endDate);
       changes = changes.filter((c) => new Date(c.submittedAt) <= endDate);
+    }
+    if (filters.unseenOnly) {
+      changes = changes.filter((c) => c.statusChangeSeenBySubmitter === false);
     }
   }
 
@@ -273,6 +299,17 @@ export function approveChange(
   change.reviewedBy = { userId, userName };
   change.reviewedAt = new Date().toISOString();
   change.reviewerComment = reviewerComment;
+  change.statusChangeSeenBySubmitter = false;
+
+  // Add to revision history
+  const historyEntry: RevisionHistoryEntry = {
+    action: 'approved',
+    comment: reviewerComment,
+    timestamp: new Date().toISOString(),
+    userId,
+    userName
+  };
+  change.revisionHistory = [...(change.revisionHistory || []), historyEntry];
 
   const success = savePendingChanges(changes);
   if (success) {
@@ -318,6 +355,17 @@ export function rejectChange(
   change.reviewedBy = { userId, userName };
   change.reviewedAt = new Date().toISOString();
   change.reviewerComment = reviewerComment;
+  change.statusChangeSeenBySubmitter = false;
+
+  // Add to revision history
+  const historyEntry: RevisionHistoryEntry = {
+    action: 'rejected',
+    comment: reviewerComment,
+    timestamp: new Date().toISOString(),
+    userId,
+    userName
+  };
+  change.revisionHistory = [...(change.revisionHistory || []), historyEntry];
 
   const success = savePendingChanges(changes);
   if (success) {
@@ -329,6 +377,183 @@ export function rejectChange(
       reviewerComment || 'Rejected pending change'
     );
     return { success: true };
+  }
+
+  return { success: false, error: 'Failed to save changes' };
+}
+
+/**
+ * Request revision for a pending change
+ */
+export function requestRevisionChange(
+  changeId: string,
+  reviewerComment: string
+): { success: boolean; error?: string } {
+  if (typeof window === 'undefined') return { success: false, error: 'Not in browser environment' };
+
+  if (!reviewerComment || reviewerComment.trim() === '') {
+    return { success: false, error: 'Comment is required when requesting revision' };
+  }
+
+  const changes = loadPendingChanges();
+  const changeIndex = changes.findIndex((c) => c.id === changeId);
+
+  if (changeIndex === -1) {
+    return { success: false, error: 'Change not found' };
+  }
+
+  const change = changes[changeIndex];
+
+  if (change.status !== 'pending' && change.status !== 'conflict') {
+    return {
+      success: false,
+      error: `Cannot request revision for change with status: ${change.status}`
+    };
+  }
+
+  const { userId, userName } = getCurrentUser();
+
+  // Verify reviewer is not the submitter
+  if (userId === change.submittedBy.userId) {
+    return { success: false, error: 'Cannot review your own change submission' };
+  }
+
+  // Request revision
+  change.status = 'needs_revision';
+  change.reviewedBy = { userId, userName };
+  change.reviewedAt = new Date().toISOString();
+  change.reviewerComment = reviewerComment;
+  change.statusChangeSeenBySubmitter = false;
+
+  // Add to revision history
+  const historyEntry: RevisionHistoryEntry = {
+    action: 'revision_requested',
+    comment: reviewerComment,
+    timestamp: new Date().toISOString(),
+    userId,
+    userName
+  };
+  change.revisionHistory = [...(change.revisionHistory || []), historyEntry];
+
+  const success = savePendingChanges(changes);
+  if (success) {
+    logAuditAction(
+      'request_revision',
+      change.resourceType,
+      change.resourceId,
+      change.resourceName,
+      reviewerComment
+    );
+    return { success: true };
+  }
+
+  return { success: false, error: 'Failed to save changes' };
+}
+
+/**
+ * Resubmit a pending change after revision or rejection
+ */
+export function resubmitPendingChange(params: {
+  changeId: string;
+  proposedData: unknown;
+  submitterComment?: string;
+}): { success: boolean; newChange?: PendingChange; error?: string } {
+  if (typeof window === 'undefined') return { success: false, error: 'Not in browser environment' };
+
+  const changes = loadPendingChanges();
+  const originalChange = changes.find((c) => c.id === params.changeId);
+
+  if (!originalChange) {
+    return { success: false, error: 'Original change not found' };
+  }
+
+  const { userId, userName } = getCurrentUser();
+
+  // Verify the current user is the original submitter
+  if (userId !== originalChange.submittedBy.userId) {
+    return { success: false, error: 'Only the original submitter can resubmit this change' };
+  }
+
+  const now = new Date().toISOString();
+
+  if (originalChange.status === 'needs_revision') {
+    // For needs_revision: update the same record, set status back to pending
+    originalChange.status = 'pending';
+    originalChange.proposedData = params.proposedData;
+    originalChange.submitterComment = params.submitterComment;
+    originalChange.reviewedBy = undefined;
+    originalChange.reviewedAt = undefined;
+    originalChange.reviewerComment = undefined;
+    originalChange.resubmitCount = (originalChange.resubmitCount || 0) + 1;
+    originalChange.statusChangeSeenBySubmitter = true;
+
+    // Add to revision history
+    const historyEntry: RevisionHistoryEntry = {
+      action: 'resubmitted',
+      comment: params.submitterComment,
+      timestamp: now,
+      userId,
+      userName
+    };
+    originalChange.revisionHistory = [...(originalChange.revisionHistory || []), historyEntry];
+
+    const success = savePendingChanges(changes);
+    if (success) {
+      logAuditAction(
+        'resubmit',
+        originalChange.resourceType,
+        originalChange.resourceId,
+        originalChange.resourceName,
+        params.submitterComment || 'Resubmitted after revision request'
+      );
+      return { success: true, newChange: originalChange };
+    }
+  } else if (originalChange.status === 'rejected') {
+    // For rejected: create a new record linked to original
+    const newChange: PendingChange = {
+      id: nanoid(),
+      resourceType: originalChange.resourceType,
+      resourceId: originalChange.resourceId,
+      resourceName: originalChange.resourceName,
+      status: 'pending',
+      originalData: originalChange.originalData,
+      proposedData: params.proposedData,
+      baseVersionHash: generateVersionHash(originalChange.originalData),
+      submittedBy: { userId, userName },
+      submittedAt: now,
+      submitterComment: params.submitterComment,
+      originalSubmissionId: originalChange.id,
+      resubmitCount: 0,
+      revisionHistory: [
+        {
+          action: 'submitted',
+          comment: params.submitterComment,
+          timestamp: now,
+          userId,
+          userName
+        }
+      ],
+      statusChangeSeenBySubmitter: true
+    };
+
+    changes.push(newChange);
+
+    const success = savePendingChanges(changes);
+    if (success) {
+      logAuditAction(
+        'resubmit',
+        newChange.resourceType,
+        newChange.resourceId,
+        newChange.resourceName,
+        `Resubmitted after rejection (original: ${originalChange.id})`
+      );
+      return { success: true, newChange };
+    }
+  } else {
+    return {
+      success: false,
+      error: `Cannot resubmit change with status: ${originalChange.status}`
+    };
   }
 
   return { success: false, error: 'Failed to save changes' };
@@ -420,8 +645,66 @@ export function getPendingChangeSummary(): PendingChangeSummary {
     pending: changes.filter((c) => c.status === 'pending').length,
     approved: changes.filter((c) => c.status === 'approved').length,
     rejected: changes.filter((c) => c.status === 'rejected').length,
-    conflict: changes.filter((c) => c.status === 'conflict').length
+    conflict: changes.filter((c) => c.status === 'conflict').length,
+    needsRevision: changes.filter((c) => c.status === 'needs_revision').length,
+    superseded: changes.filter((c) => c.status === 'superseded').length
   };
+}
+
+/**
+ * Get unread status changes for a specific user (submitter)
+ */
+export function getUnreadStatusChanges(userId: number): PendingChange[] {
+  const changes = loadPendingChanges();
+  return changes.filter(
+    (c) =>
+      c.submittedBy.userId === userId &&
+      c.statusChangeSeenBySubmitter === false &&
+      ['approved', 'rejected', 'needs_revision', 'conflict'].includes(c.status)
+  );
+}
+
+/**
+ * Get count of unread status changes for badge display
+ */
+export function getUnreadStatusChangeCount(userId: number): number {
+  return getUnreadStatusChanges(userId).length;
+}
+
+/**
+ * Mark a status change as seen by the submitter
+ */
+export function markStatusChangeAsSeen(changeId: string): boolean {
+  const changes = loadPendingChanges();
+  const change = changes.find((c) => c.id === changeId);
+
+  if (!change) {
+    return false;
+  }
+
+  change.statusChangeSeenBySubmitter = true;
+  return savePendingChanges(changes);
+}
+
+/**
+ * Mark all status changes as seen for a user
+ */
+export function markAllStatusChangesAsSeen(userId: number): boolean {
+  const changes = loadPendingChanges();
+  let updated = false;
+
+  for (const change of changes) {
+    if (change.submittedBy.userId === userId && change.statusChangeSeenBySubmitter === false) {
+      change.statusChangeSeenBySubmitter = true;
+      updated = true;
+    }
+  }
+
+  if (updated) {
+    return savePendingChanges(changes);
+  }
+
+  return true;
 }
 
 /**
@@ -436,6 +719,24 @@ export function hasPendingChangesForResource(
     (c) =>
       c.resourceType === resourceType &&
       c.resourceId === resourceId &&
-      (c.status === 'pending' || c.status === 'conflict')
+      (c.status === 'pending' || c.status === 'conflict' || c.status === 'needs_revision')
+  );
+}
+
+/**
+ * Get pending change for a resource that can be edited/resubmitted
+ */
+export function getEditablePendingChange(
+  resourceType: PendingChangeResourceType,
+  resourceId: number
+): PendingChange | null {
+  const changes = loadPendingChanges();
+  return (
+    changes.find(
+      (c) =>
+        c.resourceType === resourceType &&
+        c.resourceId === resourceId &&
+        (c.status === 'needs_revision' || c.status === 'rejected')
+    ) || null
   );
 }

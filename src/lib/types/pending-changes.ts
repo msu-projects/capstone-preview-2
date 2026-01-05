@@ -6,10 +6,37 @@
  */
 
 /** Status of a pending change request */
-export type PendingChangeStatus = 'pending' | 'approved' | 'rejected' | 'superseded' | 'conflict';
+export type PendingChangeStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'superseded'
+  | 'conflict'
+  | 'needs_revision';
 
 /** Type of resource being modified */
 export type PendingChangeResourceType = 'sitio' | 'project';
+
+/** Action taken on a revision (for history tracking) */
+export type RevisionAction =
+  | 'submitted'
+  | 'approved'
+  | 'rejected'
+  | 'revision_requested'
+  | 'resubmitted';
+
+/** A single entry in the revision history */
+export interface RevisionHistoryEntry {
+  /** Action taken */
+  action: RevisionAction;
+  /** Comment/reason for the action */
+  comment?: string;
+  /** ISO timestamp of when the action occurred */
+  timestamp: string;
+  /** User who performed the action */
+  userId: number;
+  userName: string;
+}
 
 /** A pending change request awaiting review */
 export interface PendingChange {
@@ -53,12 +80,20 @@ export interface PendingChange {
     currentValue: unknown;
     proposedValue: unknown;
   }[];
+  /** History of all revisions/reviews for this change */
+  revisionHistory?: RevisionHistoryEntry[];
+  /** Whether the submitter has seen the latest status change */
+  statusChangeSeenBySubmitter?: boolean;
+  /** For rejected resubmissions, link to the original submission */
+  originalSubmissionId?: string;
+  /** Number of times this change has been resubmitted */
+  resubmitCount?: number;
 }
 
 /** Filters for querying pending changes */
 export interface PendingChangeFilters {
   /** Filter by status */
-  status?: PendingChangeStatus;
+  status?: PendingChangeStatus | PendingChangeStatus[];
   /** Filter by resource type */
   resourceType?: PendingChangeResourceType;
   /** Filter by submitter user ID */
@@ -67,6 +102,8 @@ export interface PendingChangeFilters {
   startDate?: string;
   /** Filter by end date (ISO string) */
   endDate?: string;
+  /** Only get changes with unseen status updates */
+  unseenOnly?: boolean;
 }
 
 /** Resolution strategy for handling conflicts */
@@ -82,4 +119,8 @@ export interface PendingChangeSummary {
   rejected: number;
   /** Number of changes with conflicts */
   conflict: number;
+  /** Number of changes needing revision */
+  needsRevision: number;
+  /** Number of superseded changes */
+  superseded: number;
 }

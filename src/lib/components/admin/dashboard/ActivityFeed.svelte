@@ -72,7 +72,9 @@
       approve: Plus,
       reject: Trash,
       resolve_conflict: Pencil,
-      rollback: RotateCcw
+      rollback: RotateCcw,
+      request_revision: Pencil,
+      resubmit: RotateCcw
     };
     return iconMap[action] || Activity;
   }
