@@ -351,6 +351,7 @@
               sitios={filteredSitios}
               selectedYear={selectedYearNumber}
               {selectedMunicipality}
+              {selectedBarangay}
             />
             <!-- {/if} -->
           </Tabs.Content>
@@ -360,13 +361,20 @@
             <SitioDashboardInfrastructure
               sitios={filteredSitios}
               selectedYear={selectedYearNumber}
+              {selectedMunicipality}
+              {selectedBarangay}
             />
             <!-- {/if} -->
           </Tabs.Content>
 
           <Tabs.Content value="economic">
             <!-- {#if visitedTabs.has('economic')} -->
-            <SitioDashboardEconomic sitios={filteredSitios} selectedYear={selectedYearNumber} />
+            <SitioDashboardEconomic
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
+              {selectedMunicipality}
+              {selectedBarangay}
+            />
             <!-- {/if} -->
           </Tabs.Content>
 
