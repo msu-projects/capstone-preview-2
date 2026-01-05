@@ -12,7 +12,7 @@
   import { cn } from '$lib/utils';
   import { submitSitioForReview } from '$lib/utils/approval-aware-storage';
   import { loadSitios } from '$lib/utils/storage';
-  import { AlertTriangle, ArrowLeft, Info, Loader2, MapPin, Save, Shield, X } from '@lucide/svelte';
+  import { AlertTriangle, ArrowLeft, Loader2, MapPin, Save, Shield, X } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
 
@@ -58,7 +58,7 @@
     municipality.trim() !== '' && barangay.trim() !== '' && sitioName.trim() !== ''
   );
 
-  const canSave = $derived(isBasicInfoValid && changeReason.trim() !== '');
+  const canSave = $derived(isBasicInfoValid);
 
   // Load sitio data
   onMount(() => {
@@ -339,43 +339,6 @@
           </Card.Content>
         </Card.Root>
 
-        <!-- Change Reason Section -->
-        <Card.Root class="mt-6 hidden overflow-hidden border-amber-500/30 shadow-lg">
-          <Card.Header class="border-b border-amber-500/20 bg-amber-500/5">
-            <div class="flex items-center gap-3">
-              <Info class="size-5 text-amber-600" />
-              <div>
-                <Card.Title class="text-amber-800 dark:text-amber-200"
-                  >Reason for Changes</Card.Title
-                >
-                <Card.Description class="text-amber-700 dark:text-amber-300">
-                  Required for audit trail documentation
-                </Card.Description>
-              </div>
-            </div>
-          </Card.Header>
-          <Card.Content class="p-6">
-            <div class="space-y-2">
-              <Label for="changeReason" class="flex items-center gap-1.5">
-                Change Reason <span class="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="changeReason"
-                bind:value={changeReason}
-                placeholder="Please explain why you are changing the core identifiers (e.g., correction of spelling error, administrative boundary change, etc.)"
-                rows={3}
-                class={cn(
-                  'transition-all',
-                  changeReason && 'border-amber-500/30 bg-amber-500/5 ring-1 ring-amber-500/20'
-                )}
-              />
-              <p class="text-xs text-muted-foreground">
-                This reason will be recorded in the audit log for compliance purposes.
-              </p>
-            </div>
-          </Card.Content>
-        </Card.Root>
-
         <!-- Action Buttons -->
         <div class="mt-6 flex items-center justify-end gap-3">
           <Button variant="outline" onclick={handleCancel} disabled={isSaving}>Cancel</Button>
@@ -422,7 +385,7 @@
 
   <!-- Save Confirmation Dialog -->
   <AlertDialog.Root bind:open={saveConfirmDialogOpen}>
-    <AlertDialog.Content>
+    <AlertDialog.Content class="max-w-lg">
       <AlertDialog.Header>
         <AlertDialog.Title>Confirm Core Changes</AlertDialog.Title>
         <AlertDialog.Description>
@@ -430,26 +393,39 @@
           changes will affect the entire sitio record across all years.
         </AlertDialog.Description>
       </AlertDialog.Header>
-      {#if !changeReason.trim()}
-        <div class="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-          <p class="text-sm text-destructive">
-            Please provide a reason for your changes before saving.
+      <div class="space-y-4 py-4">
+        <div class="space-y-2">
+          <Label for="dialogChangeReason" class="flex items-center gap-1.5">
+            Reason for Changes <span class="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="dialogChangeReason"
+            bind:value={changeReason}
+            placeholder="Please explain why you are changing the core identifiers (e.g., correction of spelling error, administrative boundary change, etc.)"
+            rows={3}
+            class={cn(
+              'transition-all',
+              changeReason && 'border-amber-500/30 bg-amber-500/5 ring-1 ring-amber-500/20'
+            )}
+          />
+          <p class="text-xs text-muted-foreground">
+            This reason will be recorded in the audit log for compliance purposes.
           </p>
         </div>
-      {:else}
-        <div class="rounded-lg border bg-muted/50 p-3">
-          <p class="text-xs font-medium text-muted-foreground">Change Reason:</p>
-          <p class="mt-1 text-sm">{changeReason}</p>
-        </div>
-      {/if}
+      </div>
       <AlertDialog.Footer>
         <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
         <AlertDialog.Action
           onclick={handleSave}
-          disabled={!changeReason.trim()}
+          disabled={!changeReason.trim() || isSaving}
           class={cn(!changeReason.trim() && 'cursor-not-allowed opacity-50')}
         >
-          Confirm & Save
+          {#if isSaving}
+            <Loader2 class="mr-2 size-4 animate-spin" />
+            Saving...
+          {:else}
+            Confirm & Save
+          {/if}
         </AlertDialog.Action>
       </AlertDialog.Footer>
     </AlertDialog.Content>

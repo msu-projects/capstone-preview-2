@@ -15,6 +15,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import * as Select from '$lib/components/ui/select';
+  import { Textarea } from '$lib/components/ui/textarea';
   import { authStore } from '$lib/stores/auth.svelte';
   import type { PendingChange, PriorityItem, SitioRecord } from '$lib/types';
   import { cn } from '$lib/utils';
@@ -97,8 +98,10 @@
   let cancelDialogOpen = $state(false);
   let addYearDialogOpen = $state(false);
   let deleteYearDialogOpen = $state(false);
+  let saveConfirmDialogOpen = $state(false);
   let hasUnsavedChanges = $state(false);
   let newYearInput = $state('');
+  let changeComments = $state('');
 
   // Resubmission state
   let pendingChange = $state<PendingChange | null>(null);
@@ -879,13 +882,27 @@
     }
   }
 
+  function handleSaveClick() {
+    if (!canSave) {
+      toast.error('Please complete required fields');
+      return;
+    }
+    saveConfirmDialogOpen = true;
+  }
+
   async function handleSave() {
     if (!sitio || !selectedYear) {
       toast.error('No sitio or year selected');
       return;
     }
 
+    if (!changeComments.trim()) {
+      toast.error('Please provide comments about your changes');
+      return;
+    }
+
     isSaving = true;
+    saveConfirmDialogOpen = false;
 
     // Build the updated year data - include core identifiers from sitio record for type compatibility
     const updatedYearData = {
@@ -969,17 +986,28 @@
     isSaving = false;
 
     if (success) {
+      // Log the change with comments
+      authStore.logAction(
+        'update',
+        'sitio',
+        sitio.id,
+        `${sitio.sitioName} (${selectedYear})`,
+        `Yearly data updated. Comments: ${changeComments}`
+      );
+
       if (isResubmission) {
         toast.success('Changes resubmitted for review!', {
           description: 'Your updated submission has been sent back for review.'
         });
         hasUnsavedChanges = false;
+        changeComments = '';
         goto('/admin/my-submissions');
       } else {
         toast.success('Changes submitted for review!', {
           description: `${sitio.sitioName} (${selectedYear}) has been updated.`
         });
         hasUnsavedChanges = false;
+        changeComments = '';
 
         // Refresh sitio data
         const sitios = loadSitios();
@@ -1091,48 +1119,39 @@
       {#snippet badges()}
         <!-- Year Selector with Add/Delete options -->
         <div class="flex items-center gap-2">
-          <Select.Root type="single" value={selectedYear} onValueChange={handleYearChange}>
-            <Select.Trigger class="h-8 w-28 text-xs">
-              <Calendar class="mr-1.5 size-3.5" />
-              {selectedYear}
-            </Select.Trigger>
-            <Select.Content>
-              {#each [...(sitio?.availableYears ?? [])].sort((a, b) => b - a) as year}
-                <Select.Item value={year.toString()}>{year}</Select.Item>
-              {/each}
-            </Select.Content>
-          </Select.Root>
+          {#if !isResubmission}
+            <Select.Root type="single" value={selectedYear} onValueChange={handleYearChange}>
+              <Select.Trigger class="h-8 w-28 text-xs">
+                <Calendar class="mr-1.5 size-3.5" />
+                {selectedYear}
+              </Select.Trigger>
+              <Select.Content>
+                {#each [...(sitio?.availableYears ?? [])].sort((a, b) => b - a) as year}
+                  <Select.Item value={year.toString()}>{year}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
 
-          <Button variant="outline" size="sm" class="h-8 gap-1.5" onclick={handleAddYear}>
-            <Plus class="size-3.5" />
-            <span class="hidden sm:inline">Add Year</span>
-          </Button>
-
-          {#if canDeleteYear && (sitio?.availableYears?.length ?? 0) > 1}
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-8 gap-1.5 text-destructive hover:bg-destructive/10"
-              onclick={handleDeleteYear}
-            >
-              <Trash2 class="size-3.5" />
+            <Button variant="outline" size="sm" class="h-8 gap-1.5" onclick={handleAddYear}>
+              <Plus class="size-3.5" />
+              <span class="hidden sm:inline">Add Year</span>
             </Button>
+
+            {#if canDeleteYear && (sitio?.availableYears?.length ?? 0) > 1}
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 gap-1.5 text-destructive hover:bg-destructive/10"
+                onclick={handleDeleteYear}
+              >
+                <Trash2 class="size-3.5" />
+              </Button>
+            {/if}
           {/if}
         </div>
       {/snippet}
       {#snippet actions()}
         <div class="flex items-center gap-2">
-          <!-- {#if canEditCore && sitio}
-						<Button
-							variant="outline"
-							size="sm"
-							class="gap-2"
-							href="/admin/sitios/{sitio.id}/edit/full"
-						>
-							<Settings class="size-4" />
-							<span class="hidden sm:inline">Full Edit</span>
-						</Button>
-					{/if} -->
           <Button
             variant="ghost"
             onclick={handleCancel}
@@ -1144,7 +1163,7 @@
             <span class="hidden sm:inline">Cancel</span>
           </Button>
           <Button
-            onclick={handleSave}
+            onclick={handleSaveClick}
             disabled={!canSave || isSaving}
             size="sm"
             class={cn(
@@ -1195,7 +1214,7 @@
           {#if sitio.sitioClassification.conflict}
             <Badge variant="destructive" class="text-xs">Conflict</Badge>
           {/if}
-          {#if canEditCore}
+          {#if canEditCore && !isResubmission}
             <Button
               variant="ghost"
               size="sm"
@@ -1473,6 +1492,62 @@
           class="bg-destructive hover:bg-destructive/60"
         >
           Delete Year Data
+        </AlertDialog.Action>
+      </AlertDialog.Footer>
+    </AlertDialog.Content>
+  </AlertDialog.Root>
+
+  <!-- Save Confirmation Dialog -->
+  <AlertDialog.Root bind:open={saveConfirmDialogOpen}>
+    <AlertDialog.Content class="max-w-lg">
+      <AlertDialog.Header>
+        <AlertDialog.Title>Confirm Changes</AlertDialog.Title>
+        <AlertDialog.Description>
+          You are about to submit changes for <strong>{sitio.sitioName}</strong> ({selectedYear}).
+          Please provide comments about your changes for the audit trail.
+        </AlertDialog.Description>
+      </AlertDialog.Header>
+      <div class="py-4">
+        <div class="space-y-2">
+          <Label for="changeComments" class="flex items-center gap-1.5">
+            Change Comments <span class="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="changeComments"
+            bind:value={changeComments}
+            placeholder="Please describe the changes you made and why (e.g., updated population count from census data, corrected facility information, etc.)"
+            rows={4}
+            class={cn(
+              'transition-all',
+              changeComments.trim() && 'border-primary/30 bg-primary/5 ring-1 ring-primary/20'
+            )}
+          />
+          <p class="text-xs text-muted-foreground">
+            These comments will be recorded in the audit log and help reviewers understand your
+            changes.
+          </p>
+        </div>
+      </div>
+      {#if !changeComments.trim()}
+        <div class="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+          <p class="text-sm text-destructive">
+            Please provide comments about your changes before saving.
+          </p>
+        </div>
+      {/if}
+      <AlertDialog.Footer>
+        <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+        <AlertDialog.Action
+          onclick={handleSave}
+          disabled={!changeComments.trim() || isSaving}
+          class={cn(!changeComments.trim() && 'cursor-not-allowed opacity-50')}
+        >
+          {#if isSaving}
+            <Loader2 class="mr-2 size-4 animate-spin" />
+            Saving...
+          {:else}
+            Confirm & Save
+          {/if}
         </AlertDialog.Action>
       </AlertDialog.Footer>
     </AlertDialog.Content>
