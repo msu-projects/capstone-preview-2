@@ -61,13 +61,13 @@
     }, 0);
 
     // Preload all tabs in the background after initial render
-    setTimeout(() => {
-      tabs.forEach((tab) => visitedTabs.add(tab.id));
-      // Also preload activity feed data
-      if (recentActivities.length === 0) {
-        recentActivities = loadAuditLogs().reverse().slice(0, 10);
-      }
-    }, 100);
+    // setTimeout(() => {
+    //   tabs.forEach((tab) => visitedTabs.add(tab.id));
+    //   // Also preload activity feed data
+    //   if (recentActivities.length === 0) {
+    //     recentActivities = loadAuditLogs().reverse().slice(0, 10);
+    //   }
+    // }, 100);
   });
 
   // Get available years from sitios

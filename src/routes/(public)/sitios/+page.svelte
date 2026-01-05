@@ -73,10 +73,10 @@
       isLoading = false;
     }, 0);
 
-    // Preload all tabs in the background after initial render
-    setTimeout(() => {
-      tabs.forEach((tab) => visitedTabs.add(tab.id));
-    }, 100);
+    // // Preload all tabs in the background after initial render
+    // setTimeout(() => {
+    //   tabs.forEach((tab) => visitedTabs.add(tab.id));
+    // }, 100);
   });
 
   // Get available years from sitios
