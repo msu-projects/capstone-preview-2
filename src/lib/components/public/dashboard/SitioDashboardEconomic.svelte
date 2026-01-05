@@ -75,6 +75,15 @@
   let showPovertyTrendModal = $state(false);
   let showAgricultureTrendModal = $state(false);
   let showPetsTrendModal = $state(false);
+  let showWorkerClassTrendModal = $state(false);
+
+  // Individual agriculture trend modals
+  let showFarmersTrendModal = $state(false);
+  let showOrgsTrendModal = $state(false);
+  let showFarmAreaTrendModal = $state(false);
+  let showBackyardGardensTrendModal = $state(false);
+  let showCropsTrendModal = $state(false);
+  let showLivestockTrendModal = $state(false);
 
   // Get available years for comparison
   const availableYears = $derived(getAllAvailableYears(sitios));
@@ -129,7 +138,7 @@
     return { categories, series };
   });
 
-  // Time series data for agriculture trend
+  // Time series data for agriculture trend (combined)
   const agricultureTrendData = $derived.by(() => {
     const yearlyMetrics = getMultiYearMetrics(sitios);
     const categories = yearlyMetrics.map((m) => m.year.toString());
@@ -168,6 +177,151 @@
         }
       ]
     };
+  });
+
+  // Individual time series data for each agriculture metric
+  const farmersTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+    const data: number[] = [];
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearLivelihood = aggregateLivelihood(sitios, yearMetric.year);
+      data.push(yearLivelihood.totalFarmers);
+    });
+    return {
+      categories,
+      series: [{ name: 'Total Farmers', data, color: 'hsl(38, 92%, 50%)' }]
+    };
+  });
+
+  const orgsTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+    const data: number[] = [];
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearLivelihood = aggregateLivelihood(sitios, yearMetric.year);
+      data.push(yearLivelihood.totalFarmerOrgs);
+    });
+    return {
+      categories,
+      series: [{ name: 'Organizations', data, color: 'hsl(142, 71%, 45%)' }]
+    };
+  });
+
+  const farmAreaTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+    const data: number[] = [];
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearLivelihood = aggregateLivelihood(sitios, yearMetric.year);
+      data.push(Math.round(yearLivelihood.totalFarmArea * 10) / 10);
+    });
+    return {
+      categories,
+      series: [{ name: 'Farm Area (ha)', data, color: 'hsl(120, 60%, 50%)' }]
+    };
+  });
+
+  const backyardGardensTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+    const householdsWithGardensData: number[] = [];
+    const gardenRateData: number[] = [];
+
+    yearlyMetrics.forEach((yearMetric) => {
+      let totalHouseholdsWithGardens = 0;
+      let totalHouseholds = 0;
+      sitios.forEach((sitio) => {
+        const yearData = sitio.yearlyData?.[yearMetric.year];
+        if (yearData) {
+          totalHouseholdsWithGardens += yearData.backyardGardens?.householdsWithGardens ?? 0;
+          totalHouseholds += yearData.totalHouseholds ?? 0;
+        }
+      });
+      householdsWithGardensData.push(totalHouseholdsWithGardens);
+      gardenRateData.push(
+        totalHouseholds > 0
+          ? Math.round((totalHouseholdsWithGardens / totalHouseholds) * 1000) / 10
+          : 0
+      );
+    });
+
+    return {
+      categories,
+      series: [
+        {
+          name: 'Households with Gardens',
+          data: householdsWithGardensData,
+          color: 'hsl(173, 80%, 40%)'
+        },
+        { name: 'Garden Rate (%)', data: gardenRateData, color: 'hsl(160, 60%, 45%)' }
+      ]
+    };
+  });
+
+  const cropsTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+
+    // Get all unique crops across all years
+    const allCrops = new Set<string>();
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearLivelihood = aggregateLivelihood(sitios, yearMetric.year);
+      yearLivelihood.cropCounts.forEach((_, crop) => allCrops.add(crop));
+    });
+
+    // Get top 5 crops based on current year
+    const currentYearLivelihood = aggregateLivelihood(sitios, currentYear);
+    const topCropsList = Array.from(currentYearLivelihood.cropCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([crop]) => crop);
+
+    const series = topCropsList.map((crop, index) => {
+      const data = yearlyMetrics.map((yearMetric) => {
+        const yearLivelihood = aggregateLivelihood(sitios, yearMetric.year);
+        return yearLivelihood.cropCounts.get(crop) || 0;
+      });
+      const colors = [
+        'hsl(120, 60%, 45%)',
+        'hsl(142, 71%, 45%)',
+        'hsl(90, 60%, 45%)',
+        'hsl(160, 60%, 40%)',
+        'hsl(80, 55%, 50%)'
+      ];
+      return { name: crop, data, color: colors[index % colors.length] };
+    });
+
+    return { categories, series };
+  });
+
+  const livestockTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+
+    // Get top 5 livestock based on current year
+    const currentYearLivelihood = aggregateLivelihood(sitios, currentYear);
+    const topLivestockList = Array.from(currentYearLivelihood.livestockCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([animal]) => animal);
+
+    const series = topLivestockList.map((animal, index) => {
+      const data = yearlyMetrics.map((yearMetric) => {
+        const yearLivelihood = aggregateLivelihood(sitios, yearMetric.year);
+        return yearLivelihood.livestockCounts.get(animal) || 0;
+      });
+      const colors = [
+        'hsl(38, 92%, 50%)',
+        'hsl(24, 95%, 53%)',
+        'hsl(45, 85%, 50%)',
+        'hsl(30, 80%, 55%)',
+        'hsl(15, 75%, 50%)'
+      ];
+      return { name: animal, data, color: colors[index % colors.length] };
+    });
+
+    return { categories, series };
   });
 
   // Time series data for pets trend
@@ -227,6 +381,67 @@
         {
           name: 'Vaccinated Cats',
           data: vaccinatedCatsData,
+          color: 'hsl(173, 80%, 40%)'
+        }
+      ]
+    };
+  });
+
+  // Time series data for worker classification trend
+  const workerClassTrendData = $derived.by(() => {
+    const yearlyMetrics = getMultiYearMetrics(sitios);
+    const categories = yearlyMetrics.map((m) => m.year.toString());
+
+    const privateHHData: number[] = [];
+    const privateEstData: number[] = [];
+    const governmentData: number[] = [];
+    const selfEmployedData: number[] = [];
+    const employerData: number[] = [];
+    const ofwData: number[] = [];
+
+    yearlyMetrics.forEach((yearMetric) => {
+      const yearNum = yearMetric.year;
+      const yearLivelihood = aggregateLivelihood(sitios, yearNum);
+
+      privateHHData.push(yearLivelihood.workerPrivateHousehold);
+      privateEstData.push(yearLivelihood.workerPrivateEstablishment);
+      governmentData.push(yearLivelihood.workerGovernment);
+      selfEmployedData.push(yearLivelihood.workerSelfEmployed);
+      employerData.push(yearLivelihood.workerEmployer);
+      ofwData.push(yearLivelihood.workerOFW);
+    });
+
+    return {
+      categories,
+      series: [
+        {
+          name: 'Private Household',
+          data: privateHHData,
+          color: 'hsl(262, 83%, 58%)'
+        },
+        {
+          name: 'Private Establishment',
+          data: privateEstData,
+          color: 'hsl(217, 91%, 60%)'
+        },
+        {
+          name: 'Government',
+          data: governmentData,
+          color: 'hsl(142, 71%, 45%)'
+        },
+        {
+          name: 'Self-Employed',
+          data: selfEmployedData,
+          color: 'hsl(38, 92%, 50%)'
+        },
+        {
+          name: 'Employer',
+          data: employerData,
+          color: 'hsl(340, 75%, 55%)'
+        },
+        {
+          name: 'OFW',
+          data: ofwData,
           color: 'hsl(173, 80%, 40%)'
         }
       ]
@@ -673,10 +888,23 @@
                   Worker Classification
                 </h4>
               </div>
-              <HelpTooltip side="left">
-                Aggregated distribution of workers by employment type across all sitios. Click on
-                each category to learn more.
-              </HelpTooltip>
+              <div class="flex items-center gap-1">
+                {#if hasMultipleYears && workerClassTrendData.categories.length > 1}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="size-8 text-muted-foreground hover:text-foreground"
+                    title="View historical worker classification trend"
+                    onclick={() => (showWorkerClassTrendModal = true)}
+                  >
+                    <ChartLine class="size-4" />
+                  </Button>
+                {/if}
+                <HelpTooltip side="left">
+                  Aggregated distribution of workers by employment type across all sitios. Click on
+                  each category to learn more.
+                </HelpTooltip>
+              </div>
             </div>
 
             <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
@@ -763,51 +991,121 @@
       iconBgColor="bg-amber-50 dark:bg-amber-900/20"
       iconTextColor="text-amber-500"
     >
-      {#snippet headerAction()}
-        {#if hasMultipleYears && agricultureTrendData.categories.length > 1}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="size-8 text-muted-foreground hover:text-foreground"
-            title="View historical agriculture trend"
-            onclick={() => (showAgricultureTrendModal = true)}
-          >
-            <ChartLine class="size-4" />
-          </Button>
-        {/if}
-      {/snippet}
       {#snippet children()}
         <div class="flex flex-col gap-6">
           <!-- Stats Row -->
           <div class="grid grid-cols-3 gap-3">
-            {#each agricultureStats as stat}
+            <!-- Total Farmers -->
+            <div
+              class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 text-center transition-all hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50"
+            >
               <div
-                class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 text-center transition-all hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50"
-              >
+                class="absolute inset-0 bg-linear-to-br from-transparent to-slate-50/50 opacity-0 transition-opacity group-hover:opacity-100 dark:to-slate-700/20"
+              ></div>
+              {#if hasMultipleYears && farmersTrendData.categories.length > 1}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="absolute top-1 right-1 z-10 size-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  title="View historical trend"
+                  onclick={() => (showFarmersTrendModal = true)}
+                >
+                  <ChartLine class="size-3" />
+                </Button>
+              {/if}
+              <div class="relative">
                 <div
-                  class="absolute inset-0 bg-linear-to-br from-transparent to-slate-50/50 opacity-0 transition-opacity group-hover:opacity-100 dark:to-slate-700/20"
-                ></div>
-                <div class="relative">
-                  <div
-                    class="mx-auto mb-2 flex size-10 items-center justify-center rounded-xl {stat.color}/10"
-                  >
-                    <stat.icon class="size-5 {stat.color.replace('bg-', 'text-')}" />
-                  </div>
-                  <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                    {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
-                  </p>
-                  <p class="mt-0.5 text-xs text-muted-foreground">{stat.label}</p>
+                  class="mx-auto mb-2 flex size-10 items-center justify-center rounded-xl bg-amber-500/10"
+                >
+                  <Tractor class="size-5 text-amber-500" />
                 </div>
+                <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                  {livelihood.totalFarmers.toLocaleString()}
+                </p>
+                <p class="mt-0.5 text-xs text-muted-foreground">Total Farmers</p>
               </div>
-            {/each}
+            </div>
+
+            <!-- Organizations -->
+            <div
+              class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 text-center transition-all hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50"
+            >
+              <div
+                class="absolute inset-0 bg-linear-to-br from-transparent to-slate-50/50 opacity-0 transition-opacity group-hover:opacity-100 dark:to-slate-700/20"
+              ></div>
+              {#if hasMultipleYears && orgsTrendData.categories.length > 1}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="absolute top-1 right-1 z-10 size-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  title="View historical trend"
+                  onclick={() => (showOrgsTrendModal = true)}
+                >
+                  <ChartLine class="size-3" />
+                </Button>
+              {/if}
+              <div class="relative">
+                <div
+                  class="mx-auto mb-2 flex size-10 items-center justify-center rounded-xl bg-emerald-500/10"
+                >
+                  <Users class="size-5 text-emerald-500" />
+                </div>
+                <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                  {livelihood.totalFarmerOrgs.toLocaleString()}
+                </p>
+                <p class="mt-0.5 text-xs text-muted-foreground">Organizations</p>
+              </div>
+            </div>
+
+            <!-- Farm Area -->
+            <div
+              class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 text-center transition-all hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50"
+            >
+              <div
+                class="absolute inset-0 bg-linear-to-br from-transparent to-slate-50/50 opacity-0 transition-opacity group-hover:opacity-100 dark:to-slate-700/20"
+              ></div>
+              {#if hasMultipleYears && farmAreaTrendData.categories.length > 1}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="absolute top-1 right-1 z-10 size-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  title="View historical trend"
+                  onclick={() => (showFarmAreaTrendModal = true)}
+                >
+                  <ChartLine class="size-3" />
+                </Button>
+              {/if}
+              <div class="relative">
+                <div
+                  class="mx-auto mb-2 flex size-10 items-center justify-center rounded-xl bg-green-500/10"
+                >
+                  <Sprout class="size-5 text-green-500" />
+                </div>
+                <p class="text-2xl font-bold text-slate-900 dark:text-white">
+                  {livelihood.totalFarmArea.toFixed(1)}
+                </p>
+                <p class="mt-0.5 text-xs text-muted-foreground">Farm Area (ha)</p>
+              </div>
+            </div>
           </div>
 
           <!-- Crops & Livestock Grid -->
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <!-- Major Crops Treemap -->
             <div
-              class="rounded-xl border border-green-100 bg-linear-to-br from-green-50/80 to-emerald-50/50 p-4 dark:border-green-800/30 dark:from-green-900/15 dark:to-emerald-900/10"
+              class="group relative rounded-xl border border-green-100 bg-linear-to-br from-green-50/80 to-emerald-50/50 p-4 dark:border-green-800/30 dark:from-green-900/15 dark:to-emerald-900/10"
             >
+              {#if hasMultipleYears && cropsTrendData.categories.length > 1 && cropsTrendData.series.length > 0}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="absolute top-2 right-2 z-10 size-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  title="View historical trend"
+                  onclick={() => (showCropsTrendModal = true)}
+                >
+                  <ChartLine class="size-3" />
+                </Button>
+              {/if}
               <div class="mb-3 flex items-center gap-2">
                 <div class="rounded-lg bg-green-100 p-1.5 dark:bg-green-800/40">
                   <Leaf class="size-4 text-green-600 dark:text-green-400" />
@@ -833,8 +1131,19 @@
 
             <!-- Livestock Treemap -->
             <div
-              class="rounded-xl border border-amber-100 bg-linear-to-br from-amber-50/80 to-orange-50/50 p-4 dark:border-amber-800/30 dark:from-amber-900/15 dark:to-orange-900/10"
+              class="group relative rounded-xl border border-amber-100 bg-linear-to-br from-amber-50/80 to-orange-50/50 p-4 dark:border-amber-800/30 dark:from-amber-900/15 dark:to-orange-900/10"
             >
+              {#if hasMultipleYears && livestockTrendData.categories.length > 1 && livestockTrendData.series.length > 0}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="absolute top-2 right-2 z-10 size-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  title="View historical trend"
+                  onclick={() => (showLivestockTrendModal = true)}
+                >
+                  <ChartLine class="size-3" />
+                </Button>
+              {/if}
               <div class="mb-3 flex items-center gap-2">
                 <div class="rounded-lg bg-amber-100 p-1.5 dark:bg-amber-800/40">
                   <Bird class="size-4 text-amber-600 dark:text-amber-400" />
@@ -861,8 +1170,19 @@
 
           <!-- Backyard Gardens -->
           <div
-            class="rounded-xl border border-teal-100 bg-linear-to-br from-teal-50/80 to-cyan-50/50 p-4 dark:border-teal-800/30 dark:from-teal-900/15 dark:to-cyan-900/10"
+            class="group relative rounded-xl border border-teal-100 bg-linear-to-br from-teal-50/80 to-cyan-50/50 p-4 dark:border-teal-800/30 dark:from-teal-900/15 dark:to-cyan-900/10"
           >
+            {#if hasMultipleYears && backyardGardensTrendData.categories.length > 1}
+              <Button
+                variant="ghost"
+                size="icon"
+                class="absolute top-2 right-2 z-10 size-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                title="View historical trend"
+                onclick={() => (showBackyardGardensTrendModal = true)}
+              >
+                <ChartLine class="size-3" />
+              </Button>
+            {/if}
             <div class="mb-3 flex items-center gap-2">
               <div class="rounded-lg bg-teal-100 p-1.5 dark:bg-teal-800/40">
                 <TreeDeciduous class="size-4 text-teal-600 dark:text-teal-400" />
@@ -1435,22 +1755,110 @@
   metrics={['averageDailyIncome']}
 />
 
-<!-- Agriculture Trend Modal -->
+<!-- Total Farmers Trend Modal -->
 <TrendComparisonModal
-  bind:open={showAgricultureTrendModal}
-  title="Agriculture - Historical Trend"
-  description="Year-over-year agriculture metrics across {agricultureTrendData.categories
-    .length} years"
-  icon={Wheat}
+  bind:open={showFarmersTrendModal}
+  title="Total Farmers - Historical Trend"
+  description="Year-over-year farmer count across {farmersTrendData.categories.length} years"
+  icon={Tractor}
   iconBgColor="bg-amber-50 dark:bg-amber-900/20"
   iconTextColor="text-amber-600 dark:text-amber-400"
-  trendSeries={agricultureTrendData.series}
-  trendCategories={agricultureTrendData.categories}
+  trendSeries={farmersTrendData.series}
+  trendCategories={farmersTrendData.categories}
   {sitios}
   {selectedMunicipality}
   {selectedBarangay}
   selectedYear={currentYear}
-  metrics={['totalFarmers', 'totalFarmerOrgs', 'totalFarmArea']}
+  metrics={['totalFarmers']}
+/>
+
+<!-- Farmer Organizations Trend Modal -->
+<TrendComparisonModal
+  bind:open={showOrgsTrendModal}
+  title="Farmer Organizations - Historical Trend"
+  description="Year-over-year farmer organizations count across {orgsTrendData.categories
+    .length} years"
+  icon={Users}
+  iconBgColor="bg-emerald-50 dark:bg-emerald-900/20"
+  iconTextColor="text-emerald-600 dark:text-emerald-400"
+  trendSeries={orgsTrendData.series}
+  trendCategories={orgsTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalFarmerOrgs']}
+/>
+
+<!-- Farm Area Trend Modal -->
+<TrendComparisonModal
+  bind:open={showFarmAreaTrendModal}
+  title="Farm Area - Historical Trend"
+  description="Year-over-year farm area (hectares) across {farmAreaTrendData.categories
+    .length} years"
+  icon={Sprout}
+  iconBgColor="bg-green-50 dark:bg-green-900/20"
+  iconTextColor="text-green-600 dark:text-green-400"
+  trendSeries={farmAreaTrendData.series}
+  trendCategories={farmAreaTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalFarmArea']}
+  yAxisFormatter={(val) => `${val.toLocaleString()} ha`}
+/>
+
+<!-- Backyard Gardens Trend Modal -->
+<TrendComparisonModal
+  bind:open={showBackyardGardensTrendModal}
+  title="Backyard Gardens - Historical Trend"
+  description="Year-over-year backyard garden adoption across {backyardGardensTrendData.categories
+    .length} years"
+  icon={TreeDeciduous}
+  iconBgColor="bg-teal-50 dark:bg-teal-900/20"
+  iconTextColor="text-teal-600 dark:text-teal-400"
+  trendSeries={backyardGardensTrendData.series}
+  trendCategories={backyardGardensTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalHouseholds']}
+/>
+
+<!-- Top Crops Trend Modal -->
+<TrendComparisonModal
+  bind:open={showCropsTrendModal}
+  title="Top Crops Grown - Historical Trend"
+  description="Year-over-year top crops across {cropsTrendData.categories.length} years"
+  icon={Leaf}
+  iconBgColor="bg-green-50 dark:bg-green-900/20"
+  iconTextColor="text-green-600 dark:text-green-400"
+  trendSeries={cropsTrendData.series}
+  trendCategories={cropsTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalFarmers']}
+/>
+
+<!-- Top Livestock Trend Modal -->
+<TrendComparisonModal
+  bind:open={showLivestockTrendModal}
+  title="Top Livestock Raised - Historical Trend"
+  description="Year-over-year top livestock across {livestockTrendData.categories.length} years"
+  icon={Bird}
+  iconBgColor="bg-amber-50 dark:bg-amber-900/20"
+  iconTextColor="text-amber-600 dark:text-amber-400"
+  trendSeries={livestockTrendData.series}
+  trendCategories={livestockTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalFarmers']}
 />
 
 <!-- Pets Trend Modal -->
@@ -1469,4 +1877,22 @@
   {selectedBarangay}
   selectedYear={currentYear}
   metrics={['totalDogs', 'totalCats', 'vaccinatedDogs', 'vaccinatedCats']}
+/>
+
+<!-- Worker Classification Trend Modal -->
+<TrendComparisonModal
+  bind:open={showWorkerClassTrendModal}
+  title="Worker Classification - Historical Trend"
+  description="Year-over-year worker distribution by employment type across {workerClassTrendData
+    .categories.length} years"
+  icon={HandCoins}
+  iconBgColor="bg-blue-50 dark:bg-blue-900/20"
+  iconTextColor="text-blue-600 dark:text-blue-400"
+  trendSeries={workerClassTrendData.series}
+  trendCategories={workerClassTrendData.categories}
+  {sitios}
+  {selectedMunicipality}
+  {selectedBarangay}
+  selectedYear={currentYear}
+  metrics={['totalLaborWorkforce', 'employmentRate']}
 />
