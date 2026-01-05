@@ -120,7 +120,7 @@
         <h1 class="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-7xl">
           South Cotabato
           <span
-            class="block bg-linear-to-r from-primary to-primary/60 bg-clip-text pb-1 text-transparent"
+            class="block bg-linear-to-r from-primary to-primary/60 bg-clip-text pb-5 text-transparent"
           >
             Convergence Data Bank
           </span>
