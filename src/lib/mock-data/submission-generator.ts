@@ -1,6 +1,12 @@
 /**
  * Submission & Review Mock Data Generator
  * Generates mock PendingChange data for testing the approval workflow
+ *
+ * This generator creates comprehensive mock data including:
+ * - Simple submissions (pending, approved, rejected)
+ * - Multi-round revision cycles (needs_revision → resubmit → approve/reject)
+ * - Conflict scenarios
+ * - Various revision counts (1-5+ resubmissions before final decision)
  */
 
 import type { PendingChange, PendingChangeStatus, RevisionHistoryEntry } from '$lib/types';
@@ -14,13 +20,36 @@ import { SeededRandom } from './seeded-random';
 
 export const SUBMISSION_GENERATION_CONFIG = {
   /** Number of submissions to generate */
-  defaultCount: 25,
+  defaultCount: 35,
   /** Default seed for reproducible generation */
   defaultSeed: 42,
   /** Minimum days in the past for submission date */
-  minDaysAgo: 30,
+  minDaysAgo: 60,
   /** Maximum days in the past for submission date */
-  maxDaysAgo: 1
+  maxDaysAgo: 1,
+  /** Probability distribution for different submission scenarios */
+  scenarioWeights: {
+    /** Simple pending - no review yet */
+    simplePending: 0.15,
+    /** Quick approval - approved on first submission */
+    quickApproval: 0.15,
+    /** Quick rejection - rejected on first submission */
+    quickRejection: 0.08,
+    /** Single revision then approved */
+    singleRevisionApproved: 0.12,
+    /** Single revision then rejected */
+    singleRevisionRejected: 0.05,
+    /** Multiple revisions (2-3) then approved */
+    multiRevisionApproved: 0.15,
+    /** Multiple revisions (2-3) then rejected */
+    multiRevisionRejected: 0.05,
+    /** Many revisions (4-5) finally approved - edge case */
+    manyRevisionApproved: 0.08,
+    /** Currently in revision cycle - needs_revision status */
+    currentlyNeedsRevision: 0.1,
+    /** Conflict scenario */
+    conflict: 0.07
+  }
 } as const;
 
 // ===== MOCK DATA =====
@@ -69,17 +98,92 @@ const REVIEWER_REJECTED_COMMENTS = [
   'Requires approval from barangay captain first'
 ];
 
-const REVIEWER_NEEDS_REVISION_COMMENTS = [
-  'Please update the household count field',
-  'Coordinates need verification',
-  'Missing required facility details',
-  'Please provide more specific information about water source',
-  'Enrollment numbers seem high - please double check',
-  'Infrastructure description needs more detail',
-  'Please separate residential and total population',
-  'Add supporting documentation for poverty data',
-  'Clarify the date of data collection',
-  'Update the livelihood information section'
+/** Progression of revision request comments (for multi-round revisions) */
+const REVISION_ROUND_COMMENTS = [
+  // Round 1 - Initial issues
+  [
+    'Initial review: Several data points need verification. Please check household count and population figures.',
+    'First review: Please provide source documentation for the updated statistics.',
+    'Initial feedback: The coordinates appear to be outside the expected barangay boundaries.',
+    'First pass: Need clarification on the facility status - is this active or proposed?',
+    "Preliminary review: Population numbers don't align with previous census data. Please verify."
+  ],
+  // Round 2 - Follow-up issues
+  [
+    'Second review: Household count still inconsistent. Please cross-reference with barangay records.',
+    "Follow-up: Documentation provided but dates don't match. Need current year data.",
+    'Second pass: Coordinates corrected but population figure still needs adjustment.',
+    'Review round 2: Facility status clarified, but please add capacity information.',
+    'Follow-up review: Better, but we need the actual date when this data was collected.'
+  ],
+  // Round 3 - Minor remaining issues
+  [
+    'Third review: Almost there! Just need to verify the final household count with barangay captain.',
+    'Round 3: Please double-check one more discrepancy in the youth population count.',
+    'Third pass: Minor formatting issue - please use the standard date format.',
+    'Review round 3: One more verification needed - please confirm water source type.',
+    'Third review: Please add the missing contact information for the facility.'
+  ],
+  // Round 4 - Edge cases
+  [
+    'Fourth review: We found one additional inconsistency. Please verify senior citizen count.',
+    'Round 4: Almost approved, but the infrastructure type needs one small correction.',
+    'Fourth pass: Final check - please confirm the road length measurement.',
+    'Review round 4: One last item - please verify the livelihood program beneficiary count.',
+    'Fourth review: Need final confirmation from the barangay before approval.'
+  ],
+  // Round 5 - Final cleanup
+  [
+    "Fifth review: This is the last item - please add the barangay captain's signature date.",
+    'Final review: Just need official confirmation number from the municipal office.',
+    'Round 5: Last correction needed - please update the submission date field.',
+    'Fifth pass: Final verification - please confirm all data is from 2024 census.',
+    'Last review: One typographical correction needed in the facility name.'
+  ]
+];
+
+/** Comments for resubmissions addressing reviewer feedback */
+const RESUBMISSION_COMMENTS = [
+  // Round 1 responses
+  [
+    'Updated household count based on recent barangay census records.',
+    'Attached source documentation from municipal planning office.',
+    'Corrected coordinates after GPS verification visit.',
+    'Clarified facility status - this is an existing active facility.',
+    'Verified population with latest census data, corrected discrepancy.'
+  ],
+  // Round 2 responses
+  [
+    'Cross-referenced with barangay records - household count now verified.',
+    'Obtained current year documentation from DSWD office.',
+    'Adjusted population figure based on reviewer feedback.',
+    'Added facility capacity information as requested.',
+    'Added data collection date: field survey conducted last month.'
+  ],
+  // Round 3 responses
+  [
+    'Verified with barangay captain - final count confirmed.',
+    'Corrected youth population count after double-checking.',
+    'Changed to standard date format as requested.',
+    'Confirmed water source type: Level 2 - communal faucet.',
+    'Added facility contact information.'
+  ],
+  // Round 4 responses
+  [
+    'Senior citizen count verified and corrected.',
+    'Infrastructure type correction applied.',
+    'Road length confirmed via Google Maps measurement.',
+    'Livelihood beneficiary count verified with DOLE records.',
+    'Obtained barangay confirmation letter, attached to submission.'
+  ],
+  // Round 5 responses
+  [
+    'Added signature date as requested.',
+    'Added official confirmation number: MCO-2024-0892.',
+    'Submission date field updated.',
+    'Confirmed all data from 2024 census as required.',
+    'Corrected typographical error in facility name.'
+  ]
 ];
 
 // Field modifications for different types of changes
@@ -99,6 +203,83 @@ function generateDate(random: SeededRandom, minDaysAgo: number, maxDaysAgo: numb
   const daysAgo = random.nextInt(minDaysAgo, maxDaysAgo);
   const timestamp = now - daysAgo * 24 * 60 * 60 * 1000;
   return new Date(timestamp).toISOString();
+}
+
+/**
+ * Add hours to a date string
+ */
+function addHoursToDate(dateStr: string, hours: number): string {
+  const date = new Date(dateStr);
+  date.setHours(date.getHours() + hours);
+  return date.toISOString();
+}
+
+/**
+ * Pick a submission scenario based on weights
+ */
+function pickScenario(
+  random: SeededRandom
+): keyof typeof SUBMISSION_GENERATION_CONFIG.scenarioWeights {
+  const roll = random.nextFloat(0, 1);
+  let cumulative = 0;
+  const weights = SUBMISSION_GENERATION_CONFIG.scenarioWeights;
+
+  for (const [scenario, weight] of Object.entries(weights)) {
+    cumulative += weight;
+    if (roll < cumulative) {
+      return scenario as keyof typeof weights;
+    }
+  }
+
+  return 'simplePending';
+}
+
+/**
+ * Determine final status and revision count based on scenario
+ */
+function getScenarioDetails(
+  scenario: keyof typeof SUBMISSION_GENERATION_CONFIG.scenarioWeights,
+  random: SeededRandom
+): {
+  status: PendingChangeStatus;
+  revisionCount: number;
+  isComplete: boolean;
+} {
+  switch (scenario) {
+    case 'simplePending':
+      return { status: 'pending', revisionCount: 0, isComplete: false };
+
+    case 'quickApproval':
+      return { status: 'approved', revisionCount: 0, isComplete: true };
+
+    case 'quickRejection':
+      return { status: 'rejected', revisionCount: 0, isComplete: true };
+
+    case 'singleRevisionApproved':
+      return { status: 'approved', revisionCount: 1, isComplete: true };
+
+    case 'singleRevisionRejected':
+      return { status: 'rejected', revisionCount: 1, isComplete: true };
+
+    case 'multiRevisionApproved':
+      return { status: 'approved', revisionCount: random.nextInt(2, 3), isComplete: true };
+
+    case 'multiRevisionRejected':
+      return { status: 'rejected', revisionCount: random.nextInt(2, 3), isComplete: true };
+
+    case 'manyRevisionApproved':
+      return { status: 'approved', revisionCount: random.nextInt(4, 5), isComplete: true };
+
+    case 'currentlyNeedsRevision':
+      // Currently awaiting resubmission after 1-3 revision requests
+      return { status: 'needs_revision', revisionCount: random.nextInt(1, 3), isComplete: false };
+
+    case 'conflict':
+      return { status: 'conflict', revisionCount: random.nextInt(0, 2), isComplete: false };
+
+    default:
+      return { status: 'pending', revisionCount: 0, isComplete: false };
+  }
 }
 
 /**
@@ -134,37 +315,76 @@ function generateModifiedData(
 }
 
 /**
- * Generate revision history for a pending change
+ * Generate comprehensive revision history for multi-round review scenarios
  */
 function generateRevisionHistory(
-  status: PendingChangeStatus,
+  scenarioDetails: { status: PendingChangeStatus; revisionCount: number; isComplete: boolean },
   submitterId: number,
   submitterName: string,
-  reviewerId: number | undefined,
-  reviewerName: string | undefined,
+  reviewerId: number,
+  reviewerName: string,
   submittedAt: string,
-  reviewedAt: string | undefined,
   random: SeededRandom
-): RevisionHistoryEntry[] {
+): { history: RevisionHistoryEntry[]; finalReviewedAt: string | undefined } {
   const history: RevisionHistoryEntry[] = [];
+  let currentDate = submittedAt;
+  const { status, revisionCount, isComplete } = scenarioDetails;
 
   // Initial submission
   history.push({
     action: 'submitted',
     comment: SUBMITTER_COMMENTS[random.nextInt(0, SUBMITTER_COMMENTS.length - 1)],
-    timestamp: submittedAt,
+    timestamp: currentDate,
     userId: submitterId,
     userName: submitterName
   });
 
-  // Add review action if reviewed
-  if (reviewedAt && reviewerId && reviewerName) {
+  // Generate revision rounds
+  for (let round = 0; round < revisionCount; round++) {
+    // Reviewer requests revision
+    currentDate = addHoursToDate(currentDate, random.nextInt(4, 72));
+    const roundComments =
+      REVISION_ROUND_COMMENTS[Math.min(round, REVISION_ROUND_COMMENTS.length - 1)];
+    history.push({
+      action: 'revision_requested',
+      comment: roundComments[random.nextInt(0, roundComments.length - 1)],
+      timestamp: currentDate,
+      userId: reviewerId,
+      userName: reviewerName
+    });
+
+    // Submitter resubmits (unless this is the current state and incomplete)
+    const isLastRound = round === revisionCount - 1;
+    const shouldResubmit = !isLastRound || (isLastRound && status !== 'needs_revision');
+
+    if (shouldResubmit) {
+      currentDate = addHoursToDate(currentDate, random.nextInt(12, 96));
+      const resubmitComments =
+        RESUBMISSION_COMMENTS[Math.min(round, RESUBMISSION_COMMENTS.length - 1)];
+      history.push({
+        action: 'resubmitted',
+        comment: resubmitComments[random.nextInt(0, resubmitComments.length - 1)],
+        timestamp: currentDate,
+        userId: submitterId,
+        userName: submitterName
+      });
+    }
+  }
+
+  // Add final decision if complete
+  let finalReviewedAt: string | undefined;
+  if (isComplete && (status === 'approved' || status === 'rejected')) {
+    currentDate = addHoursToDate(currentDate, random.nextInt(4, 48));
+    finalReviewedAt = currentDate;
+
     if (status === 'approved') {
       history.push({
         action: 'approved',
         comment:
-          REVIEWER_APPROVED_COMMENTS[random.nextInt(0, REVIEWER_APPROVED_COMMENTS.length - 1)],
-        timestamp: reviewedAt,
+          revisionCount > 0
+            ? `After ${revisionCount} revision${revisionCount > 1 ? 's' : ''}, all issues resolved. ${REVIEWER_APPROVED_COMMENTS[random.nextInt(0, REVIEWER_APPROVED_COMMENTS.length - 1)]}`
+            : REVIEWER_APPROVED_COMMENTS[random.nextInt(0, REVIEWER_APPROVED_COMMENTS.length - 1)],
+        timestamp: currentDate,
         userId: reviewerId,
         userName: reviewerName
       });
@@ -172,43 +392,28 @@ function generateRevisionHistory(
       history.push({
         action: 'rejected',
         comment:
-          REVIEWER_REJECTED_COMMENTS[random.nextInt(0, REVIEWER_REJECTED_COMMENTS.length - 1)],
-        timestamp: reviewedAt,
-        userId: reviewerId,
-        userName: reviewerName
-      });
-    } else if (status === 'needs_revision') {
-      history.push({
-        action: 'revision_requested',
-        comment:
-          REVIEWER_NEEDS_REVISION_COMMENTS[
-            random.nextInt(0, REVIEWER_NEEDS_REVISION_COMMENTS.length - 1)
-          ],
-        timestamp: reviewedAt,
+          revisionCount > 0
+            ? `After ${revisionCount} revision attempt${revisionCount > 1 ? 's' : ''}, fundamental issues remain. ${REVIEWER_REJECTED_COMMENTS[random.nextInt(0, REVIEWER_REJECTED_COMMENTS.length - 1)]}`
+            : REVIEWER_REJECTED_COMMENTS[random.nextInt(0, REVIEWER_REJECTED_COMMENTS.length - 1)],
+        timestamp: currentDate,
         userId: reviewerId,
         userName: reviewerName
       });
     }
+  } else if (status === 'needs_revision') {
+    // Still awaiting resubmission - the last action was revision_requested
+    finalReviewedAt = currentDate;
+  } else if (status === 'conflict') {
+    // Conflict detected during review
+    currentDate = addHoursToDate(currentDate, random.nextInt(2, 24));
+    finalReviewedAt = currentDate;
   }
 
-  // For needs_revision, sometimes add a resubmission
-  if (status === 'needs_revision' && random.nextFloat(0, 1) < 0.3) {
-    const resubmitDate = new Date(reviewedAt!);
-    resubmitDate.setDate(resubmitDate.getDate() + random.nextInt(1, 5));
-    history.push({
-      action: 'resubmitted',
-      comment: 'Updated based on feedback',
-      timestamp: resubmitDate.toISOString(),
-      userId: submitterId,
-      userName: submitterName
-    });
-  }
-
-  return history;
+  return { history, finalReviewedAt };
 }
 
 /**
- * Generate a single mock submission
+ * Generate a single mock submission with scenario-based approach
  */
 function generateSubmission(
   random: SeededRandom,
@@ -217,6 +422,10 @@ function generateSubmission(
   projects: Project[],
   users: Array<{ id: number; name: string; canReview: boolean }>
 ): PendingChange {
+  // Pick a scenario based on weighted distribution
+  const scenario = pickScenario(random);
+  const scenarioDetails = getScenarioDetails(scenario, random);
+
   // Determine resource type (70% sitio, 30% project)
   const isSitio = random.nextFloat(0, 1) < 0.7;
   const resources = isSitio ? sitios : projects;
@@ -225,38 +434,13 @@ function generateSubmission(
   // Select submitter (any user)
   const submitter = users[random.nextInt(0, users.length - 1)];
 
-  // Determine status
-  const statusRoll = random.nextFloat(0, 1);
-  let status: PendingChangeStatus;
-  if (statusRoll < 0.3) {
-    status = 'pending';
-  } else if (statusRoll < 0.55) {
-    status = 'approved';
-  } else if (statusRoll < 0.75) {
-    status = 'rejected';
-  } else if (statusRoll < 0.9) {
-    status = 'needs_revision';
-  } else {
-    status = 'conflict';
-  }
-
-  // Generate dates
-  const submittedAt = generateDate(random, 1, 30);
-  const isReviewed = status !== 'pending';
-  const reviewedAt = isReviewed
-    ? generateDate(
-        random,
-        0,
-        Math.max(
-          1,
-          Math.floor((Date.now() - new Date(submittedAt).getTime()) / (24 * 60 * 60 * 1000)) - 1
-        )
-      )
-    : undefined;
-
   // Select reviewer (only reviewers)
   const reviewers = users.filter((u) => u.canReview);
-  const reviewer = isReviewed ? reviewers[random.nextInt(0, reviewers.length - 1)] : undefined;
+  const reviewer = reviewers[random.nextInt(0, reviewers.length - 1)];
+
+  // Generate dates - use wider range for multi-revision scenarios
+  const daysAgoMultiplier = Math.max(1, scenarioDetails.revisionCount);
+  const submittedAt = generateDate(random, 5 * daysAgoMultiplier, 10 + 10 * daysAgoMultiplier);
 
   // Generate original and proposed data
   const fieldCategory = Object.keys(FIELD_MODIFICATIONS)[
@@ -287,24 +471,30 @@ function generateSubmission(
   // Generate base version hash (simple hash for mock)
   const baseVersionHash = `hash_${resource.id}_${new Date(submittedAt).getTime()}`;
 
-  // Status change seen by submitter (false for recent changes)
-  const statusChangeSeenBySubmitter = status === 'pending' || random.nextFloat(0, 1) < 0.7;
-
-  // Generate revision history
-  const revisionHistory = generateRevisionHistory(
-    status,
+  // Generate comprehensive revision history
+  const { history: revisionHistory, finalReviewedAt } = generateRevisionHistory(
+    scenarioDetails,
     submitter.id,
     submitter.name,
-    reviewer?.id,
-    reviewer?.name,
+    reviewer.id,
+    reviewer.name,
     submittedAt,
-    reviewedAt,
     random
   );
 
+  // Determine reviewed info
+  const isReviewed = scenarioDetails.status !== 'pending';
+  const reviewedAt = isReviewed ? finalReviewedAt : undefined;
+
+  // Status change seen by submitter (newer statuses may be unseen)
+  const statusChangeSeenBySubmitter =
+    scenarioDetails.status === 'pending' ||
+    scenarioDetails.status === 'approved' ||
+    random.nextFloat(0, 1) < 0.6;
+
   // Generate conflict details if status is conflict
   const conflictDetails =
-    status === 'conflict'
+    scenarioDetails.status === 'conflict'
       ? [
           {
             field: 'totalPopulation',
@@ -325,12 +515,40 @@ function generateSubmission(
       })()
     : (resource as Project).title;
 
+  // Generate appropriate reviewer comment based on status and revision count
+  let reviewerComment: string | undefined;
+  if (isReviewed) {
+    const { status, revisionCount } = scenarioDetails;
+    if (status === 'approved') {
+      const baseComment =
+        REVIEWER_APPROVED_COMMENTS[random.nextInt(0, REVIEWER_APPROVED_COMMENTS.length - 1)];
+      reviewerComment =
+        revisionCount > 0
+          ? `After ${revisionCount} revision${revisionCount > 1 ? 's' : ''}: ${baseComment}`
+          : baseComment;
+    } else if (status === 'rejected') {
+      const baseComment =
+        REVIEWER_REJECTED_COMMENTS[random.nextInt(0, REVIEWER_REJECTED_COMMENTS.length - 1)];
+      reviewerComment =
+        revisionCount > 0
+          ? `After ${revisionCount} revision attempt${revisionCount > 1 ? 's' : ''}: ${baseComment}`
+          : baseComment;
+    } else if (status === 'needs_revision') {
+      const roundComments =
+        REVISION_ROUND_COMMENTS[Math.min(revisionCount - 1, REVISION_ROUND_COMMENTS.length - 1)];
+      reviewerComment = roundComments[random.nextInt(0, roundComments.length - 1)];
+    } else if (status === 'conflict') {
+      reviewerComment =
+        'Data conflict detected - another change was applied while this was pending review.';
+    }
+  }
+
   const submission: PendingChange = {
     id: `sub_${Date.now()}_${index}_${random.nextInt(1000, 9999)}`,
     resourceType: isSitio ? 'sitio' : 'project',
     resourceId: resource.id,
     resourceName,
-    status,
+    status: scenarioDetails.status,
     originalData,
     proposedData,
     baseVersionHash,
@@ -339,7 +557,7 @@ function generateSubmission(
       userName: submitter.name
     },
     submittedAt,
-    reviewedBy: reviewer
+    reviewedBy: isReviewed
       ? {
           userId: reviewer.id,
           userName: reviewer.name
@@ -347,21 +565,11 @@ function generateSubmission(
       : undefined,
     reviewedAt,
     submitterComment: SUBMITTER_COMMENTS[random.nextInt(0, SUBMITTER_COMMENTS.length - 1)],
-    reviewerComment: reviewer
-      ? status === 'approved'
-        ? REVIEWER_APPROVED_COMMENTS[random.nextInt(0, REVIEWER_APPROVED_COMMENTS.length - 1)]
-        : status === 'rejected'
-          ? REVIEWER_REJECTED_COMMENTS[random.nextInt(0, REVIEWER_REJECTED_COMMENTS.length - 1)]
-          : status === 'needs_revision'
-            ? REVIEWER_NEEDS_REVISION_COMMENTS[
-                random.nextInt(0, REVIEWER_NEEDS_REVISION_COMMENTS.length - 1)
-              ]
-            : undefined
-      : undefined,
+    reviewerComment,
     conflictDetails,
     revisionHistory,
     statusChangeSeenBySubmitter,
-    resubmitCount: status === 'needs_revision' && random.nextFloat(0, 1) < 0.3 ? 1 : 0
+    resubmitCount: scenarioDetails.revisionCount
   };
 
   return submission;
