@@ -1,6 +1,7 @@
 <script lang="ts">
   import AdminHeader from '$lib/components/admin/AdminHeader.svelte';
   import ActivityFeed from '$lib/components/admin/dashboard/ActivityFeed.svelte';
+  import OutdatedSitios from '$lib/components/admin/dashboard/OutdatedSitios.svelte';
   import {
     DashboardEmptyState,
     SitioDashboardDemographics,
@@ -50,6 +51,9 @@
 
   // Recent activities - lazy loaded
   let recentActivities = $state<any[]>([]);
+
+  // Outdated sitios - lazy loaded
+  let outdatedSitios = $state<any[]>([]);
 
   onMount(() => {
     // Load sitios asynchronously
@@ -131,7 +135,10 @@
     if (value === 'activity' && recentActivities.length === 0) {
       setTimeout(() => {
         initializeMockAuditLogs(); // Initialize mock data if needed
-        recentActivities = loadAuditLogs().reverse().slice(0, 10);
+        recentActivities = loadAuditLogs().reverse().slice(0, 5);
+
+        // Generate mock outdated sitios data
+        outdatedSitios = generateOutdatedSitios(sitios);
       }, 0);
     }
   }
@@ -173,6 +180,34 @@
     }
     return parseInt(selectedYear, 10);
   });
+
+  // Generate mock outdated sitios (prototype data)
+  function generateOutdatedSitios(allSitios: SitioRecord[]) {
+    if (allSitios.length === 0) return [];
+
+    // Randomly select some sitios to be "outdated"
+    const numOutdated = Math.min(Math.floor(allSitios.length * 0.2), 10); // 20% or max 10
+    const shuffled = [...allSitios].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, numOutdated);
+
+    return selected
+      .map((sitio, index) => {
+        // Generate random days since last update (between 365 and 900 days)
+        const daysSinceUpdate = 365 + Math.floor(Math.random() * 535);
+        const lastUpdatedDate = new Date();
+        lastUpdatedDate.setDate(lastUpdatedDate.getDate() - daysSinceUpdate);
+
+        return {
+          id: sitio.id,
+          name: sitio.sitioName,
+          municipality: sitio.municipality,
+          barangay: sitio.barangay,
+          lastUpdated: lastUpdatedDate.toISOString().split('T')[0],
+          daysSinceUpdate
+        };
+      })
+      .sort((a, b) => b.daysSinceUpdate - a.daysSinceUpdate); // Sort by most outdated first
+  }
 </script>
 
 <svelte:head>
@@ -347,11 +382,12 @@
 
           <Tabs.Content value="activity">
             <!-- {#if visitedTabs.has('activity')} -->
-            <div class="grid gap-6 lg:grid-cols-1">
+            <div class="grid gap-6 lg:grid-cols-2">
               <ActivityFeed
                 activities={recentActivities}
                 isLoading={recentActivities.length === 0}
               />
+              <OutdatedSitios sitios={outdatedSitios} isLoading={recentActivities.length === 0} />
             </div>
             <!-- {/if} -->
           </Tabs.Content>
