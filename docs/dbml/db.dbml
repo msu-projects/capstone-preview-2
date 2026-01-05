@@ -2,11 +2,12 @@
 // SC Sitio Profiling System
 // Entity-Relationship Diagram (DBML)
 // ============================================
-// Normalized schema for sitio profiling data
+// MongoDB Document Schema
+// Fully denormalized with embedded documents and arrays
 // ============================================
 
 Project sc_sitio_profiling {
-  database_type: 'PostgreSQL'
+  database_type: 'MongoDB'
   Note: 'South Cotabato Sitio Profiling System - Community data collection and monitoring'
 }
 
@@ -52,21 +53,6 @@ enum mobile_signal {
   five_g [note: '5G']
 }
 
-enum facility_exists {
-  yes
-  no
-}
-
-enum road_exists {
-  yes
-  no
-}
-
-enum water_source_exists {
-  yes
-  no
-}
-
 enum students_per_room {
   less_than_46 [note: 'Less than 46 students']
   from_46_to_50 [note: '46-50 students']
@@ -81,35 +67,18 @@ enum food_security {
   critical_shortage [note: 'Critical shortage']
 }
 
-enum priority_rating {
-  not_needed [note: '0 - Not needed']
-  low [note: '1 - Low priority']
-  medium [note: '2 - Medium priority']
-  very_urgent [note: '3 - Very urgent']
-}
-
 // ============================================
-// LOCATION HIERARCHY
+// LOCATION HIERARCHY (for reference/seeding only)
 // ============================================
+// Note: In MongoDB, location data is embedded directly in sitios collection
+// These tables are kept for reference and can be used for seeding/validation
 
 Table municipalities {
   id integer [pk, increment]
   name varchar(100) [not null]
+  barangays jsonb [note: '[{ id, name, sitios: [{ id, name, sitioCode }] }] - Embedded barangays with nested sitios for quick lookups']
   
-  Note: 'Municipality/City reference table'
-}
-
-Table barangays {
-  id integer [pk, increment]
-  municipality_id integer [not null, ref: > municipalities.id]
-  name varchar(100) [not null]
-  
-  indexes {
-    municipality_id [name: 'idx_barangays_municipality']
-    (municipality_id, name) [unique, name: 'idx_barangays_unique_name']
-  }
-  
-  Note: 'Barangay reference table'
+  Note: 'Municipality/City reference - can be embedded or kept as reference collection'
 }
 
 // ============================================
@@ -119,31 +88,46 @@ Table barangays {
 Table sitios {
   id integer [pk, increment]
   name varchar(255) [not null]
-  barangay_id integer [not null, ref: > barangays.id]
   sitio_code varchar(50) [note: 'Purok/Sitio code identifier']
-  coordinates_lat decimal [not null]
-  coordinates_lng decimal [not null]
+  
+  // Embedded location hierarchy (denormalized)
+  location jsonb [not null, note: '{ municipalityId, municipalityName, barangayId, barangayName } - Full location path embedded']
+  
+  coordinates jsonb [not null, note: '{ lat, lng } - Geographic coordinates']
+  
+  // Embedded yearly data snapshots (denormalized from sitio_data)
+  yearly_data jsonb [note: '[{ year, recordedAt, ...all sitio_data fields }] - Array of yearly profiling data']
+  
+  // Embedded project references
+  project_ids jsonb [note: '[projectId1, projectId2, ...] - Array of project IDs that benefit this sitio']
   
   created_at timestamp [not null, default: `now()`]
   updated_at timestamp
   
   indexes {
-    barangay_id [name: 'idx_sitios_barangay']
     name [name: 'idx_sitios_name']
-    (barangay_id, name) [unique, name: 'idx_sitios_unique_name']
+    "location.municipalityId" [name: 'idx_sitios_municipality']
+    "location.barangayId" [name: 'idx_sitios_barangay']
   }
   
-  Note: 'Core sitio (community) entity - contains only identification and location data'
+  Note: 'Core sitio (community) document - embeds location hierarchy and yearly data snapshots'
 }
 
 Table projects {
   id integer [pk, increment]
   title varchar(255) [not null]
   description text [not null]
-  location_lat decimal [not null, note: 'Project location latitude']
-  location_lng decimal [not null, note: 'Project location longitude']
+  
+  location jsonb [not null, note: '{ lat, lng } - Project location coordinates']
+  
   cost decimal [not null, default: 0, note: 'Total project cost in PHP']
   project_date date [not null, note: 'Date when the project was implemented']
+  
+  // Embedded sitio references (denormalized from project_sitios)
+  sitio_ids jsonb [not null, note: '[sitioId1, sitioId2, ...] - Array of sitio IDs that benefit from this project']
+  
+  // Embedded images (denormalized from project_images)
+  images jsonb [note: '[{ imageData, displayOrder, createdAt }, ...] - Array of base64 encoded images (max 5)']
   
   created_at timestamp [not null, default: `now()`]
   updated_at timestamp
@@ -152,44 +136,21 @@ Table projects {
     title [name: 'idx_projects_title']
     project_date [name: 'idx_projects_date']
     created_at [name: 'idx_projects_created']
+    sitio_ids [name: 'idx_projects_sitios']
   }
   
-  Note: 'Development projects implemented across sitios - tracks investments and community development'
+  Note: 'Development projects with embedded images and sitio references'
 }
 
-Table project_sitios {
-  id integer [pk, increment]
-  project_id integer [not null, ref: > projects.id]
-  sitio_id integer [not null, ref: > sitios.id]
-  
-  indexes {
-    project_id [name: 'idx_project_sitios_project']
-    sitio_id [name: 'idx_project_sitios_sitio']
-    (project_id, sitio_id) [unique, name: 'idx_project_sitios_unique']
-  }
-  
-  Note: 'Many-to-many relationship between projects and sitios - tracks which sitios benefit from each project'
-}
-
-Table project_images {
-  id integer [pk, increment]
-  project_id integer [not null, ref: > projects.id]
-  image_data text [not null, note: 'Base64 encoded image string']
-  display_order integer [not null, default: 0, note: 'Order in which images are displayed']
-  
-  created_at timestamp [not null, default: `now()`]
-  
-  indexes {
-    project_id [name: 'idx_project_images_project']
-    (project_id, display_order) [name: 'idx_project_images_order']
-  }
-  
-  Note: 'Project images (max 5 per project) - stores base64 encoded compressed images for visual documentation'
-}
+// ============================================
+// SITIO YEARLY DATA STRUCTURE (embedded in sitios.yearly_data)
+// ============================================
+// Note: This table definition shows the structure of data embedded in sitios collection
+// Each sitio document contains a yearly_data array with objects matching this structure
 
 Table sitio_data {
-  id integer [pk, increment]
-  sitio_id integer [not null, ref: > sitios.id]
+  id integer [pk, increment, note: 'Not used in MongoDB - this is embedded in sitios.yearly_data array']
+  sitio_id integer [not null, ref: > sitios.id, note: 'Not needed in embedded version']
   year_recorded integer [not null, note: 'Year this data was recorded']
   recorded_at timestamp [not null, default: `now()`]
   
@@ -237,8 +198,18 @@ Table sitio_data {
   mobile_signal mobile_signal [not null, default: 'none']
   households_with_internet integer [default: 0]
   
+  // SECTION D: Community Facilities (denormalized from sitio_facilities)
+  facilities jsonb [note: '{ healthCenter: { exists, count, distanceToNearest, condition }, pharmacy: {...}, communityToilet: {...}, kindergarten: {...}, elementarySchool: {...}, highSchool: {...}, madrasah: {...}, market: {...} }']
+  
+  // SECTION E: Roads & Internal Infrastructure (denormalized from sitio_infrastructure)
+  infrastructure jsonb [note: '{ asphalt: { exists, lengthKm, condition }, concrete: {...}, gravel: {...}, natural: {...} }']
+  
   // SECTION F: Education
   students_per_room students_per_room
+  
+  // SECTION G: Water & Sanitation (denormalized from sitio_water_sources and sitio_sanitation_types)
+  water_sources jsonb [note: '{ natural: { exists, functioningCount, notFunctioningCount }, level1: {...}, level2: {...}, level3: {...} }']
+  sanitation_types jsonb [note: '["waterSealed", "pitLatrine", "communityCR", "openDefecation"] - array of sanitation types used by majority']
   
   // SECTION H: Livelihood & Agriculture
   private_household_workers integer [default: 0]
@@ -254,191 +225,28 @@ Table sitio_data {
   number_of_associations integer [default: 0]
   estimated_farm_area_hectares decimal [default: 0]
   
+  // SECTION H: Crops & Livestock (denormalized from sitio_crops and sitio_livestock)
+  crops jsonb [note: '["Palay", "Corn", "Banana", "Coconut", ...] - array of crop names']
+  livestock jsonb [note: '["Pig", "Cow", "Kalabaw", "Horse", "Goat", "Chicken", "Duck", ...] - array of livestock types']
+  
   // SECTION I: Safety & Risk
   food_security food_security
   
-  Note: 'Sitio profiling data with year-over-year tracking mapped to survey sections'
-}
-
-// ============================================
-// SECTION D: COMMUNITY FACILITIES
-// ============================================
-
-Table sitio_facilities {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  facility_type varchar(50) [not null, note: 'healthCenter, pharmacy, communityToilet, kindergarten, elementarySchool, highSchool, madrasah, market']
-  exists facility_exists [not null]
-  count integer [note: 'Number of facilities if exists=yes']
-  distance_to_nearest decimal [note: 'Distance in km if exists=no']
-  condition integer [note: 'Condition rating 1-5 (1=Bad, 5=Excellent)']
+  // SECTION I: Hazards (denormalized from sitio_hazards)
+  hazards jsonb [note: '{ flood: { frequencyDescription }, landslide: {...}, drought: {...}, earthquake: {...} }']
   
-  indexes {
-    sitio_data_id [name: 'idx_facilities_sitio_data']
-    (sitio_data_id, facility_type) [unique, name: 'idx_facilities_unique']
-  }
+  // SECTION J: Priority Needs (denormalized from sitio_priorities)
+  priorities jsonb [note: '{ waterSystem: "not_needed|low|medium|very_urgent", communityCR: "...", solarStreetLights: "...", roadOpening: "...", farmTools: "...", healthServices: "...", educationSupport: "..." }']
   
-  Note: 'Community facilities inventory and condition (Section D)'
-}
-
-// ============================================
-// SECTION E: ROADS & INTERNAL INFRASTRUCTURE
-// ============================================
-
-Table sitio_infrastructure {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  road_type varchar(50) [not null, note: 'asphalt, concrete, gravel, natural']
-  exists road_exists [not null]
-  length_km decimal [note: 'Length in kilometers if exists=yes']
-  condition integer [note: 'Condition rating 1-5 (1=Bad, 5=Excellent)']
+  // SECTION K: Issues and Concerns (denormalized from sitio_issues_concerns)
+  issues_concerns jsonb [note: '[{ issueDescription, category }, ...] - array of issues and concerns']
   
-  indexes {
-    sitio_data_id [name: 'idx_infrastructure_sitio_data']
-    (sitio_data_id, road_type) [unique, name: 'idx_infrastructure_unique']
-  }
-  
-  Note: 'Road infrastructure inventory and condition (Section E)'
-}
-
-// ============================================
-// SECTION G: WATER & SANITATION
-// ============================================
-
-Table sitio_water_sources {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  source_type varchar(50) [not null, note: 'natural, level1, level2, level3']
-  exists water_source_exists [not null]
-  functioning_count integer [note: 'Number of functioning units/stations']
-  not_functioning_count integer [note: 'Number of not functioning units/stations']
-  
-  indexes {
-    sitio_data_id [name: 'idx_water_sources_sitio_data']
-    (sitio_data_id, source_type) [unique, name: 'idx_water_sources_unique']
-  }
-  
-  Note: 'Water source status (Section G)'
-}
-
-Table sitio_sanitation_types {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  sanitation_type varchar(50) [not null, note: 'waterSealed, pitLatrine, communityCR, openDefecation']
-  
-  indexes {
-    sitio_data_id [name: 'idx_sanitation_sitio_data']
-  }
-  
-  Note: 'Sanitation types used by majority (Section G)'
-}
-
-// ============================================
-// SECTION H: CROPS & LIVESTOCK
-// ============================================
-
-Table sitio_crops {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  crop_name varchar(100) [not null, note: 'Palay, Corn, Banana, Coconut, etc.']
-  
-  indexes {
-    sitio_data_id [name: 'idx_crops_sitio_data']
-  }
-  
-  Note: 'Main crops produced (Section H)'
-}
-
-Table sitio_livestock {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  livestock_type varchar(100) [not null, note: 'Pig, Cow, Kalabaw, Horse, Goat, Chicken, Duck, etc.']
-  
-  indexes {
-    sitio_data_id [name: 'idx_livestock_sitio_data']
-  }
-  
-  Note: 'Livestock and poultry produced (Section H)'
-}
-
-// ============================================
-// SECTION I: HAZARDS
-// ============================================
-
-Table sitio_hazards {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  hazard_type varchar(50) [not null, note: 'flood, landslide, drought, earthquake']
-  frequency_description text [note: 'Frequency in past 12 months']
-  
-  indexes {
-    sitio_data_id [name: 'idx_hazards_sitio_data']
-    (sitio_data_id, hazard_type) [unique, name: 'idx_hazards_unique']
-  }
-  
-  Note: 'Environmental and natural hazards (Section I)'
-}
-
-// ============================================
-// SECTION J: PRIORITY NEEDS
-// ============================================
-
-Table sitio_priorities {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  priority_name varchar(100) [not null, note: 'waterSystem, communityCR, solarStreetLights, roadOpening, farmTools, healthServices, educationSupport']
-  rating priority_rating [not null]
-  
-  indexes {
-    sitio_data_id [name: 'idx_priorities_sitio_data']
-    (sitio_data_id, priority_name) [unique, name: 'idx_priorities_unique']
-  }
-  
-  Note: 'Priority interventions with rating scale (Section J)'
-}
-
-// ============================================
-// SECTION K: ISSUES AND CONCERNS
-// ============================================
-
-Table sitio_issues_concerns {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
-  issue_description text [not null]
-  category varchar(100)
-  
-  indexes {
-    sitio_data_id [name: 'idx_issues_sitio_data']
-    category [name: 'idx_issues_category']
-  }
-  
-  Note: 'Issues and concerns identified in the sitio'
+  Note: 'Sitio profiling data with year-over-year tracking mapped to survey sections - denormalized for simplified queries'
 }
 
 // ============================================
 // CUSTOM FORM INDICATORS
 // ============================================
-
-Table custom_field_groups {
-  id varchar(21) [pk, note: 'nanoid']
-  name varchar(255) [not null]
-  description text
-  icon varchar(50) [note: 'Icon identifier (e.g., Folder, Layers, Users)']
-  is_collapsible boolean [not null, default: true]
-  display_order integer [not null, default: 0, note: 'Order in which groups appear']
-  
-  created_at timestamp [not null, default: `now()`]
-  created_by integer [ref: > users.id]
-  updated_at timestamp
-  updated_by integer [ref: > users.id]
-  
-  indexes {
-    display_order [name: 'idx_custom_groups_order']
-    created_at [name: 'idx_custom_groups_created']
-  }
-  
-  Note: 'Custom field groups for organizing dynamic form fields'
-}
 
 Table custom_field_definitions {
   id varchar(21) [pk, note: 'nanoid']
@@ -446,7 +254,7 @@ Table custom_field_definitions {
   display_label varchar(255) [not null, note: 'Display label shown in forms']
   data_type varchar(20) [not null, note: 'text, number, boolean, date, array, checkbox, radio']
   
-  // Validation Rules (stored as JSONB)
+  // Validation Rules
   validation_rules jsonb [not null, note: '{ required, min, max, pattern, options[], allowMultiple }']
   
   // Aggregation & Visualization
@@ -458,8 +266,8 @@ Table custom_field_definitions {
   is_active boolean [not null, default: true, note: 'false = archived/soft-deleted']
   description text [note: 'Help text for the field']
   
-  // Group Association
-  group_id varchar(21) [ref: > custom_field_groups.id]
+  // Embedded Group Information (denormalized from custom_field_groups)
+  group jsonb [note: '{ id, name, description, icon, isCollapsible, displayOrder } - Embedded group details']
   group_display_order integer [note: 'Display order within the group']
   
   created_at timestamp [not null, default: `now()`]
@@ -469,27 +277,27 @@ Table custom_field_definitions {
   
   indexes {
     field_name [unique, name: 'idx_custom_fields_name']
-    group_id [name: 'idx_custom_fields_group']
+    "group.id" [name: 'idx_custom_fields_group']
     display_order [name: 'idx_custom_fields_order']
     is_active [name: 'idx_custom_fields_active']
   }
   
-  Note: 'Dynamic custom field definitions created by admins to extend sitio data collection'
+  Note: 'Dynamic custom field definitions with embedded group information'
 }
 
+// ============================================
+// CUSTOM FIELD DATA (embedded in sitios.yearly_data[].custom_fields)
+// ============================================
+// Note: Custom field data is embedded directly in sitios.yearly_data array
+// Structure: sitios.yearly_data[].custom_fields = { fieldId1: value1, fieldId2: value2, ... }
+
 Table sitio_custom_field_data {
-  id integer [pk, increment]
-  sitio_data_id integer [not null, ref: > sitio_data.id]
+  id integer [pk, increment, note: 'Not used in MongoDB - embedded in sitios.yearly_data[].custom_fields']
+  sitio_data_id integer [not null, ref: > sitio_data.id, note: 'Not needed in embedded version']
   field_id varchar(21) [not null, ref: > custom_field_definitions.id]
   value jsonb [not null, note: 'Stores the actual value - type depends on field definition']
   
-  indexes {
-    sitio_data_id [name: 'idx_custom_data_sitio']
-    field_id [name: 'idx_custom_data_field']
-    (sitio_data_id, field_id) [unique, name: 'idx_custom_data_unique']
-  }
-  
-  Note: 'Stores custom field values for each sitio yearly snapshot'
+  Note: 'REFERENCE ONLY - In MongoDB, custom field values are embedded in sitios.yearly_data[].custom_fields as key-value pairs'
 }
 
 // ============================================
@@ -550,6 +358,63 @@ Table users {
 }
 
 // ============================================
+// PENDING CHANGES / APPROVAL WORKFLOW
+// ============================================
+
+enum pending_change_status {
+  pending [note: 'Awaiting review']
+  approved [note: 'Approved by admin']
+  rejected [note: 'Rejected by admin']
+  superseded [note: 'Superseded by newer change']
+  conflict [note: 'Conflict detected with current data']
+}
+
+enum pending_resource_type {
+  sitio [note: 'Sitio data changes']
+  project [note: 'Project changes']
+}
+
+Table pending_changes {
+  id varchar(21) [pk, note: 'nanoid']
+  resource_type pending_resource_type [not null]
+  resource_id integer [not null, note: 'Sitio or Project ID']
+  resource_name varchar(255) [not null, note: 'Display name of the resource']
+  status pending_change_status [not null, default: 'pending']
+  
+  // Data snapshots
+  original_data jsonb [not null, note: 'Snapshot of data at time of submission']
+  proposed_data jsonb [not null, note: 'The proposed changes']
+  base_version_hash varchar(64) [not null, note: 'Hash of original data for conflict detection']
+  
+  // Submission details
+  submitted_by_user_id integer [not null, ref: > users.id]
+  submitted_by_user_name varchar(255) [not null, note: 'Denormalized for history']
+  submitted_at timestamp [not null, default: `now()`]
+  submitter_comment text [note: 'Optional comment from submitter explaining the change']
+  
+  // Review details
+  reviewed_by_user_id integer [ref: > users.id]
+  reviewed_by_user_name varchar(255) [note: 'Denormalized for history']
+  reviewed_at timestamp
+  reviewer_comment text [note: 'Optional comment from reviewer explaining the decision']
+  
+  // Conflict details
+  conflict_details jsonb [note: '[{ field, currentValue, proposedValue }]']
+  
+  indexes {
+    status [name: 'idx_pending_changes_status']
+    resource_type [name: 'idx_pending_changes_resource_type']
+    resource_id [name: 'idx_pending_changes_resource_id']
+    submitted_by_user_id [name: 'idx_pending_changes_submitter']
+    reviewed_by_user_id [name: 'idx_pending_changes_reviewer']
+    submitted_at [name: 'idx_pending_changes_submitted']
+    (resource_type, resource_id, status) [name: 'idx_pending_changes_resource_status']
+  }
+  
+  Note: 'Pending change requests awaiting admin review/approval - enables approval workflow for data changes'
+}
+
+// ============================================
 // SYSTEM / AUDIT
 // ============================================
 
@@ -587,41 +452,21 @@ TableGroup location_hierarchy [color: #f39c12] {
 
 TableGroup core_entities [color: #3498db] {
   sitios
-  sitio_data
   projects
   users
 }
 
-TableGroup projects_related [color: #16a085] {
-  project_sitios
-  project_images
-}
-
-TableGroup facilities_infrastructure [color: #9b59b6] {
-  sitio_facilities
-  sitio_infrastructure
-}
-
-TableGroup water_sanitation [color: #1abc9c] {
-  sitio_water_sources
-  sitio_sanitation_types
-}
-
-TableGroup agriculture [color: #27ae60] {
-  sitio_crops
-  sitio_livestock
-}
-
-TableGroup safety_priorities [color: #e67e22] {
-  sitio_hazards
-  sitio_priorities
-  sitio_issues_concerns
+TableGroup reference_structures [color: #95a5a6] {
+  sitio_data
+  sitio_custom_field_data
 }
 
 TableGroup custom_fields [color: #8e44ad] {
-  custom_field_groups
   custom_field_definitions
-  sitio_custom_field_data
+}
+
+TableGroup approval_workflow [color: #e67e22] {
+  pending_changes
 }
 
 TableGroup system [color: #e74c3c] {
