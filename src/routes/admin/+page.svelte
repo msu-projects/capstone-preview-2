@@ -32,9 +32,10 @@
     MapPin,
     TrendingUp,
     Users,
-    X
+    X,
+    type IconProps
   } from '@lucide/svelte';
-  import { onMount } from 'svelte';
+  import { onMount, type Component } from 'svelte';
 
   let sitios = $state<SitioRecord[]>([]);
   let isLoading = $state(true);
@@ -157,7 +158,12 @@
   }
 
   // Tab configuration - conditionally include supplementary tab
-  const baseTabs = [
+  const baseTabs: {
+    id: string;
+    label: string;
+    icon: Component<IconProps, {}, ''>;
+    number?: number;
+  }[] = [
     { id: 'overview', label: 'Overview', icon: FileText },
     { id: 'demographics', label: 'Demographics', icon: Users },
     { id: 'infrastructure', label: 'Infrastructure', icon: Building2 },
@@ -170,7 +176,7 @@
       ? [{ id: 'supplementary', label: 'Supplementary', icon: Layers }]
       : []),
     { id: 'maps', label: 'Maps', icon: Map },
-    { id: 'activity', label: 'Activity', icon: Activity }
+    { id: 'activity', label: 'Activity', icon: Activity, number: 3 }
   ]);
 
   // Selected year as number for components
@@ -186,7 +192,7 @@
     if (allSitios.length === 0) return [];
 
     // Randomly select some sitios to be "outdated"
-    const numOutdated = Math.min(Math.floor(allSitios.length * 0.2), 10); // 20% or max 10
+    const numOutdated = Math.min(Math.floor(allSitios.length * 0.5), 10); // 50% or max 10
     const shuffled = [...allSitios].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, numOutdated);
 
@@ -320,7 +326,12 @@
                 class="inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
               >
                 <tab.icon class="size-4" />
-                <span class="hidden sm:inline">{tab.label}</span>
+                <div class="flex items-center gap-2">
+                  <span class="hidden sm:inline">{tab.label}</span>
+                  {#if tab.number}
+                    <Badge variant="destructive" class="scale-75">{tab.number}</Badge>
+                  {/if}
+                </div>
               </Tabs.Trigger>
             {/each}
           </Tabs.List>

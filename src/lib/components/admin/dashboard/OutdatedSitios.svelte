@@ -126,7 +126,12 @@
 
       {#if sitios.length >= 5}
         <div class="mt-4 text-center">
-          <Button variant="ghost" size="sm" class="gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="gap-2"
+            href="/admin/sitios?sort=lastUpdateTime%3Adesc"
+          >
             View all outdated sitios
             <ExternalLink class="size-3" />
           </Button>

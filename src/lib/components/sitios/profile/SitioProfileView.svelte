@@ -1,10 +1,11 @@
 <script lang="ts">
   import * as Tabs from '$lib/components/ui/tabs';
   import type { SitioProfile, SitioRecord } from '$lib/types';
-  import { FileText, FolderKanban, Home, Layers, ToolCase, Users } from '@lucide/svelte';
+  import { Edit, FileText, FolderKanban, Home, Layers, ToolCase, Users } from '@lucide/svelte';
 
   import AppBreadcrumb from '$lib/components/AppBreadcrumb.svelte';
   import ProjectsSection from '$lib/components/sitios/ProjectsSection.svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
   import { getActiveCustomFieldDefinitions } from '$lib/utils/custom-fields-storage';
   import { onMount } from 'svelte';
   import SitioProfileHeader from './SitioProfileHeader.svelte';
@@ -69,7 +70,14 @@
 <div
   class="min-h-screen bg-linear-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900"
 >
-  <AppBreadcrumb items={breadcrumbItems} {isAdminView} />
+  <AppBreadcrumb items={breadcrumbItems} {isAdminView}>
+    {#snippet actions()}
+      <Button variant="outline" href="/admin/sitios/{sitioId}/edit">
+        <Edit class="mr-2 h-4 w-4" />
+        Edit Sitio
+      </Button>
+    {/snippet}
+  </AppBreadcrumb>
   <SitioProfileHeader
     {sitio}
     {selectedYear}
