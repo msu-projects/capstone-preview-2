@@ -44,14 +44,14 @@ export type ReportChartType =
  * Geographic filter options for reports
  */
 export interface ReportFilters {
-  /** Primary year for the report data */
+  /** Primary year for the report data (treated as "as of [year]") */
   year: number;
-  /** Comparison year for trend analysis (optional) */
-  compareYear?: number;
   /** Filter by municipality (optional) */
   municipality?: string;
   /** Filter by barangay (optional, requires municipality) */
   barangay?: string;
+  /** Filter by specific sitio coding (optional, requires municipality and barangay) */
+  sitioCoding?: string;
 }
 
 /**

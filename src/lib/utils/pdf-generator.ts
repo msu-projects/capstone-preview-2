@@ -132,6 +132,105 @@ function createTable(
   };
 }
 
+/**
+ * Create signatory section for the end of reports
+ */
+function createSignatorySection(): Content[] {
+  return [
+    {
+      text: '',
+      margin: [0, 40, 0, 0] as [number, number, number, number]
+    },
+    {
+      columns: [
+        {
+          width: '*',
+          stack: [
+            {
+              text: 'Prepared by:',
+              fontSize: 10,
+              color: '#64748B',
+              margin: [0, 0, 0, 30] as [number, number, number, number]
+            },
+            {
+              canvas: [
+                {
+                  type: 'line',
+                  x1: 0,
+                  y1: 0,
+                  x2: 180,
+                  y2: 0,
+                  lineWidth: 1,
+                  lineColor: '#1E293B'
+                }
+              ]
+            },
+            {
+              text: 'Data Officer / Encoder',
+              fontSize: 10,
+              color: '#1E293B',
+              margin: [0, 5, 0, 0] as [number, number, number, number]
+            },
+            {
+              text: 'Date: _________________',
+              fontSize: 9,
+              color: '#64748B',
+              margin: [0, 10, 0, 0] as [number, number, number, number]
+            }
+          ],
+          alignment: 'center' as const
+        },
+        {
+          width: '*',
+          stack: [
+            {
+              text: 'Reviewed and Approved by:',
+              fontSize: 10,
+              color: '#64748B',
+              margin: [0, 0, 0, 30] as [number, number, number, number]
+            },
+            {
+              canvas: [
+                {
+                  type: 'line',
+                  x1: 0,
+                  y1: 0,
+                  x2: 180,
+                  y2: 0,
+                  lineWidth: 1,
+                  lineColor: '#1E293B'
+                }
+              ]
+            },
+            {
+              text: 'Municipal Planning Officer',
+              fontSize: 10,
+              color: '#1E293B',
+              margin: [0, 5, 0, 0] as [number, number, number, number]
+            },
+            {
+              text: 'Date: _________________',
+              fontSize: 9,
+              color: '#64748B',
+              margin: [0, 10, 0, 0] as [number, number, number, number]
+            }
+          ],
+          alignment: 'center' as const
+        }
+      ],
+      margin: [0, 0, 0, 20] as [number, number, number, number]
+    },
+    {
+      text: 'This report is system-generated from the South Cotabato Convergence Data Bank. The data presented herein has been collected, validated, and approved through the official data management process.',
+      fontSize: 8,
+      italics: true,
+      color: '#9CA3AF',
+      alignment: 'center' as const,
+      margin: [20, 20, 20, 0] as [number, number, number, number]
+    }
+  ];
+}
+
 // ===== SECTION BUILDERS =====
 
 interface AggregatedData {
@@ -206,10 +305,7 @@ function buildOverviewSection(
   if (config.filters.barangay) {
     content.push(createKeyValue('Barangay', config.filters.barangay));
   }
-  content.push(createKeyValue('Data Year', config.filters.year.toString()));
-  if (config.filters.compareYear) {
-    content.push(createKeyValue('Comparison Year', config.filters.compareYear.toString()));
-  }
+  content.push(createKeyValue('Data Year', `as of ${config.filters.year}`));
 
   // Classification breakdown
   content.push(createSubsectionHeader('Sitio Classifications'));
@@ -985,22 +1081,29 @@ export function generateAggregateReport(
       {
         stack: [
           {
-            text: config.title || 'AGGREGATE DATA REPORT',
-            style: 'documentTitle',
-            alignment: 'center' as const
-          },
-          {
             text: 'South Cotabato Convergence Data Bank',
             style: 'documentSubtitle',
             alignment: 'center' as const
           },
           {
-            text: `Generated: ${currentDate}`,
+            text: config.title || 'AGGREGATE DATA REPORT',
+            style: 'documentTitle',
+            alignment: 'center' as const
+          },
+          {
+            text: `As of ${year} / Generated ${currentDate}`,
             fontSize: 9,
             italics: true,
             alignment: 'center' as const,
             margin: [0, 5, 0, 0] as [number, number, number, number]
           }
+          // {
+          //   text: `Generated: ${currentDate}`,
+          //   fontSize: 9,
+          //   italics: true,
+          //   alignment: 'center' as const,
+          //   margin: [0, 5, 0, 0] as [number, number, number, number]
+          // }
         ],
         width: '*'
       },
@@ -1033,6 +1136,9 @@ export function generateAggregateReport(
       content.push(...builder(aggregatedData, config, chartImageMap));
     }
   }
+
+  // Add signatory section at the end
+  content.push(...createSignatorySection());
 
   // Document definition
   const docDefinition: TDocumentDefinitions = {
@@ -1137,7 +1243,7 @@ export function downloadAggregateReport(
   const locationStr = config.filters.municipality
     ? `_${config.filters.municipality.replace(/\s+/g, '_')}`
     : '';
-  const defaultFileName = `Aggregate_Report${locationStr}_${config.filters.year}_${dateStr}.pdf`;
+  const defaultFileName = `Aggregate_Report${locationStr}_as_of_${config.filters.year}_${dateStr}.pdf`;
   const finalFileName = fileName || defaultFileName;
 
   pdf.download(finalFileName);
@@ -1149,7 +1255,648 @@ export function downloadAggregateReport(
     'report',
     `aggregate-${config.filters.year}`,
     finalFileName,
-    `Generated aggregate report: ${sitios.length} sitios, sections: ${sectionNames}, year: ${config.filters.year}${config.filters.compareYear ? `, compared with ${config.filters.compareYear}` : ''}`
+    `Generated aggregate report: ${sitios.length} sitios, sections: ${sectionNames}, year: ${config.filters.year}`
+  );
+}
+
+// ===== SITIO PROFILE REPORT GENERATION =====
+
+/**
+ * Build sitio overview section for profile report
+ */
+function buildSitioOverviewSection(
+  profile: import('$lib/types').SitioProfile,
+  sitio: SitioRecord
+): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Basic Information'));
+
+  // Location info
+  content.push(createSubsectionHeader('Location'));
+  content.push(createKeyValue('Municipality', sitio.municipality));
+  content.push(createKeyValue('Barangay', sitio.barangay));
+  content.push(createKeyValue('Sitio Name', sitio.sitioName));
+  content.push(createKeyValue('Sitio Code', sitio.coding));
+  content.push(
+    createKeyValue('Coordinates', `${sitio.latitude.toFixed(6)}, ${sitio.longitude.toFixed(6)}`)
+  );
+
+  // Classification
+  content.push(createSubsectionHeader('Classification'));
+  const classifications: string[] = [];
+  if (sitio.sitioClassification.gida) classifications.push('GIDA (Geographically Isolated)');
+  if (sitio.sitioClassification.indigenous) classifications.push('Indigenous Community');
+  if (sitio.sitioClassification.conflict) classifications.push('Conflict-Affected Area');
+  content.push(
+    createKeyValue(
+      'Classifications',
+      classifications.length > 0 ? classifications.join(', ') : 'None'
+    )
+  );
+
+  // Main access
+  content.push(createSubsectionHeader('Main Access'));
+  const accessTypes: string[] = [];
+  if (profile.mainAccess.pavedRoad) accessTypes.push('Paved Road');
+  if (profile.mainAccess.unpavedRoad) accessTypes.push('Unpaved Road');
+  if (profile.mainAccess.footpath) accessTypes.push('Footpath');
+  if (profile.mainAccess.boat) accessTypes.push('Boat');
+  content.push(
+    createKeyValue(
+      'Access Types',
+      accessTypes.length > 0 ? accessTypes.join(', ') : 'Not specified'
+    )
+  );
+
+  return content;
+}
+
+/**
+ * Build sitio demographics section for profile report
+ */
+function buildSitioDemographicsSection(profile: import('$lib/types').SitioProfile): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Demographics & Population'));
+
+  // Population overview
+  content.push(createSubsectionHeader('Population Overview'));
+  content.push(
+    createTable(
+      ['Metric', 'Value'],
+      [
+        ['Total Population', formatNumber(profile.totalPopulation)],
+        ['Male Population', formatNumber(profile.population.totalMale)],
+        ['Female Population', formatNumber(profile.population.totalFemale)],
+        ['Total Households', formatNumber(profile.totalHouseholds)],
+        ['Registered Voters', formatNumber(profile.registeredVoters)],
+        ['Labor Force', formatNumber(profile.laborForceCount)],
+        ['School-Age Children', formatNumber(profile.schoolAgeChildren)]
+      ]
+    )
+  );
+
+  // Vulnerable groups
+  content.push(createSubsectionHeader('Vulnerable Groups'));
+  content.push(
+    createTable(
+      ['Group', 'Count'],
+      [
+        ['Seniors (60+)', formatNumber(profile.vulnerableGroups.seniorsCount)],
+        ['Labor Force (60-64)', formatNumber(profile.vulnerableGroups.laborForce60to64Count)],
+        ['Muslim Population', formatNumber(profile.vulnerableGroups.muslimCount)],
+        ['Indigenous Peoples (IP)', formatNumber(profile.vulnerableGroups.ipCount)],
+        ['Unemployed', formatNumber(profile.vulnerableGroups.unemployedCount)],
+        ['Out-of-School Youth', formatNumber(profile.vulnerableGroups.outOfSchoolYouth)],
+        ['Without Birth Certificate', formatNumber(profile.vulnerableGroups.noBirthCertCount)],
+        ['Without National ID', formatNumber(profile.vulnerableGroups.noNationalIDCount)]
+      ]
+    )
+  );
+
+  return content;
+}
+
+/**
+ * Build sitio utilities section for profile report
+ */
+function buildSitioUtilitiesSection(profile: import('$lib/types').SitioProfile): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Utilities & Connectivity'));
+
+  // Basic utilities
+  content.push(createSubsectionHeader('Household Utilities'));
+  content.push(
+    createTable(
+      ['Utility', 'Households'],
+      [
+        ['With Electricity', formatNumber(profile.householdsWithElectricity)],
+        ['With Toilet Facilities', formatNumber(profile.householdsWithToilet)],
+        ['With Internet Access', formatNumber(profile.householdsWithInternet)]
+      ]
+    )
+  );
+
+  // Electricity sources
+  content.push(createSubsectionHeader('Electricity Sources'));
+  content.push(
+    createTable(
+      ['Source', 'Households'],
+      [
+        ['Grid Connection', formatNumber(profile.electricitySources.grid)],
+        ['Solar Power', formatNumber(profile.electricitySources.solar)],
+        ['Battery', formatNumber(profile.electricitySources.battery)],
+        ['Generator', formatNumber(profile.electricitySources.generator)]
+      ]
+    )
+  );
+
+  // Mobile signal
+  const signalLabels: Record<string, string> = {
+    none: 'No Signal',
+    '2g': '2G',
+    '3g': '3G',
+    '4g': '4G',
+    '5g': '5G'
+  };
+  content.push(createKeyValue('Mobile Signal', signalLabels[profile.mobileSignal] || 'Unknown'));
+
+  return content;
+}
+
+/**
+ * Build sitio facilities section for profile report
+ */
+function buildSitioFacilitiesSection(profile: import('$lib/types').SitioProfile): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Community Facilities'));
+
+  const conditionLabels: Record<number, string> = {
+    1: 'Bad',
+    2: 'Poor',
+    3: 'Average',
+    4: 'Good',
+    5: 'Excellent'
+  };
+
+  const facilityNames: Record<string, string> = {
+    healthCenter: 'Health Center',
+    pharmacy: 'Pharmacy',
+    communityToilet: 'Community Toilet',
+    kindergarten: 'Kindergarten',
+    elementarySchool: 'Elementary School',
+    highSchool: 'High School',
+    madrasah: 'Madrasah',
+    market: 'Market'
+  };
+
+  const rows: (string | number)[][] = [];
+  for (const [key, label] of Object.entries(facilityNames)) {
+    const facility = profile.facilities[key as keyof typeof profile.facilities];
+    if (facility) {
+      rows.push([
+        label,
+        facility.exists === 'yes' ? 'Yes' : 'No',
+        facility.count ?? '-',
+        facility.condition ? conditionLabels[facility.condition] : '-',
+        facility.distanceToNearest ? `${facility.distanceToNearest} km` : '-'
+      ]);
+    }
+  }
+
+  content.push(createTable(['Facility', 'Exists', 'Count', 'Condition', 'Distance'], rows));
+
+  return content;
+}
+
+/**
+ * Build sitio infrastructure section for profile report
+ */
+function buildSitioInfrastructureSection(profile: import('$lib/types').SitioProfile): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Roads & Infrastructure'));
+
+  const conditionLabels: Record<number, string> = {
+    1: 'Bad',
+    2: 'Poor',
+    3: 'Average',
+    4: 'Good',
+    5: 'Excellent'
+  };
+
+  // Roads
+  content.push(createSubsectionHeader('Road Infrastructure'));
+  const roadTypes: Record<string, string> = {
+    asphalt: 'Asphalt',
+    concrete: 'Concrete',
+    gravel: 'Gravel',
+    natural: 'Natural/Earth'
+  };
+
+  const roadRows: (string | number)[][] = [];
+  for (const [key, label] of Object.entries(roadTypes)) {
+    const road = profile.infrastructure[key as keyof typeof profile.infrastructure];
+    if (road) {
+      roadRows.push([
+        label,
+        road.exists === 'yes' ? 'Yes' : 'No',
+        road.length ? `${road.length} km` : '-',
+        road.condition ? conditionLabels[road.condition] : '-'
+      ]);
+    }
+  }
+  content.push(createTable(['Road Type', 'Exists', 'Length', 'Condition'], roadRows));
+
+  // Water sources
+  content.push(createSubsectionHeader('Water Sources'));
+  const waterTypes: Record<string, string> = {
+    natural: 'Natural (Spring/River/Well)',
+    level1: 'Level 1 (Point Source)',
+    level2: 'Level 2 (Communal)',
+    level3: 'Level 3 (House Connection)'
+  };
+
+  const waterRows: (string | number)[][] = [];
+  for (const [key, label] of Object.entries(waterTypes)) {
+    const water = profile.waterSources[key as keyof typeof profile.waterSources];
+    if (water) {
+      waterRows.push([
+        label,
+        water.exists === 'yes' ? 'Yes' : 'No',
+        water.functioningCount ?? '-',
+        water.notFunctioningCount ?? '-'
+      ]);
+    }
+  }
+  content.push(
+    createTable(['Water Source', 'Exists', 'Functioning', 'Not Functioning'], waterRows)
+  );
+
+  // Sanitation
+  content.push(createSubsectionHeader('Sanitation'));
+  const sanitationTypes: string[] = [];
+  if (profile.sanitationTypes.waterSealed) sanitationTypes.push('Water-Sealed Toilet');
+  if (profile.sanitationTypes.pitLatrine) sanitationTypes.push('Pit Latrine');
+  if (profile.sanitationTypes.communityCR) sanitationTypes.push('Community CR');
+  if (profile.sanitationTypes.openDefecation) sanitationTypes.push('Open Defecation');
+  content.push(
+    createKeyValue(
+      'Sanitation Types',
+      sanitationTypes.length > 0 ? sanitationTypes.join(', ') : 'None specified'
+    )
+  );
+
+  // Education
+  const roomLabels: Record<string, string> = {
+    less_than_46: 'Less than 46',
+    '46_50': '46-50',
+    '51_55': '51-55',
+    more_than_56: 'More than 56',
+    no_classroom: 'No Classroom'
+  };
+  content.push(
+    createKeyValue('Students per Room', roomLabels[profile.studentsPerRoom] || 'Unknown')
+  );
+
+  return content;
+}
+
+/**
+ * Build sitio economy section for profile report
+ */
+function buildSitioEconomySection(profile: import('$lib/types').SitioProfile): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Livelihood & Agriculture'));
+
+  // Income
+  content.push(createSubsectionHeader('Income'));
+  content.push(
+    createKeyValue('Average Daily Income', formatCurrency(profile.averageDailyIncome) + '/day')
+  );
+
+  // Worker distribution
+  content.push(createSubsectionHeader('Worker Distribution'));
+  content.push(
+    createTable(
+      ['Worker Class', 'Count'],
+      [
+        ['Private Household', formatNumber(profile.workerClass.privateHousehold)],
+        ['Private Establishment', formatNumber(profile.workerClass.privateEstablishment)],
+        ['Government', formatNumber(profile.workerClass.government)],
+        ['Self-Employed', formatNumber(profile.workerClass.selfEmployed)],
+        ['Employer', formatNumber(profile.workerClass.employer)],
+        ['OFW', formatNumber(profile.workerClass.ofw)]
+      ]
+    )
+  );
+
+  // Agriculture
+  content.push(createSubsectionHeader('Agriculture'));
+  content.push(
+    createKeyValue('Number of Farmers', formatNumber(profile.agriculture.numberOfFarmers))
+  );
+  content.push(
+    createKeyValue(
+      'Farm Area',
+      `${formatNumber(profile.agriculture.estimatedFarmAreaHectares)} hectares`
+    )
+  );
+  content.push(
+    createKeyValue('Farmer Associations', formatNumber(profile.agriculture.numberOfAssociations))
+  );
+
+  // Crops and livestock
+  if (profile.crops.length > 0) {
+    content.push(createKeyValue('Main Crops', profile.crops.join(', ')));
+  }
+  if (profile.livestock.length > 0) {
+    content.push(createKeyValue('Livestock/Poultry', profile.livestock.join(', ')));
+  }
+
+  // Pets
+  content.push(createSubsectionHeader('Pet Statistics'));
+  content.push(
+    createTable(
+      ['Animal', 'Total', 'Vaccinated'],
+      [
+        ['Dogs', formatNumber(profile.pets.dogsCount), formatNumber(profile.pets.vaccinatedDogs)],
+        ['Cats', formatNumber(profile.pets.catsCount), formatNumber(profile.pets.vaccinatedCats)]
+      ]
+    )
+  );
+
+  // Backyard gardens
+  if (profile.backyardGardens.householdsWithGardens > 0) {
+    content.push(createSubsectionHeader('Backyard Gardens'));
+    content.push(
+      createKeyValue(
+        'Households with Gardens',
+        formatNumber(profile.backyardGardens.householdsWithGardens)
+      )
+    );
+    if (profile.backyardGardens.commonCrops.length > 0) {
+      content.push(createKeyValue('Common Crops', profile.backyardGardens.commonCrops.join(', ')));
+    }
+  }
+
+  return content;
+}
+
+/**
+ * Build sitio safety section for profile report
+ */
+function buildSitioSafetySection(profile: import('$lib/types').SitioProfile): Content[] {
+  const content: Content[] = [];
+
+  content.push(createSectionHeader('Safety & Risk Context'));
+
+  // Food security
+  const foodSecurityLabels: Record<string, string> = {
+    secure: 'Food Secure',
+    seasonal_scarcity: 'Seasonal Scarcity',
+    critical_shortage: 'Critical Shortage'
+  };
+  content.push(
+    createKeyValue('Food Security Status', foodSecurityLabels[profile.foodSecurity] || 'Unknown')
+  );
+
+  // Hazards
+  content.push(createSubsectionHeader('Natural Hazards (Past 12 Months)'));
+  content.push(
+    createTable(
+      ['Hazard Type', 'Occurrences'],
+      [
+        ['Flooding', profile.hazards.flood.frequency],
+        ['Landslide', profile.hazards.landslide.frequency],
+        ['Drought', profile.hazards.drought.frequency],
+        ['Earthquake', profile.hazards.earthquake.frequency]
+      ]
+    )
+  );
+
+  return content;
+}
+
+/**
+ * Build sitio priorities section for profile report
+ */
+// function buildSitioPrioritiesSection(profile: import('$lib/types').SitioProfile): Content[] {
+//   const content: Content[] = [];
+
+//   content.push(createSectionHeader('Priority Interventions'));
+
+//   const priorityLabels: Record<string, string> = {
+//     waterSystem: 'Water System',
+//     communityCR: 'Community CR',
+//     solarStreetLights: 'Solar Street Lights',
+//     roadOpening: 'Road Opening',
+//     farmTools: 'Farm Tools',
+//     healthServices: 'Health Services',
+//     educationSupport: 'Education Support'
+//   };
+
+//   const ratingLabels: Record<number, string> = {
+//     0: 'Not Needed',
+//     1: 'Low Priority',
+//     2: 'Medium Priority',
+//     3: 'Very Urgent'
+//   };
+
+//   if (profile.priorities && profile.priorities.length > 0) {
+//     const sortedPriorities = [...profile.priorities].sort((a, b) => b.rating - a.rating);
+//     content.push(
+//       createTable(
+//         ['Intervention', 'Priority Level'],
+//         sortedPriorities.map((p) => [
+//           priorityLabels[p.name] || p.name,
+//           ratingLabels[p.rating] || 'Unknown'
+//         ])
+//       )
+//     );
+
+//     content.push(createKeyValue('Average Need Score', profile.averageNeedScore.toFixed(2)));
+//   } else {
+//     content.push({ text: 'No priority data available', style: 'noData' });
+//   }
+
+//   return content;
+// }
+
+/**
+ * Generate sitio profile report PDF
+ */
+export function generateSitioProfileReport(
+  sitio: SitioRecord,
+  year: number
+): ReturnType<typeof pdfMake.createPdf> {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Get the profile for the specified year
+  const profile = sitio.yearlyData[year.toString()];
+  if (!profile) {
+    throw new Error(`No data available for year ${year}`);
+  }
+
+  // Build content
+  const content: Content[] = [];
+
+  // Header
+  content.push({
+    columns: [
+      {
+        image: LOGO_BASE64,
+        width: 60,
+        alignment: 'left' as const
+      },
+      {
+        stack: [
+          {
+            text: 'SOUTH COTABATO CATCH - UP',
+            style: 'documentSubtitle',
+            alignment: 'center' as const
+          },
+          {
+            text: `${sitio.sitioName.toUpperCase()} PROFILE REPORT`,
+            style: 'documentTitle',
+            alignment: 'center' as const
+          },
+          {
+            text: `${sitio.barangay}, ${sitio.municipality}`,
+            style: 'documentSubtitle',
+            alignment: 'center' as const
+          },
+          {
+            text: `Data as of ${year} | Generated: ${currentDate}`,
+            fontSize: 9,
+            italics: true,
+            alignment: 'center' as const,
+            margin: [0, 5, 0, 0] as [number, number, number, number]
+          }
+        ],
+        width: '*'
+      },
+      {
+        width: 60,
+        text: ''
+      }
+    ],
+    margin: [0, 0, 0, 20] as [number, number, number, number]
+  });
+
+  // Build all sections
+  content.push(...buildSitioOverviewSection(profile, sitio));
+  content.push(...buildSitioDemographicsSection(profile));
+  content.push(...buildSitioUtilitiesSection(profile));
+  content.push(...buildSitioFacilitiesSection(profile));
+  content.push(...buildSitioInfrastructureSection(profile));
+  content.push(...buildSitioEconomySection(profile));
+  content.push(...buildSitioSafetySection(profile));
+  // content.push(...buildSitioPrioritiesSection(profile));
+
+  // Add signatory section at the end
+  content.push(...createSignatorySection());
+
+  // Document definition
+  const docDefinition: TDocumentDefinitions = {
+    pageOrientation: 'portrait',
+    pageSize: 'LEGAL',
+    pageMargins: [40, 40, 40, 60],
+    footer: (currentPage: number, pageCount: number) => ({
+      columns: [
+        {
+          text: `${sitio.sitioName} Profile Report - South Cotabato Convergence Data Bank`,
+          fontSize: 8,
+          color: '#6B7280',
+          margin: [40, 0, 0, 0]
+        },
+        {
+          text: `Page ${currentPage} of ${pageCount}`,
+          alignment: 'right' as const,
+          fontSize: 8,
+          color: '#6B7280',
+          margin: [0, 0, 40, 0]
+        }
+      ]
+    }),
+    content,
+    styles: {
+      documentTitle: {
+        fontSize: 16,
+        bold: true,
+        color: '#1E293B'
+      },
+      documentSubtitle: {
+        fontSize: 11,
+        color: '#475569'
+      },
+      sectionHeader: {
+        fontSize: 14,
+        bold: true,
+        color: '#1E40AF',
+        decoration: 'underline' as const
+      },
+      subsectionHeader: {
+        fontSize: 11,
+        bold: true,
+        color: '#334155'
+      },
+      label: {
+        fontSize: 10,
+        color: '#64748B'
+      },
+      value: {
+        fontSize: 10,
+        color: '#1E293B'
+      },
+      statLabel: {
+        fontSize: 9,
+        color: '#64748B'
+      },
+      statValue: {
+        fontSize: 14,
+        bold: true,
+        color: '#1E293B'
+      },
+      trendText: {
+        fontSize: 8,
+        italics: true
+      },
+      tableHeader: {
+        fontSize: 9,
+        bold: true,
+        fillColor: '#E2E8F0',
+        color: '#1E293B'
+      },
+      tableCell: {
+        fontSize: 9,
+        color: '#374151'
+      },
+      noData: {
+        fontSize: 9,
+        italics: true,
+        color: '#9CA3AF',
+        margin: [0, 5, 0, 10] as [number, number, number, number]
+      }
+    }
+  };
+
+  return pdfMake.createPdf(docDefinition);
+}
+
+/**
+ * Download a sitio profile report as PDF
+ */
+export function downloadSitioProfileReport(
+  sitio: SitioRecord,
+  year: number,
+  fileName?: string
+): void {
+  const pdf = generateSitioProfileReport(sitio, year);
+
+  // Generate filename
+  const dateStr = new Date().toISOString().split('T')[0];
+  const sitioName = sitio.sitioName.replace(/\s+/g, '_');
+  const defaultFileName = `${sitioName}_Profile_as_of_${year}_${dateStr}.pdf`;
+  const finalFileName = fileName || defaultFileName;
+
+  pdf.download(finalFileName);
+
+  // Log the export action
+  logAuditAction(
+    'export',
+    'report',
+    `sitio-profile-${sitio.coding}`,
+    finalFileName,
+    `Generated sitio profile report for ${sitio.sitioName} (${sitio.municipality}, ${sitio.barangay}) as of ${year}`
   );
 }
 

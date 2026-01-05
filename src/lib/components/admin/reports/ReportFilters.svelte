@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Label } from '$lib/components/ui/label';
   import * as Select from '$lib/components/ui/select';
-  import { Switch } from '$lib/components/ui/switch';
   import { getBarangaysForMunicipality, getMunicipalities } from '$lib/config/location-data';
   import type { SitioRecord } from '$lib/types';
   import type { ReportFilters } from '$lib/types/report';
@@ -10,18 +9,10 @@
   interface Props {
     filters: ReportFilters;
     sitios: SitioRecord[];
-    includeTrends: boolean;
     onfilterschange?: (filters: ReportFilters) => void;
-    ontrendschange?: (includeTrends: boolean) => void;
   }
 
-  let {
-    filters = $bindable(),
-    sitios,
-    includeTrends = $bindable(),
-    onfilterschange,
-    ontrendschange
-  }: Props = $props();
+  let { filters = $bindable(), sitios, onfilterschange }: Props = $props();
 
   // Get available years from sitios data
   const availableYears = $derived(getAllAvailableYears(sitios).sort((a, b) => b - a));
@@ -32,90 +23,82 @@
     filters.municipality ? getBarangaysForMunicipality(filters.municipality) : []
   );
 
-  // Comparison year options (exclude current year)
-  const comparisonYears = $derived(availableYears.filter((y) => y !== filters.year));
+  // Get sitios available for selected municipality and barangay
+  const availableSitios = $derived(() => {
+    if (!filters.municipality || !filters.barangay) return [];
+    return sitios
+      .filter(
+        (sitio) =>
+          sitio.municipality === filters.municipality && sitio.barangay === filters.barangay
+      )
+      .sort((a, b) => a.sitioName.localeCompare(b.sitioName));
+  });
 
   function updateYear(value: string | undefined) {
     if (value) {
       filters = { ...filters, year: parseInt(value) };
-      // Reset compare year if it's the same as new year
-      if (filters.compareYear === filters.year) {
-        filters = { ...filters, compareYear: undefined };
-      }
       onfilterschange?.(filters);
     }
-  }
-
-  function updateCompareYear(value: string | undefined) {
-    filters = { ...filters, compareYear: value ? parseInt(value) : undefined };
-    onfilterschange?.(filters);
   }
 
   function updateMunicipality(value: string | undefined) {
     filters = {
       ...filters,
       municipality: value || undefined,
-      barangay: undefined // Reset barangay when municipality changes
+      barangay: undefined, // Reset barangay when municipality changes
+      sitioCoding: undefined // Reset sitio when municipality changes
     };
     onfilterschange?.(filters);
   }
 
   function updateBarangay(value: string | undefined) {
-    filters = { ...filters, barangay: value || undefined };
+    filters = {
+      ...filters,
+      barangay: value || undefined,
+      sitioCoding: undefined // Reset sitio when barangay changes
+    };
     onfilterschange?.(filters);
   }
 
-  function toggleTrends(checked: boolean) {
-    includeTrends = checked;
-    ontrendschange?.(checked);
+  function updateSitio(value: string | undefined) {
+    filters = { ...filters, sitioCoding: value || undefined };
+    onfilterschange?.(filters);
   }
+
+  // Get the selected sitio name for display
+  const selectedSitioName = $derived(() => {
+    if (!filters.sitioCoding) return null;
+    const sitio = sitios.find((s) => s.coding === filters.sitioCoding);
+    return sitio?.sitioName ?? null;
+  });
 </script>
 
 <div class="space-y-6">
   <!-- Year Selection -->
   <div class="space-y-4">
     <h3 class="text-sm font-medium">Data Year</h3>
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div class="space-y-2">
-        <Label for="year">Primary Year</Label>
-        <Select.Root type="single" value={filters.year.toString()} onValueChange={updateYear}>
-          <Select.Trigger id="year" class="w-full">
-            {filters.year}
-          </Select.Trigger>
-          <Select.Content>
-            {#each availableYears as year}
-              <Select.Item value={year.toString()}>{year}</Select.Item>
-            {/each}
-          </Select.Content>
-        </Select.Root>
-        <p class="text-xs text-muted-foreground">Select the year for report data</p>
-      </div>
-
-      <div class="space-y-2">
-        <Label for="compare-year">Comparison Year (Optional)</Label>
-        <Select.Root
-          type="single"
-          value={filters.compareYear?.toString() ?? ''}
-          onValueChange={updateCompareYear}
-        >
-          <Select.Trigger id="compare-year" class="w-full">
-            {filters.compareYear ?? 'None'}
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Item value="">None</Select.Item>
-            {#each comparisonYears as year}
-              <Select.Item value={year.toString()}>{year}</Select.Item>
-            {/each}
-          </Select.Content>
-        </Select.Root>
-        <p class="text-xs text-muted-foreground">Compare with previous year data</p>
-      </div>
+    <div class="space-y-2">
+      <Label for="year">Report Year</Label>
+      <Select.Root type="single" value={filters.year.toString()} onValueChange={updateYear}>
+        <Select.Trigger id="year" class="w-full">
+          {filters.year}
+        </Select.Trigger>
+        <Select.Content>
+          {#each availableYears as year}
+            <Select.Item value={year.toString()}>{year}</Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Root>
+      <p class="text-xs text-muted-foreground">Generate report with data as of this year</p>
     </div>
   </div>
 
   <!-- Geographic Filters -->
   <div class="space-y-4">
     <h3 class="text-sm font-medium">Geographic Scope</h3>
+    <p class="text-xs text-muted-foreground">
+      Leave blank to aggregate all data. Select a location to narrow down the scope.
+    </p>
     <div class="grid gap-4 sm:grid-cols-2">
       <div class="space-y-2">
         <Label for="municipality">Municipality</Label>
@@ -156,21 +139,37 @@
         </Select.Root>
       </div>
     </div>
-  </div>
 
-  <!-- Trends Toggle -->
-  <div class="flex items-center justify-between rounded-lg border p-4">
-    <div class="space-y-0.5">
-      <Label for="trends-toggle" class="text-base">Include Year-over-Year Trends</Label>
-      <p class="text-sm text-muted-foreground">
-        Show percentage changes compared to the previous year
-      </p>
-    </div>
-    <Switch
-      id="trends-toggle"
-      checked={includeTrends}
-      onCheckedChange={toggleTrends}
-      disabled={comparisonYears.length === 0}
-    />
+    <!-- Sitio Selection (only shown when municipality and barangay are selected) -->
+    {#if filters.municipality && filters.barangay}
+      <div class="space-y-2">
+        <Label for="sitio">Sitio (Optional)</Label>
+        <Select.Root
+          type="single"
+          value={filters.sitioCoding ?? ''}
+          onValueChange={updateSitio}
+          disabled={availableSitios().length === 0}
+        >
+          <Select.Trigger id="sitio" class="w-full">
+            {selectedSitioName() ?? 'All Sitios (Aggregated)'}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="">All Sitios (Aggregated)</Select.Item>
+            {#each availableSitios() as sitio}
+              <Select.Item value={sitio.coding}>{sitio.sitioName}</Select.Item>
+            {/each}
+          </Select.Content>
+        </Select.Root>
+        <p class="text-xs text-muted-foreground">
+          {#if availableSitios().length === 0}
+            No sitios found for this location
+          {:else if filters.sitioCoding}
+            Generate individual sitio profile report
+          {:else}
+            Select a sitio to generate an individual profile report instead of aggregated data
+          {/if}
+        </p>
+      </div>
+    {/if}
   </div>
 </div>
