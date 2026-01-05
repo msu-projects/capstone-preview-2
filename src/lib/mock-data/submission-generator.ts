@@ -236,10 +236,8 @@ function generateSubmission(
     status = 'rejected';
   } else if (statusRoll < 0.9) {
     status = 'needs_revision';
-  } else if (statusRoll < 0.95) {
-    status = 'conflict';
   } else {
-    status = 'superseded';
+    status = 'conflict';
   }
 
   // Generate dates

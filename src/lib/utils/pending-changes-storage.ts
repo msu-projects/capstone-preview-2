@@ -740,3 +740,137 @@ export function getEditablePendingChange(
     ) || null
   );
 }
+
+/**
+ * Update a pending submission (only pending, needs_revision, or rejected)
+ */
+export function updatePendingSubmission(
+  submissionId: string,
+  updatedData: {
+    proposedData: unknown;
+    submitterComment?: string;
+  }
+): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const { userId, userName } = getCurrentUser();
+  const changes = loadPendingChanges();
+  const changeIndex = changes.findIndex((c) => c.id === submissionId);
+
+  if (changeIndex === -1) {
+    console.error('Submission not found');
+    return false;
+  }
+
+  const change = changes[changeIndex];
+
+  // Only allow editing if pending, needs_revision, or rejected
+  if (!['pending', 'needs_revision', 'rejected'].includes(change.status)) {
+    console.error('Cannot edit submission with status:', change.status);
+    return false;
+  }
+
+  // Only allow submitter to edit their own submission
+  if (change.submittedBy.userId !== userId) {
+    console.error('Only the submitter can edit this submission');
+    return false;
+  }
+
+  // Update the submission
+  change.proposedData = updatedData.proposedData;
+  if (updatedData.submitterComment !== undefined) {
+    change.submitterComment = updatedData.submitterComment;
+  }
+
+  // Add to revision history
+  const historyEntry: RevisionHistoryEntry = {
+    action: change.status === 'pending' ? 'submitted' : 'resubmitted',
+    comment: updatedData.submitterComment || 'Updated submission',
+    timestamp: new Date().toISOString(),
+    userId,
+    userName
+  };
+
+  if (!change.revisionHistory) {
+    change.revisionHistory = [];
+  }
+  change.revisionHistory.push(historyEntry);
+
+  // If it was rejected or needs_revision, mark it as pending and increment resubmit count
+  if (change.status === 'rejected' || change.status === 'needs_revision') {
+    change.status = 'pending';
+    change.resubmitCount = (change.resubmitCount || 0) + 1;
+    change.statusChangeSeenBySubmitter = true;
+    // Clear review fields
+    delete change.reviewedBy;
+    delete change.reviewedAt;
+    delete change.reviewerComment;
+  }
+
+  const success = savePendingChanges(changes);
+  if (success) {
+    logAuditAction(
+      'submit_for_review',
+      change.resourceType,
+      change.resourceId,
+      change.resourceName,
+      JSON.stringify({
+        submissionId: change.id,
+        action: 'updated',
+        resubmitCount: change.resubmitCount
+      })
+    );
+  }
+
+  return success;
+}
+
+/**
+ * Withdraw a pending submission (only pending)
+ */
+export function withdrawSubmission(submissionId: string, reason?: string): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const { userId, userName } = getCurrentUser();
+  const changes = loadPendingChanges();
+  const changeIndex = changes.findIndex((c) => c.id === submissionId);
+
+  if (changeIndex === -1) {
+    console.error('Submission not found');
+    return false;
+  }
+
+  const change = changes[changeIndex];
+
+  // Only allow withdrawing pending submissions
+  if (change.status !== 'pending') {
+    console.error('Can only withdraw pending submissions');
+    return false;
+  }
+
+  // Only allow submitter to withdraw their own submission
+  if (change.submittedBy.userId !== userId) {
+    console.error('Only the submitter can withdraw this submission');
+    return false;
+  }
+
+  // Remove the submission from the list
+  changes.splice(changeIndex, 1);
+
+  const success = savePendingChanges(changes);
+  if (success) {
+    logAuditAction(
+      'delete',
+      change.resourceType,
+      change.resourceId,
+      change.resourceName,
+      JSON.stringify({
+        submissionId: change.id,
+        action: 'withdrawn',
+        reason: reason || 'Withdrawn by submitter'
+      })
+    );
+  }
+
+  return success;
+}

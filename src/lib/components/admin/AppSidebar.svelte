@@ -79,17 +79,17 @@
         { title: 'Sitios', url: '/admin/sitios', icon: MapPin },
         { title: 'Projects', url: '/admin/projects', icon: FolderKanban },
         {
+          title: 'My Submissions',
+          url: '/admin/my-submissions',
+          icon: Send,
+          badge: () => unreadStatusCount
+        },
+        {
           title: 'Review Queue',
           url: '/admin/review',
           icon: ClipboardCheck,
           requiresReviewer: true,
           badge: () => pendingCount
-        },
-        {
-          title: 'My Submissions',
-          url: '/admin/my-submissions',
-          icon: Send,
-          badge: () => unreadStatusCount
         }
       ]
     },

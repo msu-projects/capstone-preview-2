@@ -5,9 +5,11 @@
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
   import * as Dialog from '$lib/components/ui/dialog';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { Input } from '$lib/components/ui/input';
   import * as Select from '$lib/components/ui/select';
   import * as Table from '$lib/components/ui/table';
+  import { Textarea } from '$lib/components/ui/textarea';
   import { authStore } from '$lib/stores/auth.svelte';
   import type { PendingChange, PendingChangeStatus } from '$lib/types';
   import toTitleCase from '$lib/utils/common';
@@ -15,7 +17,9 @@
     getPendingChanges,
     getUnreadStatusChanges,
     markAllStatusChangesAsSeen,
-    markStatusChangeAsSeen
+    markStatusChangeAsSeen,
+    updatePendingSubmission,
+    withdrawSubmission
   } from '$lib/utils/pending-changes-storage';
   import {
     AlertTriangle,
@@ -30,10 +34,12 @@
     History,
     MapPin,
     Minus,
+    MoreVertical,
     Plus,
     RefreshCw,
     RotateCcw,
     Search,
+    Trash2,
     X,
     XCircle
   } from '@lucide/svelte';
@@ -48,6 +54,12 @@
   let resourceTypeFilter = $state<'all' | 'sitio' | 'project'>('all');
   let selectedChange = $state<PendingChange | null>(null);
   let isDetailDialogOpen = $state(false);
+  let isEditDialogOpen = $state(false);
+  let isWithdrawDialogOpen = $state(false);
+  let editedData = $state<string>('');
+  let editComment = $state('');
+  let withdrawReason = $state('');
+  let isProcessing = $state(false);
 
   // Statistics
   let statistics = $derived({
@@ -133,6 +145,73 @@
     // Mark as seen when viewed
     if (change.statusChangeSeenBySubmitter === false) {
       markStatusChangeAsSeen(change.id);
+    }
+  }
+
+  function canEdit(change: PendingChange): boolean {
+    return ['pending', 'needs_revision', 'rejected'].includes(change.status);
+  }
+
+  function canWithdraw(change: PendingChange): boolean {
+    return change.status === 'pending';
+  }
+
+  function handleEdit(change: PendingChange) {
+    selectedChange = change;
+    editedData = JSON.stringify(change.proposedData, null, 2);
+    editComment = change.submitterComment || '';
+    isEditDialogOpen = true;
+  }
+
+  function handleWithdraw(change: PendingChange) {
+    selectedChange = change;
+    withdrawReason = '';
+    isWithdrawDialogOpen = true;
+  }
+
+  async function saveEdit() {
+    if (!selectedChange || isProcessing) return;
+
+    try {
+      isProcessing = true;
+      const parsedData = JSON.parse(editedData);
+
+      const success = updatePendingSubmission(selectedChange.id, {
+        proposedData: parsedData,
+        submitterComment: editComment
+      });
+
+      if (success) {
+        toast.success('Submission updated successfully');
+        isEditDialogOpen = false;
+        loadSubmissions();
+      } else {
+        toast.error('Failed to update submission');
+      }
+    } catch (error) {
+      toast.error('Invalid JSON data');
+      console.error(error);
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  async function confirmWithdraw() {
+    if (!selectedChange || isProcessing) return;
+
+    try {
+      isProcessing = true;
+      const success = withdrawSubmission(selectedChange.id, withdrawReason);
+
+      if (success) {
+        toast.success('Submission withdrawn successfully');
+        isWithdrawDialogOpen = false;
+        loadSubmissions();
+      } else {
+        toast.error('Failed to withdraw submission');
+      }
+    } finally {
+      isProcessing = false;
     }
   }
 
@@ -318,6 +397,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>My Submissions</title>
+</svelte:head>
+
 <AdminHeader
   title="My Submissions"
   description="Track your submitted changes and their review status"
@@ -414,22 +497,6 @@
       <Card.Content>
         <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
           {statistics.conflict}
-        </div>
-      </Card.Content>
-    </Card.Root>
-
-    <Card.Root class="border-slate-200 dark:border-slate-700">
-      <Card.Header class="pb-2">
-        <Card.Title
-          class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400"
-        >
-          <RefreshCw class="h-4 w-4" />
-          Superseded
-        </Card.Title>
-      </Card.Header>
-      <Card.Content>
-        <div class="text-2xl font-bold text-slate-600 dark:text-slate-400">
-          {statistics.superseded}
         </div>
       </Card.Content>
     </Card.Root>
@@ -601,21 +668,35 @@
 
                 <!-- Actions -->
                 <Table.Cell>
-                  <div class="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onclick={() => viewDetails(change)}>
-                      <Eye class="h-4 w-4" />
-                    </Button>
-                    {#if canResubmit(change)}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onclick={() => handleEditAndResubmit(change)}
-                        title="Edit & Resubmit"
-                      >
-                        <Edit class="h-4 w-4" />
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical class="h-4 w-4" />
                       </Button>
-                    {/if}
-                  </div>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end">
+                      <DropdownMenu.Item onclick={() => viewDetails(change)}>
+                        <Eye class="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenu.Item>
+                      {#if canEdit(change)}
+                        <DropdownMenu.Item onclick={() => handleEdit(change)}>
+                          <Edit class="mr-2 h-4 w-4" />
+                          Edit Submission
+                        </DropdownMenu.Item>
+                      {/if}
+                      {#if canWithdraw(change)}
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Item
+                          onclick={() => handleWithdraw(change)}
+                          class="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 class="mr-2 h-4 w-4" />
+                          Withdraw
+                        </DropdownMenu.Item>
+                      {/if}
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
                 </Table.Cell>
               </Table.Row>
             {:else}
@@ -634,7 +715,7 @@
 
 <!-- Detail Dialog -->
 <Dialog.Root bind:open={isDetailDialogOpen}>
-  <Dialog.Content class="max-h-[90vh] max-w-4xl overflow-y-auto">
+  <Dialog.Content class="max-h-[90vh] max-w-3xl! overflow-y-auto">
     {#if selectedChange}
       <Dialog.Header>
         <Dialog.Title class="flex items-center gap-2">
@@ -856,6 +937,144 @@
 
       <Dialog.Footer>
         <Button variant="outline" onclick={() => (isDetailDialogOpen = false)}>Close</Button>
+      </Dialog.Footer>
+    {/if}
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Edit Dialog -->
+<Dialog.Root bind:open={isEditDialogOpen}>
+  <Dialog.Content class="max-h-[90vh] max-w-2xl! overflow-y-auto">
+    {#if selectedChange}
+      <Dialog.Header>
+        <Dialog.Title class="flex items-center gap-2">
+          <Edit class="h-5 w-5" />
+          Edit Submission
+        </Dialog.Title>
+        <Dialog.Description>
+          {selectedChange.resourceName}
+          {#if selectedChange.status === 'needs_revision'}
+            • Needs Revision
+          {:else if selectedChange.status === 'rejected'}
+            • Rejected - You can edit and resubmit
+          {:else}
+            • Pending Review
+          {/if}
+        </Dialog.Description>
+      </Dialog.Header>
+
+      <div class="space-y-4">
+        {#if selectedChange.reviewerComment}
+          <div class="rounded-lg bg-orange-50 p-4 dark:bg-orange-900/20">
+            <div
+              class="mb-1 flex items-center gap-2 font-semibold text-orange-800 dark:text-orange-300"
+            >
+              <AlertTriangle class="h-4 w-4" />
+              Reviewer Feedback
+            </div>
+            <p class="text-sm text-orange-700 dark:text-orange-400">
+              {selectedChange.reviewerComment}
+            </p>
+          </div>
+        {/if}
+
+        <div class="space-y-2">
+          <label for="edit-data" class="text-sm font-medium"> Proposed Changes (JSON) </label>
+          <Textarea
+            id="edit-data"
+            bind:value={editedData}
+            rows={15}
+            class="font-mono text-xs"
+            placeholder="Enter proposed data as JSON"
+          />
+          <p class="text-xs text-muted-foreground">
+            Edit the JSON data to update your proposed changes
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <label for="edit-comment" class="text-sm font-medium"> Comment (Optional) </label>
+          <Textarea
+            id="edit-comment"
+            bind:value={editComment}
+            rows={3}
+            placeholder="Explain what you changed..."
+          />
+        </div>
+      </div>
+
+      <Dialog.Footer>
+        <Button
+          variant="outline"
+          onclick={() => (isEditDialogOpen = false)}
+          disabled={isProcessing}
+        >
+          Cancel
+        </Button>
+        <Button onclick={saveEdit} disabled={isProcessing}>
+          {#if isProcessing}
+            <RefreshCw class="mr-2 h-4 w-4 animate-spin" />
+            Saving...
+          {:else}
+            <Check class="mr-2 h-4 w-4" />
+            {selectedChange.status === 'pending' ? 'Update Submission' : 'Update & Resubmit'}
+          {/if}
+        </Button>
+      </Dialog.Footer>
+    {/if}
+  </Dialog.Content>
+</Dialog.Root>
+
+<!-- Withdraw Dialog -->
+<Dialog.Root bind:open={isWithdrawDialogOpen}>
+  <Dialog.Content class="max-w-md!">
+    {#if selectedChange}
+      <Dialog.Header>
+        <Dialog.Title class="flex items-center gap-2 text-destructive">
+          <Trash2 class="h-5 w-5" />
+          Withdraw Submission
+        </Dialog.Title>
+        <Dialog.Description>Are you sure you want to withdraw this submission?</Dialog.Description>
+      </Dialog.Header>
+
+      <div class="space-y-4">
+        <div class="rounded-lg bg-muted p-3">
+          <div class="text-sm font-medium">{selectedChange.resourceName}</div>
+          <div class="text-xs text-muted-foreground">ID: {selectedChange.id}</div>
+        </div>
+
+        <div class="space-y-2">
+          <label for="withdraw-reason" class="text-sm font-medium"> Reason (Optional) </label>
+          <Textarea
+            id="withdraw-reason"
+            bind:value={withdrawReason}
+            rows={3}
+            placeholder="Why are you withdrawing this submission?"
+          />
+        </div>
+
+        <div class="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <p>⚠️ This action cannot be undone. The submission will be permanently removed.</p>
+        </div>
+      </div>
+
+      <Dialog.Footer>
+        <Button
+          variant="outline"
+          onclick={() => (isWithdrawDialogOpen = false)}
+          disabled={isProcessing}
+        >
+          Cancel
+        </Button>
+        <Button variant="destructive" onclick={confirmWithdraw} disabled={isProcessing}>
+          {#if isProcessing}
+            <RefreshCw class="mr-2 h-4 w-4 animate-spin" />
+            Withdrawing...
+          {:else}
+            <Trash2 class="mr-2 h-4 w-4" />
+            Withdraw Submission
+          {/if}
+        </Button>
       </Dialog.Footer>
     {/if}
   </Dialog.Content>
