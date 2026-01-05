@@ -5,6 +5,7 @@
  */
 
 import type { SitioProfile } from '$lib/types/sitio-profile';
+import type { SitioRecord } from '$lib/types/sitio-storage';
 
 // ==========================================
 // INDICATOR CATEGORIES
@@ -50,6 +51,11 @@ export const INDICATOR_CATEGORIES = {
     key: 'classification',
     label: 'Classification',
     description: 'GIDA, Indigenous, and Conflict-Affected status'
+  },
+  projectsUpdates: {
+    key: 'projectsUpdates',
+    label: 'Projects & Updates',
+    description: 'Project implementation and data update tracking'
   }
 } as const;
 
@@ -70,6 +76,11 @@ export interface SitioIndicator {
   category: IndicatorCategory;
   /** Function to extract value from SitioProfile */
   accessor: (profile: SitioProfile) => number;
+  /** Extended accessor that can access full SitioRecord (optional) */
+  extendedAccessor?: (
+    sitioRecord: SitioRecord & { _projectCount?: number },
+    profile: SitioProfile
+  ) => number;
   /** Default sort order */
   defaultOrder: 'asc' | 'desc';
   /** Format function for display */
@@ -908,6 +919,50 @@ export const SITIO_INDICATORS: SitioIndicator[] = [
     defaultOrder: 'desc',
     format: (v) => (v === 1 ? 'Yes' : 'No'),
     description: 'Conflict-affected area (past 3 years)',
+    higherIsBetter: undefined
+  },
+
+  // ==========================================
+  // PROJECTS & UPDATES INDICATORS
+  // ==========================================
+  {
+    key: 'projectCount',
+    label: 'Number of Projects Implemented',
+    shortLabel: 'Projects',
+    category: 'projectsUpdates',
+    accessor: () => 0, // Will be overridden by extendedAccessor
+    extendedAccessor: (sitioRecord) => {
+      // This will be calculated dynamically using project data
+      // The value will be injected during sort preparation
+      return sitioRecord._projectCount || 0;
+    },
+    defaultOrder: 'desc',
+    format: formatNumber,
+    description: 'Total number of projects implemented in this sitio',
+    higherIsBetter: true
+  },
+  {
+    key: 'lastUpdateTime',
+    label: 'Last Data Update',
+    shortLabel: 'Last Update',
+    category: 'projectsUpdates',
+    accessor: () => 0, // Will be overridden by extendedAccessor
+    extendedAccessor: (sitioRecord) => {
+      // Convert updatedAt to timestamp for sorting
+      const timestamp = sitioRecord.updatedAt ? new Date(sitioRecord.updatedAt).getTime() : 0;
+      return timestamp;
+    },
+    defaultOrder: 'desc',
+    format: (v) => {
+      if (v === 0) return 'Never';
+      const date = new Date(v);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    },
+    description: 'When this sitio data was last updated',
     higherIsBetter: undefined
   }
 ];

@@ -201,12 +201,26 @@ export interface SitioWithProfile extends SitioRecord {
   profile: SitioProfile;
   /** Computed indicator values cache */
   indicatorValues: Map<string, number>;
+  /** Cached project count for this sitio */
+  _projectCount: number;
 }
 
 /**
  * Prepare sitios with profile data for the selected year
  */
 export function prepareSitiosForSort(sitios: SitioRecord[], year: string): SitioWithProfile[] {
+  // Load projects for counting
+  let projects: Array<{ sitioIds?: number[] }> = [];
+  try {
+    // Dynamically import project storage to avoid circular dependencies
+    const projectsData = localStorage.getItem('sccdp_projects');
+    if (projectsData) {
+      projects = JSON.parse(projectsData);
+    }
+  } catch (error) {
+    console.warn('Failed to load projects for sorting:', error);
+  }
+
   return sitios
     .map((sitio) => {
       // Get the year to use
@@ -224,10 +238,16 @@ export function prepareSitiosForSort(sitios: SitioRecord[], year: string): Sitio
       const profile = sitio.yearlyData[targetYear];
       const indicatorValues = new Map<string, number>();
 
+      // Calculate project count for extendedAccessor
+      const projectCount = projects.filter(
+        (p) => p.sitioIds && p.sitioIds.includes(sitio.id)
+      ).length;
+
       return {
         ...sitio,
         profile,
-        indicatorValues
+        indicatorValues,
+        _projectCount: projectCount
       };
     })
     .filter((s): s is SitioWithProfile => s !== null);
@@ -243,7 +263,10 @@ function getIndicatorValue(sitio: SitioWithProfile, indicator: SitioIndicator): 
   }
 
   // Compute and cache
-  const value = indicator.accessor(sitio.profile);
+  // Use extendedAccessor if available, otherwise use regular accessor
+  const value = indicator.extendedAccessor
+    ? indicator.extendedAccessor(sitio, sitio.profile)
+    : indicator.accessor(sitio.profile);
   sitio.indicatorValues.set(indicator.key, value);
   return value;
 }
