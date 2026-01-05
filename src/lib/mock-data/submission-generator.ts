@@ -20,7 +20,7 @@ import { SeededRandom } from './seeded-random';
 
 export const SUBMISSION_GENERATION_CONFIG = {
   /** Number of submissions to generate */
-  defaultCount: 35,
+  defaultCount: 15,
   /** Default seed for reproducible generation */
   defaultSeed: 42,
   /** Minimum days in the past for submission date */
@@ -44,7 +44,7 @@ export const SUBMISSION_GENERATION_CONFIG = {
     /** Multiple revisions (2-3) then rejected */
     multiRevisionRejected: 0.05,
     /** Many revisions (4-5) finally approved - edge case */
-    manyRevisionApproved: 0.08,
+    manyRevisionApproved: 0.1,
     /** Currently in revision cycle - needs_revision status */
     currentlyNeedsRevision: 0.1,
     /** Conflict scenario */
