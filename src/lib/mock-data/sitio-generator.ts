@@ -1045,6 +1045,7 @@ export function generateSitios(
 
     // Generate yearly data with realistic year-over-year changes
     const yearlyData: { [year: string]: SitioProfile } = {};
+    const lastUpdatedByYear: { [year: string]: string } = {};
     const availableYears: number[] = [];
 
     // Initialize progression state for this sitio
@@ -1078,6 +1079,7 @@ export function generateSitios(
       );
 
       yearlyData[String(currentYear)] = profile;
+      lastUpdatedByYear[String(currentYear)] = new Date().toISOString();
 
       // Update progression state for next year
       updateProgressionState(yearRng, progressionState, profile, currentYear);
@@ -1095,6 +1097,7 @@ export function generateSitios(
       longitude,
       sitioClassification,
       yearlyData,
+      lastUpdatedByYear,
       availableYears,
       createdAt: now,
       updatedAt: now

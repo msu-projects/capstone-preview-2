@@ -32,7 +32,35 @@ export function saveSitios(sitios: SitioRecord[]): boolean {
 export function loadSitios(): SitioRecord[] {
   try {
     const json = localStorage.getItem(SITIOS_STORAGE_KEY);
-    return json ? JSON.parse(json) : [];
+    if (!json) return [];
+
+    const sitios: SitioRecord[] = JSON.parse(json);
+
+    // Migrate old data that doesn't have lastUpdatedByYear
+    const migratedSitios = sitios.map((sitio) => {
+      if (!sitio.lastUpdatedByYear) {
+        // Initialize lastUpdatedByYear with updatedAt or createdAt for all years
+        const lastUpdatedByYear: { [year: string]: string } = {};
+        const timestamp = sitio.updatedAt || sitio.createdAt || new Date().toISOString();
+
+        for (const year of Object.keys(sitio.yearlyData)) {
+          lastUpdatedByYear[year] = timestamp;
+        }
+
+        return {
+          ...sitio,
+          lastUpdatedByYear
+        };
+      }
+      return sitio;
+    });
+
+    // Save migrated data back if any migration occurred
+    if (migratedSitios.some((s, i) => !sitios[i].lastUpdatedByYear)) {
+      saveSitios(migratedSitios);
+    }
+
+    return migratedSitios;
   } catch (error) {
     console.error('Failed to load sitios:', error);
     return [];

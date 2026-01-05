@@ -63,6 +63,15 @@ export interface SitioRecord extends SitioCoreIdentifier {
     [year: string]: SitioProfile;
   };
 
+  /**
+   * Tracks when each year's data was last updated
+   * Key: Year as string (e.g., "2021", "2022")
+   * Value: ISO timestamp of last update for that year
+   */
+  lastUpdatedByYear: {
+    [year: string]: string;
+  };
+
   /** Sorted array of available years (e.g., [2021, 2022, 2023, 2024]) */
   availableYears: number[];
 

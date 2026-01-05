@@ -125,11 +125,15 @@
 
     // Update main access in all yearly data
     const updatedYearlyData = { ...sitio.yearlyData };
+    const updatedLastUpdatedByYear = { ...sitio.lastUpdatedByYear };
+    const currentTimestamp = new Date().toISOString();
+
     for (const year of Object.keys(updatedYearlyData)) {
       updatedYearlyData[year] = {
         ...updatedYearlyData[year],
         mainAccess: mainAccessObj
       };
+      updatedLastUpdatedByYear[year] = currentTimestamp;
     }
 
     const updatedData = {
@@ -141,7 +145,8 @@
       longitude,
       sitioClassification: { ...sitioClassification },
       yearlyData: updatedYearlyData,
-      updatedAt: new Date().toISOString()
+      lastUpdatedByYear: updatedLastUpdatedByYear,
+      updatedAt: currentTimestamp
     };
     const result = submitSitioForReview(sitio.id, updatedData);
     const success = result.success;

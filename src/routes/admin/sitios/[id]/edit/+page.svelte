@@ -785,10 +785,16 @@
       [newYear.toString()]: newYearData
     };
 
+    const updatedLastUpdatedByYear = {
+      ...sitio.lastUpdatedByYear,
+      [newYear.toString()]: new Date().toISOString()
+    };
+
     const newAvailableYears = [...sitio.availableYears, newYear].sort((a, b) => a - b);
 
     const success = updateSitio(sitio.id, {
       yearlyData: updatedYearlyData,
+      lastUpdatedByYear: updatedLastUpdatedByYear,
       availableYears: newAvailableYears,
       updatedAt: new Date().toISOString()
     });
@@ -834,12 +840,14 @@
 
     const yearToDelete = parseInt(selectedYear);
 
-    // Remove the year from yearlyData
+    // Remove the year from yearlyData and lastUpdatedByYear
     const { [selectedYear]: _, ...remainingYearlyData } = sitio.yearlyData;
+    const { [selectedYear]: __, ...remainingLastUpdated } = sitio.lastUpdatedByYear;
     const newAvailableYears = sitio.availableYears.filter((y) => y !== yearToDelete);
 
     const success = updateSitio(sitio.id, {
       yearlyData: remainingYearlyData,
+      lastUpdatedByYear: remainingLastUpdated,
       availableYears: newAvailableYears,
       updatedAt: new Date().toISOString()
     });
@@ -960,8 +968,14 @@
       [selectedYear]: updatedYearData
     };
 
+    const updatedLastUpdatedByYear = {
+      ...sitio.lastUpdatedByYear,
+      [selectedYear]: new Date().toISOString()
+    };
+
     const changes = {
       yearlyData: updatedYearlyData,
+      lastUpdatedByYear: updatedLastUpdatedByYear,
       updatedAt: new Date().toISOString()
     };
 

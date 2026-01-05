@@ -198,6 +198,9 @@
       yearlyData: {
         [currentYear.toString()]: initialYearData
       },
+      lastUpdatedByYear: {
+        [currentYear.toString()]: new Date().toISOString()
+      },
       availableYears: [currentYear],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

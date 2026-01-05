@@ -199,12 +199,17 @@
       ...selectedSitio.yearlyData,
       [newYearToAdd.toString()]: newYearData
     };
+    const updatedLastUpdatedByYear = {
+      ...selectedSitio.lastUpdatedByYear,
+      [newYearToAdd.toString()]: new Date().toISOString()
+    };
     const updatedAvailableYears = [...selectedSitio.availableYears, newYearToAdd].sort(
       (a, b) => b - a
     );
 
     const success = updateSitio(selectedSitio.id, {
       yearlyData: updatedYearlyData,
+      lastUpdatedByYear: updatedLastUpdatedByYear,
       availableYears: updatedAvailableYears,
       updatedAt: new Date().toISOString()
     });
