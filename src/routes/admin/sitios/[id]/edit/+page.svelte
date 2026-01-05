@@ -1128,7 +1128,11 @@
       description="Update {sitio.sitioName} data for {selectedYear}"
       breadcrumbs={isResubmission
         ? [{ label: 'My Submissions', href: '/admin/my-submissions' }, { label: 'Resubmit' }]
-        : [{ label: 'Sitios', href: '/admin/sitios' }, { label: sitio.sitioName || 'Edit' }]}
+        : [
+            { label: 'Sitios', href: '/admin/sitios' },
+            { label: sitio.sitioName, href: `/admin/sitios/${sitioId}` },
+            { label: 'Edit' }
+          ]}
     >
       {#snippet badges()}
         <!-- Year Selector with Add/Delete options -->

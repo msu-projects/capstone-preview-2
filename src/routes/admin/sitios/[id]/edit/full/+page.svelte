@@ -247,7 +247,8 @@
       description="Edit core identifiers for {sitio.sitioName}"
       breadcrumbs={[
         { label: 'Sitios', href: '/admin/sitios' },
-        { label: sitio.sitioName, href: `/admin/sitios/${sitio.id}/edit` },
+        { label: sitio.sitioName, href: `/admin/sitios/${sitio.id}` },
+        { label: 'Edit', href: `/admin/sitios/${sitio.id}/edit` },
         { label: 'Full Edit' }
       ]}
     >
