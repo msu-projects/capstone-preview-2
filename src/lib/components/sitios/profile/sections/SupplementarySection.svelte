@@ -157,8 +157,8 @@
   }
 
   // Get custom field value from sitio
-  function getFieldValue(fieldId: string): unknown {
-    return sitio.customFields?.[fieldId];
+  function getFieldValue(fieldName: string): unknown {
+    return sitio.customFields?.[fieldName];
   }
 
   // Check if field has a value
@@ -174,7 +174,7 @@
   }
 
   // Get fields organized by groups
-  const fieldsByGroup = $derived(() => {
+  const fieldsByGroup = $derived.by(() => {
     const grouped = new Map<string | null, CustomFieldDefinition[]>();
 
     // Initialize with all active groups
@@ -208,9 +208,11 @@
     return grouped;
   });
 
+  $inspect(fieldsByGroup);
+
   // Statistics
   const fieldsRecordedCount = $derived(
-    definitions.filter((d) => hasValue(getFieldValue(d.id), d.dataType)).length
+    definitions.filter((d) => hasValue(getFieldValue(d.fieldName), d.dataType)).length
   );
 
   // Toggle group collapse
@@ -226,7 +228,7 @@
 
   // Get group field count with values
   function getGroupRecordedCount(groupFields: CustomFieldDefinition[]): number {
-    return groupFields.filter((d) => hasValue(getFieldValue(d.id), d.dataType)).length;
+    return groupFields.filter((d) => hasValue(getFieldValue(d.fieldName), d.dataType)).length;
   }
 
   // Color mappings for icons
@@ -294,12 +296,15 @@
     <!-- Groups Display -->
     <div class="space-y-4">
       {#each [...groups, { id: null, name: 'Uncategorized', icon: 'Folder', isCollapsible: true, description: 'Fields not assigned to any group' }] as group (group.id ?? '__uncategorized__')}
-        {@const groupFields = fieldsByGroup().get(group.id ?? null) ?? []}
+        {@const groupFields = fieldsByGroup.get(group.id ?? null) ?? []}
+        {@const groupFieldsWithData = groupFields.filter((d) =>
+          hasValue(getFieldValue(d.fieldName), d.dataType)
+        )}
         {@const recordedCount = getGroupRecordedCount(groupFields)}
         {@const IconComponent = getIconComponent(group.icon)}
         {@const iconColors = getIconColors(group.icon)}
 
-        {#if groupFields.length > 0}
+        {#if groupFieldsWithData.length > 0}
           {@const isCollapsed = group.id ? collapsedGroups.has(group.id) : false}
 
           <InfoCard
@@ -330,8 +335,8 @@
 
             {#if !isCollapsed}
               <div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                {#each groupFields as def (def.id)}
-                  {@const value = getFieldValue(def.id)}
+                {#each groupFieldsWithData as def (def.id)}
+                  {@const value = getFieldValue(def.fieldName)}
                   {@const hasVal = hasValue(value, def.dataType)}
                   {@const DataTypeIcon = getDataTypeIcon(def.dataType)}
 
@@ -395,7 +400,7 @@
                       <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
                           <p class="truncate text-sm font-medium">{def.displayLabel}</p>
-                          <p class="mt-0.5 text-xs text-muted-foreground">
+                          <p class="mt-0.5 hidden text-xs text-muted-foreground">
                             {AGGREGATION_TYPE_LABELS[def.aggregationType]}
                           </p>
                         </div>

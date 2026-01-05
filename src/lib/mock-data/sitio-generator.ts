@@ -865,28 +865,73 @@ function generateCustomFields(
   const isUrban = municipalityProfile.type === 'urban';
 
   // Example custom fields that might be configured by administrators
+  // IMPORTANT: All fields must match the definitions in initializeCustomFieldDefinitions()
   const customFields: Record<string, unknown> = {};
 
-  // Number fields with different purposes
+  // ===== GROUP: Program Metrics (cfg_programs) =====
+
+  // cf_beneficiaries: Number of Beneficiaries
   customFields.beneficiariesCount = rng.nextInt(
     Math.floor(totalHouseholds * 0.1),
     Math.floor(totalHouseholds * 0.6)
   );
 
+  // cf_training: Training Attendees
   customFields.trainingAttendees = rng.nextInt(10, Math.min(100, totalPopulation / 5));
 
+  // cf_seedlings: Seedlings Distributed
   customFields.seedlingsDistributed = rng.nextInt(0, 1000);
 
-  customFields.communityProjectsBudget = rng.nextInt(50000, 500000);
-
-  // Boolean fields for yes/no questions
-  customFields.hasDisasterPreparednessplan = rng.boolean(isUrban ? 0.7 : isGida ? 0.3 : 0.5);
-
-  customFields.hasCommunityOrganization = rng.boolean(0.6);
-
+  // cf_training_participation: Participated in Recent Training
   customFields.participatedInRecentTraining = rng.boolean(0.4);
 
-  // Text fields for qualitative data
+  // cf_participation_rate: Program Participation Rate (0.0 to 1.0)
+  customFields.programParticipationRate = Number(rng.nextFloat(0.15, 0.85).toFixed(2));
+
+  // ===== GROUP: Community Development (cfg_community) =====
+
+  // cf_community_org: Has Community Organization
+  customFields.hasCommunityOrganization = rng.boolean(0.6);
+
+  // cf_assembly_date: Last Community Assembly Date
+  // Generate date only if year is 2020 or later
+  if (currentYear >= 2020) {
+    const daysAgo = rng.nextInt(1, 365);
+    const assemblyDate = new Date(currentYear, 11, 31);
+    assemblyDate.setDate(assemblyDate.getDate() - daysAgo);
+    customFields.lastCommunityAssembly = assemblyDate.toISOString().split('T')[0];
+  } else {
+    customFields.lastCommunityAssembly = ''; // Empty for years before 2020
+  }
+
+  // cf_contribution: Community Contribution Amount
+  customFields.communityContributionAmount = rng.nextInt(5000, 50000);
+
+  // cf_disaster_plan: Has Disaster Preparedness Plan
+  customFields.hasDisasterPreparednessplan = rng.boolean(isUrban ? 0.7 : isGida ? 0.3 : 0.5);
+
+  // cf_available_services: Available Services (checkbox)
+  const availableServices: string[] = [];
+  const serviceOptions = [
+    { name: 'Mobile clinic', probability: 0.4 },
+    { name: 'Satellite office', probability: 0.3 },
+    { name: 'Community library', probability: 0.25 },
+    { name: 'Skills training center', probability: 0.35 },
+    { name: 'Day care center', probability: 0.5 }
+  ];
+  serviceOptions.forEach((service) => {
+    if (rng.boolean(service.probability)) {
+      availableServices.push(service.name);
+    }
+  });
+  customFields.availableServices = availableServices;
+
+  // ===== GROUP: Project Tracking (cfg_projects) =====
+
+  // cf_budget: Community Projects Budget
+  customFields.communityProjectsBudget = rng.nextInt(50000, 500000);
+
+  // cf_recent_project: Recent Project Implemented
   const projectExamples = [
     'Community livelihood program',
     'Water system improvement',
@@ -897,26 +942,24 @@ function generateCustomFields(
   ];
   customFields.recentProjectImplemented = rng.boolean(0.5) ? rng.pick(projectExamples) : '';
 
-  const remarksOptions = [
-    'Community actively participates in programs',
-    'Needs more infrastructure support',
-    'Strong community leadership present',
-    'Requires capacity building interventions',
-    'Good collaboration with local government',
-    ''
+  // cf_implementation_status: Project Implementation Status (radio)
+  const implementationStatusOptions = [
+    'Not started',
+    'Planning phase',
+    'Ongoing',
+    'Completed',
+    'On hold'
   ];
-  customFields.remarks = rng.pick(remarksOptions);
+  customFields.projectImplementationStatus = rng.pick(implementationStatusOptions);
 
-  // Date fields for tracking
-  if (currentYear >= 2020) {
-    // Last community assembly date (within past year)
-    const daysAgo = rng.nextInt(1, 365);
-    const assemblyDate = new Date(currentYear, 11, 31);
-    assemblyDate.setDate(assemblyDate.getDate() - daysAgo);
-    customFields.lastCommunityAssembly = assemblyDate.toISOString().split('T')[0];
-  }
+  // cf_intervention_priority: Intervention Priority Level (radio)
+  const priorityLevelOptions = ['Low', 'Medium', 'High', 'Critical'];
+  const priorityWeights = isGida
+    ? [0.1, 0.2, 0.4, 0.3] // GIDA tends to have higher priority
+    : [0.2, 0.4, 0.3, 0.1]; // Others more moderate
+  customFields.interventionPriority = rng.pickWeighted(priorityLevelOptions, priorityWeights);
 
-  // Array fields for lists
+  // cf_completed_activities: Completed Activities (array)
   const completedActivities: string[] = [];
   const activityOptions = [
     'Feeding program',
@@ -935,61 +978,36 @@ function generateCustomFields(
   }
   customFields.completedActivities = completedActivities;
 
-  // Checkbox field (multiple selection)
-  const availableServices: string[] = [];
-  const serviceOptions = [
-    { name: 'Mobile clinic', probability: 0.4 },
-    { name: 'Satellite office', probability: 0.3 },
-    { name: 'Community library', probability: 0.25 },
-    { name: 'Skills training center', probability: 0.35 },
-    { name: 'Day care center', probability: 0.5 }
+  // ===== GROUP: Special Considerations (cfg_special) =====
+
+  // cf_ip_leaders: Indigenous Leaders Count
+  // Always present but value depends on classification
+  customFields.indigenousLeadersCount = classification.indigenous ? rng.nextInt(1, 8) : 0;
+
+  // cf_cultural_activities: Cultural Activities Per Year
+  // Always present but value depends on classification
+  customFields.culturalActivitiesPerYear = classification.indigenous ? rng.nextInt(2, 12) : 0;
+
+  // cf_peace_dialogues: Peace Dialogues Conducted
+  // Always present but value depends on classification
+  customFields.peaceDialoguesConducted = classification.conflict ? rng.nextInt(0, 6) : 0;
+
+  // cf_security_incidents: Security Incidents Last Year
+  // Always present but value depends on classification
+  customFields.securityIncidentsLastYear = classification.conflict ? rng.nextInt(0, 5) : 0;
+
+  // ===== GROUP: General Information (cfg_general) =====
+
+  // cf_remarks: General Remarks
+  const remarksOptions = [
+    'Community actively participates in programs',
+    'Needs more infrastructure support',
+    'Strong community leadership present',
+    'Requires capacity building interventions',
+    'Good collaboration with local government',
+    ''
   ];
-  serviceOptions.forEach((service) => {
-    if (rng.boolean(service.probability)) {
-      availableServices.push(service.name);
-    }
-  });
-  customFields.availableServices = availableServices;
-
-  // Radio field (single selection)
-  const priorityLevelOptions = ['Low', 'Medium', 'High', 'Critical'];
-  const priorityWeights = isGida
-    ? [0.1, 0.2, 0.4, 0.3] // GIDA tends to have higher priority
-    : [0.2, 0.4, 0.3, 0.1]; // Others more moderate
-  customFields.interventionPriority = rng.pickWeighted(priorityLevelOptions, priorityWeights);
-
-  const implementationStatusOptions = [
-    'Not started',
-    'Planning phase',
-    'Ongoing',
-    'Completed',
-    'On hold'
-  ];
-  customFields.projectImplementationStatus = rng.pick(implementationStatusOptions);
-
-  // Numeric field with decimal for percentages
-  customFields.programParticipationRate = Number(rng.nextFloat(0.15, 0.85).toFixed(2));
-
-  customFields.communityContributionAmount = rng.nextInt(5000, 50000);
-
-  // Additional context-specific fields (always present to match definitions)
-  // For indigenous communities - higher values, for others - lower or zero
-  if (classification.indigenous) {
-    customFields.indigenousLeadersCount = rng.nextInt(1, 8);
-    customFields.culturalActivitiesPerYear = rng.nextInt(2, 12);
-  } else {
-    customFields.indigenousLeadersCount = 0;
-    customFields.culturalActivitiesPerYear = 0;
-  }
-
-  // For conflict-affected areas - actual values, for others - zero
-  if (classification.conflict) {
-    customFields.peaceDialoguesConducted = rng.nextInt(0, 6);
-    customFields.securityIncidentsLastYear = rng.nextInt(0, 5);
-  } else {
-    customFields.peaceDialoguesConducted = 0;
-    customFields.securityIncidentsLastYear = 0;
-  }
+  customFields.remarks = rng.pick(remarksOptions);
 
   return customFields;
 }
