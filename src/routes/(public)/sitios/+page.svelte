@@ -6,7 +6,8 @@
     SitioDashboardEconomic,
     SitioDashboardInfrastructure,
     SitioDashboardMaps,
-    SitioDashboardOverview
+    SitioDashboardOverview,
+    SitioDashboardSupplementary
   } from '$lib/components/public/dashboard';
   import { DashboardSkeleton } from '$lib/components/sitios/dashboard';
   import { Badge } from '$lib/components/ui/badge';
@@ -21,6 +22,7 @@
     Building2,
     Calendar,
     FileText,
+    Layers,
     Lightbulb,
     List,
     Map,
@@ -173,7 +175,8 @@
     { id: 'demographics', label: 'Demographics', icon: Users },
     { id: 'infrastructure', label: 'Infrastructure', icon: Building2 },
     { id: 'economic', label: 'Economic', icon: TrendingUp },
-    { id: 'maps', label: 'Maps', icon: Map }
+    { id: 'maps', label: 'Maps', icon: Map },
+    { id: 'supplementary', label: 'Supplementary', icon: Layers }
   ];
 
   // Selected year as number for components
@@ -390,6 +393,15 @@
               sitios={filteredSitios}
               selectedYear={selectedYearNumber}
               onSitioClick={handleSitioClick}
+            />
+            <!-- {/if} -->
+          </Tabs.Content>
+
+          <Tabs.Content value="supplementary">
+            <!-- {#if visitedTabs.has('supplementary')} -->
+            <SitioDashboardSupplementary
+              sitios={filteredSitios}
+              selectedYear={selectedYearNumber}
             />
             <!-- {/if} -->
           </Tabs.Content>
